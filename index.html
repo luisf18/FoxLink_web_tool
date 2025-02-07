@@ -8,8 +8,8 @@
 <body>
     <h2>Conectar ao Arduino</h2>
     <button onclick="conectarSerial()">Conectar</button>
-    <button onclick="enviarComando('LIGAR')">Ligar</button>
-    <button onclick="enviarComando('DESLIGAR')">Desligar</button>
+    <button onclick="enviarComando('FOX-SHELL')">Init</button>
+    <button onclick="enviarComando('help')">Help</button>
     
     <h3>Dados do Arduino:</h3>
     <div id="dados"></div>
@@ -22,7 +22,7 @@
         async function conectarSerial() {
             try {
                 portaSerial = await navigator.serial.requestPort(); // Solicita a porta
-                await portaSerial.open({ baudRate: 9600 }); // Abre a conexão
+                await portaSerial.open({ baudRate: 115200 }); // Abre a conexão
                 
                 const leitorSerial = portaSerial.readable.pipeThrough(decodificador).getReader();
                 document.getElementById("dados").innerText = "Conectado!";
