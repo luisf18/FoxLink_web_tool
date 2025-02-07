@@ -3,54 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle Arduino via Web Serial</title>
+    <title>Serial Monitor Web</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #output { width: 100%; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap; }
+        input, button, select { margin-top: 10px; }
+    </style>
 </head>
 <body>
-    <h2>Conectar ao Arduino</h2>
+    <h2>Serial Monitor Web</h2>
     <button onclick="conectarSerial()">Conectar</button>
-    <button onclick="enviarComando('FOX-SHELL')">Init</button>
-    <button onclick="enviarComando('help')">Help</button>
-    
-    <h3>Dados do Arduino:</h3>
-    <div id="dados"></div>
+    <button onclick="desconectarSerial()">Desconectar</button>
+    <br>
+    <textarea id="output" readonly></textarea>
+    <br>
+    <input type="text" id="inputComando" placeholder="Digite um comando...">
+    <button onclick="enviarComando()">Enviar</button>
 
     <script>
         let portaSerial;
-        let leitor;
-        let decodificador = new TextDecoderStream();
+        let leitorSerial;
+        let bufferRecebido = "";
+        const decodificador = new TextDecoderStream();
 
         async function conectarSerial() {
             try {
                 portaSerial = await navigator.serial.requestPort(); // Solicita a porta
                 await portaSerial.open({ baudRate: 115200 }); // Abre a conexão
-                
-                const leitorSerial = portaSerial.readable.pipeThrough(decodificador).getReader();
-                document.getElementById("dados").innerText = "Conectado!";
-                
-                // Leitura contínua dos dados recebidos
-                while (true) {
-                    const { value, done } = await leitorSerial.read();
-                    if (done) break;
-                    if (value) {
-                        document.getElementById("dados").innerText = "Recebido: " + value;
-                    }
-                }
+                leitorSerial = portaSerial.readable.pipeThrough(decodificador).getReader();
+                document.getElementById("output").value += "Conectado ao dispositivo!\n";
+                lerDados();
             } catch (error) {
                 console.error("Erro ao conectar:", error);
             }
         }
 
-        async function enviarComando(comando) {
+        async function lerDados() {
+            
+            while (true) {
+                const { value, done } = await leitorSerial.read();
+                if (done){
+                    // Allow the serial port to be closed later.
+                    console.log('[readLoop] DONE', done);
+                    reader.releaseLock();
+                    break;
+                }
+                
+                console.log(value);
+                
+                if (value) {
+                    console.log(value);
+                    bufferRecebido += value;
+                    let linhas = bufferRecebido.split("\n");
+                    for (let i = 0; i < linhas.length - 1; i++) {
+                        adicionarAoOutput(linhas[i]);
+                    }
+                    bufferRecebido = linhas[linhas.length - 1]; // Resto do buffer
+                }
+            }
+        }
+
+        function adicionarAoOutput(texto) {
+            const output = document.getElementById("output");
+            output.value += texto;
+            output.scrollTop = output.scrollHeight; // Rolagem automática
+        }
+
+        async function enviarComando() {
             if (!portaSerial) {
-                alert("Conecte-se primeiro ao Arduino!");
+                alert("Conecte-se primeiro ao dispositivo!");
                 return;
             }
+            const input = document.getElementById("inputComando");
+            const finalChar = "\n";//document.getElementById("finalChar").value;
+            const comando = input.value.<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serial Monitor Web</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #output { width: 100%; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap; }
+        input, button, select { margin-top: 10px; }
+        .recebido { color: green; }  /* Cor para mensagens recebidas */
+        .enviado { color: blue; }    /* Cor para mensagens enviadas */
+    </style>
+</head>
+<body>
+    <h2>Serial Monitor Web</h2>
+    <button onclick="conectarSerial()">Conectar</button>
+    <button onclick="desconectarSerial()">Desconectar</button>
+    <br>
+    <textarea id="output" readonly></textarea>
+    <br>
+    <input type="text" id="inputComando" placeholder="Digite um comando...">
+    <button onclick="enviarComando()">Enviar</button>
+
+    <script>
+        let portaSerial;
+        let leitorSerial;
+        let bufferRecebido = "";
+        const decodificador = new TextDecoderStream();
+
+        async function conectarSerial() {
+            try {
+                portaSerial = await navigator.serial.requestPort(); // Solicita a porta
+                await portaSerial.open({ baudRate: 115200 }); // Abre a conexão
+                leitorSerial = portaSerial.readable.pipeThrough(decodificador).getReader();
+                document.getElementById("output").value += "Conectado ao dispositivo!\n";
+                lerDados();
+            } catch (error) {
+                console.error("Erro ao conectar:", error);
+            }
+        }
+
+        async function lerDados() {
+            while (true) {
+                const { value, done } = await leitorSerial.read();
+                if (done){
+                    // Allow the serial port to be closed later.
+                    console.log('[readLoop] DONE', done);
+                    leitorSerial.releaseLock();
+                    break;
+                }
+                
+                console.log(value);
+                
+                if (value) {
+                    console.log(value);
+                    bufferRecebido += value;
+                    let linhas = bufferRecebido.split("\n");
+                    for (let i = 0; i < linhas.length - 1; i++) {
+                        adicionarAoOutput(linhas[i], 'recebido');
+                    }
+                    bufferRecebido = linhas[linhas.length - 1]; // Resto do buffer
+                }
+            }
+        }
+
+        function adicionarAoOutput(texto, tipo) {
+            const output = document.getElementById("output");
+            const linha = document.createElement('div');
+            linha.textContent = texto;
+            linha.className = tipo;  // Aplica a classe para colorir a mensagem
+            output.appendChild(linha);
+            output.scrollTop = output.scrollHeight; // Rolagem automática
+        }
+
+        async function enviarComando() {
+            if (!portaSerial) {
+                alert("Conecte-se primeiro ao dispositivo!");
+                return;
+            }
+            const input = document.getElementById("inputComando");
+            const finalChar = "\n";//document.getElementById("finalChar").value;
+            const comando = input.value.trim();
+            if (comando === "") return;
 
             const encoder = new TextEncoder();
             const escritor = portaSerial.writable.getWriter();
-            await escritor.write(encoder.encode(comando + "\n"));
+            await escritor.write(encoder.encode(comando + finalChar));
             escritor.releaseLock();
+
+            adicionarAoOutput("Enviado: " + comando, 'enviado');
+            input.value = "";
         }
+
+        async function desconectarSerial() {
+            if (portaSerial) {
+                await leitorSerial.cancel();
+                await portaSerial.close();
+                portaSerial = null;
+                document.getElementById("output").value += "Desconectado!\n";
+            }
+        }
+
+        // Permitir envio com a tecla Enter
+        document.getElementById("inputComando").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Evita quebra de linha
+                enviarComando();
+            }
+        });
+    </script>
+</body>
+</html>
+trim();
+            if (comando === "") return;
+
+            const encoder = new TextEncoder();
+            const escritor = portaSerial.writable.getWriter();
+            await escritor.write(encoder.encode(comando + finalChar));
+            escritor.releaseLock();
+
+            adicionarAoOutput("Enviado: " + comando);
+            input.value = "";
+        }
+
+        async function desconectarSerial() {
+            if (portaSerial) {
+                await leitorSerial.cancel();
+                await portaSerial.close();
+                portaSerial = null;
+                document.getElementById("output").value += "Desconectado!\n";
+            }
+        }
+
+        // Permitir envio com a tecla Enter
+        document.getElementById("inputComando").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Evita quebra de linha
+                enviarComando();
+            }
+        });
     </script>
 </body>
 </html>

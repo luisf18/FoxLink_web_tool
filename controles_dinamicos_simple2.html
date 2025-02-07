@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Controles</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let port;
+        let isConnected = false;
+        let reader;
+        let receivedBytes = [];
+
+        async function connectSerial() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                isConnected = true;
+                updateConnectionStatus();
+                readSerialData();
+            } catch (error) {
+                console.error("Erro ao conectar:", error);
+            }
+        }
+
+        async function disconnectSerial() {
+            if (port) {
+                await port.close();
+                isConnected = false;
+                updateConnectionStatus();
+            }
+        }
+
+        async function testSerialConnection() {
+            if (isConnected) {
+                alert("Conexão está ativa.");
+            } else {
+                alert("Nenhuma conexão ativa.");
+            }
+        }
+
+        async function sendSerialMessage() {
+            if (port && isConnected) {
+                const writer = port.writable.getWriter();
+                const data = new TextEncoder().encode("FOX-SHELL");
+                await writer.write(data);
+                writer.releaseLock();
+            } else {
+                alert("Conecte primeiro a porta serial.");
+            }
+        }
+
+        async function readSerialData() {
+            while (isConnected) {
+                try {
+                    reader = port.readable.getReader();
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    receivedBytes.push(...value);
+                    updateChart();
+                    updateByteCount();
+                    reader.releaseLock();
+                } catch (error) {
+                    console.error("Erro na leitura serial:", error);
+                }
+            }
+        }
+
+        function updateConnectionStatus() {
+            document.getElementById("connectionStatus").innerText = isConnected ? "Conectado" : "Desconectado";
+        }
+
+        function updateByteCount() {
+            document.getElementById("byteCount").innerText = receivedBytes.length;
+        }
+
+        function updateChart() {
+            myChart.data.labels = receivedBytes.map((_, i) => i);
+            myChart.data.datasets[0].data = receivedBytes;
+            myChart.update();
+        }
+
+        function addButton() {
+            const container = document.getElementById("controls");
+            const label = "Botão";
+            let value = 0;
+            
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "10px";
+            
+            const button = document.createElement("button");
+            button.innerText = label + " (" + value + ")";
+            button.onclick = function() {
+                value = value === 0 ? 1 : 0;
+                button.innerText = label + " (" + value + ")";
+            };
+            
+            wrapper.appendChild(button);
+            container.appendChild(wrapper);
+        }
+
+        function addSlide() {
+            const container = document.getElementById("controls");
+            const label = "Slider";
+            
+            const wrapper = document.createElement("div");
+            wrapper.style.marginBottom = "10px";
+            
+            const labelElement = document.createElement("label");
+            labelElement.innerText = label + ": ";
+            wrapper.appendChild(labelElement);
+            
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = 0;
+            slider.max = 100;
+            slider.step = 1;
+            slider.value = 50;
+            
+            const valueDisplay = document.createElement("span");
+            valueDisplay.innerText = slider.value;
+            
+            slider.oninput = function() {
+                valueDisplay.innerText = slider.value;
+            };
+            
+            wrapper.appendChild(slider);
+            wrapper.appendChild(valueDisplay);
+            container.appendChild(wrapper);
+        }
+
+        function clearControls() {
+            document.getElementById("controls").innerHTML = "";
+        }
+    </script>
+</head>
+<body>
+    <h2>Gerador de Controles</h2>
+    <div>
+        <h3>Conexão Serial</h3>
+        <button onclick="connectSerial()">Conectar Serial</button>
+        <button onclick="disconnectSerial()">Desconectar Serial</button>
+        <button onclick="testSerialConnection()">Testar Conexão</button>
+        <button onclick="sendSerialMessage()">Enviar Mensagem</button>
+        <p>Status da conexão: <span id="connectionStatus">Desconectado</span></p>
+        <p>Bytes recebidos: <span id="byteCount">0</span></p>
+    </div>
+    <canvas id="serialChart"></canvas>
+    <hr>
+    <div>
+        <h3>Controles</h3>
+        <button onclick="addButton()">Adicionar Botão</button>
+        <button onclick="addSlide()">Adicionar Slider</button>
+        <button onclick="clearControls()">Limpar Controles</button>
+        <br><br>
+        <div id="controls"></div>
+    </div>
+    <script>
+        const ctx = document.getElementById("serialChart").getContext("2d");
+        const myChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [{
+                    label: "Bytes Recebidos",
+                    data: [],
+                    borderColor: "blue",
+                    borderWidth: 1,
+                    fill: false,
+                }],
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { display: false },
+                    y: { beginAtZero: true },
+                },
+            },
+        });
+    </script>
+</body>
+</html>
