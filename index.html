@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Arduino via Web Serial</title>
+</head>
+<body>
+    <h2>Conectar ao Arduino</h2>
+    <button onclick="conectarSerial()">Conectar</button>
+    <button onclick="enviarComando('LIGAR')">Ligar</button>
+    <button onclick="enviarComando('DESLIGAR')">Desligar</button>
+    
+    <h3>Dados do Arduino:</h3>
+    <div id="dados"></div>
+
+    <script>
+        let portaSerial;
+        let leitor;
+        let decodificador = new TextDecoderStream();
+
+        async function conectarSerial() {
+            try {
+                portaSerial = await navigator.serial.requestPort(); // Solicita a porta
+                await portaSerial.open({ baudRate: 9600 }); // Abre a conexão
+                
+                const leitorSerial = portaSerial.readable.pipeThrough(decodificador).getReader();
+                document.getElementById("dados").innerText = "Conectado!";
+                
+                // Leitura contínua dos dados recebidos
+                while (true) {
+                    const { value, done } = await leitorSerial.read();
+                    if (done) break;
+                    if (value) {
+                        document.getElementById("dados").innerText = "Recebido: " + value;
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao conectar:", error);
+            }
+        }
+
+        async function enviarComando(comando) {
+            if (!portaSerial) {
+                alert("Conecte-se primeiro ao Arduino!");
+                return;
+            }
+
+            const encoder = new TextEncoder();
+            const escritor = portaSerial.writable.getWriter();
+            await escritor.write(encoder.encode(comando + "\n"));
+            escritor.releaseLock();
+        }
+    </script>
+</body>
+</html>
