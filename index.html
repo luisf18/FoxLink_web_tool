@@ -1,222 +1,434 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serial Monitor Web</title>
+    <title>Chat Simples com Configurações</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        #output { width: 100%; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap; }
-        input, button, select { margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <h2>Serial Monitor Web</h2>
-    <button onclick="conectarSerial()">Conectar</button>
-    <button onclick="desconectarSerial()">Desconectar</button>
-    <br>
-    <textarea id="output" readonly></textarea>
-    <br>
-    <input type="text" id="inputComando" placeholder="Digite um comando...">
-    <button onclick="enviarComando()">Enviar</button>
-
-    <script>
-        let portaSerial;
-        let leitorSerial;
-        let bufferRecebido = "";
-        const decodificador = new TextDecoderStream();
-
-        async function conectarSerial() {
-            try {
-                portaSerial = await navigator.serial.requestPort(); // Solicita a porta
-                await portaSerial.open({ baudRate: 115200 }); // Abre a conexão
-                leitorSerial = portaSerial.readable.pipeThrough(decodificador).getReader();
-                document.getElementById("output").value += "Conectado ao dispositivo!\n";
-                lerDados();
-            } catch (error) {
-                console.error("Erro ao conectar:", error);
-            }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            gap: 30px;
+        }
+        .sidebar {
+            width: 300px;
+            background: #ffffff;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            height: 100vh;
         }
 
-        async function lerDados() {
+        /*/
+        .sidebar h2 {
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        /*/
+
+        .sidebar hr {
+            border: none;
+            height: 2px;
+            background-color: #ccc;
+            margin: 10px 0;
+        }
+
+        /*/
+        .sidebar h3 {
+            color: #555;
+            font-size: 18px;
+            margin: 2px 0;
+        }
+        /*/
+    
+        .user-card {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .user-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .user-header img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+        }
+        .edit-btn {
+            padding: 5px 10px;
+            border: 2px solid #007BFF;
+            background-color: white;
+            color: #007BFF;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .edit-btn:hover {
+            background-color: #007BFF;
+            color: white;
+        }
+        .action-buttons {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .start-btn {
             
-            while (true) {
-                const { value, done } = await leitorSerial.read();
-                if (done){
-                    // Allow the serial port to be closed later.
-                    console.log('[readLoop] DONE', done);
-                    reader.releaseLock();
-                    break;
-                }
-                
-                console.log(value);
-                
-                if (value) {
-                    console.log(value);
-                    bufferRecebido += value;
-                    let linhas = bufferRecebido.split("\n");
-                    for (let i = 0; i < linhas.length - 1; i++) {
-                        adicionarAoOutput(linhas[i]);
-                    }
-                    bufferRecebido = linhas[linhas.length - 1]; // Resto do buffer
-                }
-            }
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+
+            background-color: #dc3545;
+            color: #fff;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .start-btn.active {
+            background-color: #28a745;
         }
 
-        function adicionarAoOutput(texto) {
-            const output = document.getElementById("output");
-            output.value += texto;
-            output.scrollTop = output.scrollHeight; // Rolagem automática
+        .scan-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #3575dc;
+            color: #fff;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .scan-btn.active {
+            background-color: #f34500;
         }
 
-        async function enviarComando() {
-            if (!portaSerial) {
-                alert("Conecte-se primeiro ao dispositivo!");
-                return;
-            }
-            const input = document.getElementById("inputComando");
-            const finalChar = "\n";//document.getElementById("finalChar").value;
-            const comando = input.value.<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serial Monitor Web</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        #output { width: 100%; height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap; }
-        input, button, select { margin-top: 10px; }
-        .recebido { color: green; }  /* Cor para mensagens recebidas */
-        .enviado { color: blue; }    /* Cor para mensagens enviadas */
+        /* Estilizando a logo */
+        .logo-container {
+            height: 20%;
+            width: 100%; /* Ocupa toda a largura da sidebar */
+            text-align: center;
+            padding-bottom: 20px;
+        }
+
+        .logo-container img {
+            height: 100%; /* width: 200px; Ajuste conforme necessário */
+            opacity: 0.8;
+        }
+
+        .logo-container img:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
-    <h2>Serial Monitor Web</h2>
-    <button onclick="conectarSerial()">Conectar</button>
-    <button onclick="desconectarSerial()">Desconectar</button>
-    <br>
-    <textarea id="output" readonly></textarea>
-    <br>
-    <input type="text" id="inputComando" placeholder="Digite um comando...">
-    <button onclick="enviarComando()">Enviar</button>
 
-    <script>
-        let portaSerial;
-        let leitorSerial;
-        let bufferRecebido = "";
-        const decodificador = new TextDecoderStream();
+<div class="sidebar">
 
-        async function conectarSerial() {
+    <div style="height: 70%">
+        <h2>Web Fox Link</h2>
+        <h3 style=" color: #555; font-size: 18px; margin: 2px 0;">Versão beta 0.2</h3>
+        <hr>
+        <h3>Conecte seus dispositivos FoxWire</h3>
+        <button class="start-btn" onclick="toggleConnection()">Connectar</button>
+        
+        <button class="scan-btn" onclick="scan()">scan devices</button>
+        
+        <div id="progressContainer" style="display:none; width: 100%; background-color: #ddd; border-radius: 5px; margin-top: 10px;">
+            <div id="progressBar" style="width: 0%; height: 20px; background-color: #4caf50; border-radius: 5px;"></div>
+        </div>
+        <div id="result"></div>
+        <div id="scannedAddresses"></div> <!-- Mostra os endereços buscados -->
+        <div id="users"></div>
+    </div>
+
+    <!-- Adicionando a logo -->
+    <div class="logo-container">
+        <img src="logo.png" alt="FoxWire Logo">
+    </div>
+</div>
+
+<script>
+
+    // ================================================
+    // FOXWIRE 
+    // ================================================
+
+    class FoxWire {        
+        
+        constructor(baudRate = 115200) {
+            this.port = null;
+            this.reader = null;
+            this.writer = null;
+            this.baudRate = baudRate;
+        }
+
+        isConnected() {
+            return !(!this.writer || !this.reader);
+        }
+
+        // Inicia a conexão serial
+        async connect() {
             try {
-                portaSerial = await navigator.serial.requestPort(); // Solicita a porta
-                await portaSerial.open({ baudRate: 115200 }); // Abre a conexão
-                leitorSerial = portaSerial.readable.pipeThrough(decodificador).getReader();
-                document.getElementById("output").value += "Conectado ao dispositivo!\n";
-                lerDados();
+                if (!("serial" in navigator)) {
+                    throw new Error("A API Web Serial não é suportada neste navegador.");
+                }
+                this.port = await navigator.serial.requestPort(); // Solicita ao usuário escolher a porta
+                await this.port.open({ baudRate: this.baudRate });
+                this.writer = this.port.writable.getWriter();
+                this.reader = this.port.readable.getReader();
+                console.log("Conexão serial estabelecida.");
+                return true;
             } catch (error) {
                 console.error("Erro ao conectar:", error);
             }
+            return false;
         }
 
-        async function lerDados() {
-            while (true) {
-                const { value, done } = await leitorSerial.read();
-                if (done){
-                    // Allow the serial port to be closed later.
-                    console.log('[readLoop] DONE', done);
-                    leitorSerial.releaseLock();
-                    break;
+        // Encerra a conexão serial
+        async disconnect() {
+            try {
+                if (this.reader) {
+                    await this.reader.cancel();
+                    this.reader.releaseLock();
                 }
-                
-                console.log(value);
-                
-                if (value) {
-                    console.log(value);
-                    bufferRecebido += value;
-                    let linhas = bufferRecebido.split("\n");
-                    for (let i = 0; i < linhas.length - 1; i++) {
-                        adicionarAoOutput(linhas[i], 'recebido');
+                if (this.writer) {
+                    this.writer.releaseLock();
+                }
+                if (this.port) {
+                    await this.port.close();
+                }
+                console.log("Conexão serial encerrada.");
+            } catch (error) {
+                console.error("Erro ao desconectar:", error);
+            }
+        }
+
+        // Envia bytes e aguarda resposta dentro de um timeout
+        async sendAndReceive(sendData, timeout = 100) {
+            if (!this.writer || !this.reader) {
+                throw new Error("A conexão serial não está aberta.");
+                return [];
+            }
+
+            // Envia os dados
+            await this.writer.write(sendData);
+            console.log("Dados enviados:", sendData);
+
+            await new Promise(resolve => setTimeout(resolve, timeout));
+
+            // Aguarda resposta
+            const receivedData = [];
+            const { value, done } = await this.reader.read();
+            if (done){
+                return [];
+            }
+            receivedData.push(...value);
+
+            console.log("[SendAndRecive] Dados recebidos:", receivedData);
+            return receivedData;
+        }
+
+        // envia e remove os bytes repetidos
+        async send(data) {
+            const recive = await this.sendAndReceive(data); // Aguarda resposta
+            console.log("[Send] recive:", recive );
+            if (recive.length < data.length) {
+                return { ok: false, values: [] }; // Erro: resposta muito curta
+            }
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] !== recive[i]) {
+                    return { ok: false, values: [] }; // Erro: dados não batem
+                }
+            }
+            return { ok: true, values: recive.slice(data.length) }; // Sucesso
+        }
+
+        async check( addr ) {
+            const ans = await this.send( new Uint8Array([0x80|addr]) );
+            console.log("[CHECK] ans:", ans );
+            if( ans.ok ){
+                if(ans.values.length >= 1){
+                    if( (ans.values[0] & 0x1F) == addr ){
+                        return { ok: true, arg: (0x03&(ans.values[0]>>5)), raw: ans.values[0] }; // Sucesso
                     }
-                    bufferRecebido = linhas[linhas.length - 1]; // Resto do buffer
+                    return { ok: false, arg: 0, raw: ans.values[0], send_ok: true };
                 }
+                return { ok: false, arg: 0, raw: 0, send_ok: true };
             }
+            return { ok: false, arg: 0, raw: 0, send_ok: false }; // Sucesso
         }
 
-        function adicionarAoOutput(texto, tipo) {
-            const output = document.getElementById("output");
-            const linha = document.createElement('div');
-            linha.textContent = texto;
-            linha.className = tipo;  // Aplica a classe para colorir a mensagem
-            output.appendChild(linha);
-            output.scrollTop = output.scrollHeight; // Rolagem automática
+    }
+
+    const fx = new FoxWire(115200);
+
+    // ================================================
+
+
+
+    // Função para aguardar um tempo específico
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    // "SERIAL" -----------------------------------------
+    let readingMode = "update";
+    
+    // "buttons" -----------------------------------------
+    async function toggleConnection() {
+        
+        if(fx.isConnected()){
+            console.log("DESCONECTANDO...");
+            await fx.disconnect();
+        }else{
+            console.log("CONECTANDO...");
+            await fx.connect();
         }
 
-        async function enviarComando() {
-            if (!portaSerial) {
-                alert("Conecte-se primeiro ao dispositivo!");
-                return;
-            }
-            const input = document.getElementById("inputComando");
-            const finalChar = "\n";//document.getElementById("finalChar").value;
-            const comando = input.value.trim();
-            if (comando === "") return;
+        // atualiza o botão de conexão
+        const startButton = document.querySelector('.start-btn');
+        if( fx.isConnected() ){
+            console.log("CONECTADO!!");
+            startButton.classList.add('active');
+            startButton.textContent = 'conectado';
+        }else{
+            console.log("DESCONECTADO!!");
+            startButton.classList.remove('active');
+            startButton.textContent = 'desconectado';
+        }
+    }
 
-            const encoder = new TextEncoder();
-            const escritor = portaSerial.writable.getWriter();
-            await escritor.write(encoder.encode(comando + finalChar));
-            escritor.releaseLock();
 
-            adicionarAoOutput("Enviado: " + comando, 'enviado');
-            input.value = "";
+    // SCAN ------------------------------------------------
+    async function scan() {
+        
+        if ( !fx.isConnected() ) {
+            alert("Conecte primeiro a porta serial.");
+            return;
         }
 
-        async function desconectarSerial() {
-            if (portaSerial) {
-                await leitorSerial.cancel();
-                await portaSerial.close();
-                portaSerial = null;
-                document.getElementById("output").value += "Desconectado!\n";
+        // Ajusta elementos graficos...
+        //clearInterval(intervalCHECK);
+        document.getElementById("result").textContent = "Escaneando...";
+        document.getElementById("scannedAddresses").innerHTML = "";
+        document.getElementById("progressBar").style.width = "0%";
+        document.getElementById("progressContainer").style.display = "block";
+        //document.getElementById("addressCards").innerHTML = ""; // Limpa os cards anteriores
+        const startButton = document.querySelector('.scan-btn');
+        startButton.classList.add('active');
+        startButton.textContent = "scanning...";
+
+        // Lista de endereços válidos
+        let validAddresses = [];
+        for (let i = 0; i <= 32; i++) {
+            const ans = await fx.check(i);
+            if (ans.ok) {
+                console.log(`Endereço ${i}: arg ${ans.arg}`);
+                document.getElementById("scannedAddresses").innerHTML +=  `Endereço ${i}: arg ${ans.arg}<br>`;
+                //validAddresses.push({ address: i, ans.arg, ans.raw });
+                validAddresses.push({ address: i });
             }
+            document.getElementById("progressBar").style.width = `${(i / 32) * 100}%`;
         }
 
-        // Permitir envio com a tecla Enter
-        document.getElementById("inputComando").addEventListener("keydown", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault(); // Evita quebra de linha
-                enviarComando();
-            }
-        });
-    </script>
-</body>
-</html>
-trim();
-            if (comando === "") return;
+        startButton.classList.remove('active');
+        startButton.textContent = "scan";
+        document.getElementById("progressBar").style.width = "100%";
 
-            const encoder = new TextEncoder();
-            const escritor = portaSerial.writable.getWriter();
-            await escritor.write(encoder.encode(comando + finalChar));
-            escritor.releaseLock();
-
-            adicionarAoOutput("Enviado: " + comando);
-            input.value = "";
+    }
+    
+    // "USUARIOS" dispositivos ---------------------------------
+    class User {
+        constructor(name, age, country, number, img) {
+            this.name = name;
+            this.age = age;
+            this.country = country;
+            this.number = number;
+            this.img = img;
         }
+        dump() {
 
-        async function desconectarSerial() {
-            if (portaSerial) {
-                await leitorSerial.cancel();
-                await portaSerial.close();
-                portaSerial = null;
-                document.getElementById("output").value += "Desconectado!\n";
-            }
         }
+    }
 
-        // Permitir envio com a tecla Enter
-        document.getElementById("inputComando").addEventListener("keydown", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault(); // Evita quebra de linha
-                enviarComando();
-            }
-        });
-    </script>
+    let users = [];
+    //let userDataCopy = JSON.parse(JSON.stringify(users));
+
+    function addUser( user ) {
+        // Atualiza a lista global de usuários
+        users = [...users, user];
+        renderUsers( user );
+    }
+
+    function renderUsers( usersList ) {
+
+        const userContainer = document.getElementById("users");
+
+        userContainer.innerHTML = usersList.map((user, index) => `
+            <div class="user-card" id="user${index}">
+                <div class="user-header">
+                    <div>
+                        <img src="${user.img}" alt="${user.name}">
+                        <strong>${user.name}</strong>
+                    </div>
+                    <button class="edit-btn" onclick="editUser(${index})">Editar</button>
+                </div>
+                <div class="user-info">
+                    <label>Nome: <input type="text" id="name${index}" value="${user.name}" disabled></label><br>
+                    <label>Idade: <input type="text" id="age${index}" value="${user.age}" disabled></label><br>
+                    <label>País: <input type="text" id="country${index}" value="${user.country}" disabled></label><br>
+                    <label>Número: <input type="text" id="number${index}" value="${user.number}" disabled></label>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function editUser(index) {
+        document.getElementById(`name${index}`).disabled = false;
+        document.getElementById(`age${index}`).disabled = false;
+        document.getElementById(`country${index}`).disabled = false;
+        document.getElementById(`number${index}`).disabled = false;
+
+        const userCard = document.getElementById(`user${index}`);
+        const actionButtons = document.createElement('div');
+        actionButtons.classList.add('action-buttons');
+        actionButtons.innerHTML = `
+            <button onclick="saveUser(${index})">Salvar</button>
+            <button onclick="cancelEdit(${index})">Cancelar</button>
+        `;
+        userCard.appendChild(actionButtons);
+    }
+
+    function saveUser(index) {
+        users[index].name = document.getElementById(`name${index}`).value;
+        users[index].age = document.getElementById(`age${index}`).value;
+        users[index].country = document.getElementById(`country${index}`).value;
+        users[index].number = document.getElementById(`number${index}`).value;
+        userDataCopy = JSON.parse(JSON.stringify(users));
+        renderUsers();
+    }
+
+    function cancelEdit(index) {
+        document.getElementById(`name${index}`).value = userDataCopy[index].name;
+        document.getElementById(`age${index}`).value = userDataCopy[index].age;
+        document.getElementById(`country${index}`).value = userDataCopy[index].country;
+        document.getElementById(`number${index}`).value = userDataCopy[index].number;
+        renderUsers();
+    }
+
+    addUsers([
+        new User("Usuário A", 25, "Brasil", "+55 99999-9999", "https://flagsapi.com/BR/shiny/64.png"),
+        new User("Usuário B", 30, "EUA", "+1 88888-8888", "https://flagsapi.com/US/shiny/64.png")
+    ]);
+</script>
+
 </body>
 </html>
