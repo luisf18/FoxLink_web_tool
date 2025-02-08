@@ -126,6 +126,26 @@
         .logo-container img:hover {
             opacity: 1;
         }
+
+        .devices-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+        .box {
+            width: 100px;
+            height: 100px;
+            background: #3498db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -153,6 +173,10 @@
     <div class="logo-container">
         <img src="logo.png" alt="FoxWire Logo">
     </div>
+</div>
+
+<div class="devices-container" id="boxContainer">
+    <!-- Caixas serão adicionadas aqui -->
 </div>
 
 <script>
@@ -325,6 +349,7 @@
         const startButton = document.querySelector('.scan-btn');
         startButton.classList.add('active');
         startButton.textContent = "scanning...";
+        clearBoxes();
 
         // Lista de endereços válidos
         let validAddresses = [];
@@ -335,6 +360,7 @@
                 document.getElementById("scannedAddresses").innerHTML +=  `Endereço ${i}: arg ${ans.arg}<br>`;
                 //validAddresses.push({ address: i, ans.arg, ans.raw });
                 validAddresses.push({ address: i });
+                addBox(i);
             }
             document.getElementById("progressBar").style.width = `${(i / 32) * 100}%`;
         }
@@ -346,18 +372,48 @@
     }
     
     // "USUARIOS" dispositivos ---------------------------------
-    class User {
-        constructor(name, age, country, number, img) {
-            this.name = name;
-            this.age = age;
-            this.country = country;
-            this.number = number;
-            this.img = img;
-        }
-        dump() {
 
+    function addBox(i) {
+        const container = document.getElementById("boxContainer");
+        const box = document.createElement("div");
+        box.classList.add("box");
+        box.id = `device_${i}`; // Adiciona um ID único ao box
+        box.textContent = i;
+        container.appendChild(box);
+    }
+
+    function clearBoxes() {
+        const container = document.getElementById("boxContainer");
+        container.innerHTML = ""; // Remove todos os elementos dentro do container
+    }
+
+
+    class fx_device {
+        constructor( Addr ) {
+            this.Addr = Addr;
+            this.deviceId = null;
+            this.foxWireVersion = null;
+            this.firmwareVersion = null;
+            this.lote = null;
+        }
+        async dump() {
+            const ans = await fx.check(this.Addr);
+            if (ans.ok) {
+                return true;
+            }
+            return false;
         }
     }
+
+    //class fxs50 extends fx_device {
+    //    constructor(Addr, extraFeature) {
+    //        super(Addr); // Chama o construtor da classe pai
+    //        this.extraFeature = extraFeature; // Propriedade exclusiva da fxs50
+    //    }
+    //    getDetails() {
+    //        return `FXS50 - Addr: ${this.Addr}, Extra: ${this.extraFeature}`;
+    //    }
+    //}
 
     let users = [];
     //let userDataCopy = JSON.parse(JSON.stringify(users));
