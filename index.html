@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Simples com Configurações</title>
     <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
@@ -12,7 +18,10 @@
             padding: 0;
             display: flex;
             gap: 30px;
+            height: 100vh;
         }
+
+        /* Sidebar ----------------------------------------------- */
         .sidebar {
             width: 300px;
             background: #ffffff;
@@ -29,13 +38,6 @@
         }
         /*/
 
-        .sidebar hr {
-            border: none;
-            height: 2px;
-            background-color: #ccc;
-            margin: 10px 0;
-        }
-
         /*/
         .sidebar h3 {
             color: #555;
@@ -43,43 +45,13 @@
             margin: 2px 0;
         }
         /*/
-    
-        .user-card {
-            background: #f8f8f8;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .user-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .user-header img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-        }
-        .edit-btn {
-            padding: 5px 10px;
-            border: 2px solid #007BFF;
-            background-color: white;
-            color: #007BFF;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .edit-btn:hover {
-            background-color: #007BFF;
-            color: white;
-        }
-        .action-buttons {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-        }
 
+        .sidebar hr {
+            border: none;
+            height: 2px;
+            background-color: #ccc;
+            margin: 10px 0;
+        }
         .start-btn {
             
             padding: 10px 20px;
@@ -110,7 +82,6 @@
             background-color: #f34500;
         }
 
-        /* Estilizando a logo */
         .logo-container {
             height: 20%;
             width: 100%; /* Ocupa toda a largura da sidebar */
@@ -127,24 +98,118 @@
             opacity: 1;
         }
 
+        /* Sidebar ----------------------------------------------- */
         .devices-container {
             flex: 1;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 10px;
-            padding: 20px;
-            background: #f4f4f4;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 15px;
+            padding: 20px; /* Adicionando espaço no topo para evitar sobreposição */
+            max-width: 100vw; /* Garante que não ultrapasse a largura da tela */
+            overflow-x: auto; /* Permite rolagem horizontal caso necessário */
         }
-        .box {
-            width: 100px;
-            height: 100px;
-            background: #3498db;
+
+        .user-card {
+            background: #ffffff;
+            /*/width: 350px;/*/
+            
+            min-width: 350px;
+            max-width: 400px;
+            /*/max-width: 100%;/*/ /* Evita que os cartões ultrapassem a largura do contêiner */
+
+            min-height: 500px;
+            max-height: 550px;
+
+            
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 16px; /* Reduzi o espaçamento entre os elementos */
+            justify-content: space-between;
+
+        }
+        .user-header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
+            gap: 10px;
+        }
+        .user-header img {
+            width: 70px;
+            height: 70px;
+            border-radius: 5px;
+        }
+        .device-title {
+            font-size: 1.8rem;
             font-weight: bold;
+        }
+        .device-info {
+            font-size: 1rem;
+            color: #666;
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px; /* Reduzi o espaçamento entre os inputs */
+        }
+        .user-info label {
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .user-info input {
+            flex: 1;
+            padding: 3px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .user-info input[type="number"] {
+            width: 70px;
+        }
+        
+        /* Gráfico */
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 8px;
+        }
+        canvas {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 100%; /* Agora não estica mais */
+            height: 80px; /* Reduzi a altura */
+        }
+        .chart-labels {
+            font-size: 0.8rem;
+            text-align: center;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        /* Botões */
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px; /* Reduzi o espaçamento */
+        }
+        .action-buttons button {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            background-color: #007BFF;
+            color: #fff;
+            transition: background 0.3s ease-in-out;
+        }
+        .action-buttons button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
@@ -175,7 +240,7 @@
     </div>
 </div>
 
-<div class="devices-container" id="boxContainer">
+<div class="devices-container" id="cards">
     <!-- Caixas serão adicionadas aqui -->
 </div>
 
@@ -192,6 +257,16 @@
             this.reader = null;
             this.writer = null;
             this.baudRate = baudRate;
+            this.CMD_DEVICE_ID             = 0x00;
+            this.CMD_FIRMWARE_ID           = 0x01;
+            this.CMD_FOXWIRE_VERSION_ID    = 0x02;
+            this.CMD_READ                  = 0x03;
+            this.CMD_RESET                 = 0x04;
+            this.CMD_REQUEST_WRITE         = 0x05;
+            this.CMD_W_RESTORE             = 0x01;
+            this.CMD_W_RESTORE_KEPP_ADDR   = 0x02;
+            this.CMD_W_SAVE                = 0x03;
+            this.busy = false;
         }
 
         isConnected() {
@@ -236,15 +311,21 @@
         }
 
         // Envia bytes e aguarda resposta dentro de um timeout
-        async sendAndReceive(sendData, timeout = 100) {
+        async sendAndReceive(sendData, timeout = 10) {
             if (!this.writer || !this.reader) {
                 throw new Error("A conexão serial não está aberta.");
                 return [];
             }
 
+            while( this.busy ){
+                await new Promise(resolve => setTimeout(resolve, 20));
+            }
+
+            this.busy = true;
+
             // Envia os dados
             await this.writer.write(sendData);
-            console.log("Dados enviados:", sendData);
+            //console.log("Dados enviados:", sendData);
 
             await new Promise(resolve => setTimeout(resolve, timeout));
 
@@ -252,18 +333,20 @@
             const receivedData = [];
             const { value, done } = await this.reader.read();
             if (done){
+                this.busy = false;
                 return [];
             }
             receivedData.push(...value);
 
-            console.log("[SendAndRecive] Dados recebidos:", receivedData);
+            this.busy = false;
+            //console.log("[SendAndRecive] Dados recebidos:", receivedData);
             return receivedData;
         }
 
         // envia e remove os bytes repetidos
         async send(data) {
             const recive = await this.sendAndReceive(data); // Aguarda resposta
-            console.log("[Send] recive:", recive );
+            console.log(`[Send: ${data}][Receive: ${recive}]`);
             if (recive.length < data.length) {
                 return { ok: false, values: [] }; // Erro: resposta muito curta
             }
@@ -281,13 +364,85 @@
             if( ans.ok ){
                 if(ans.values.length >= 1){
                     if( (ans.values[0] & 0x1F) == addr ){
-                        return { ok: true, arg: (0x03&(ans.values[0]>>5)), raw: ans.values[0] }; // Sucesso
+                        return { ok: true, arg: (0x03&(ans.values[0]>>5)), value: ans.values[0] }; // Sucesso
                     }
-                    return { ok: false, arg: 0, raw: ans.values[0], send_ok: true };
+                    return { ok: false, arg: 0, value: ans.values[0], send_ok: true };
                 }
-                return { ok: false, arg: 0, raw: 0, send_ok: true };
+                return { ok: false, arg: 0, value: 0, send_ok: true };
             }
-            return { ok: false, arg: 0, raw: 0, send_ok: false }; // Sucesso
+            return { ok: false, arg: 0, value: 0, send_ok: false }; // Sucesso
+        }
+
+        checksum(v){
+            v = v&0x1F;
+            let cs = ( 0x3 & ( (v&1) + ((v>>1)&1) + ((v>>2)&1) + ((v>>3)&1) + ((v>>4)&1) ) );
+            return (cs << 5) | v;
+        }
+
+        // READ ----------------------------------------------------------
+        async READ( addr, arg  ) {
+            addr = 0xA0|(addr & 0x1F);
+            arg = arg & 0xFF;
+            const ans = await this.send( new Uint8Array([addr,arg]) );
+            console.log("[READ] ans:", ans );
+            if( ans.ok ){
+                if(ans.values.length >= 1){
+                    return { ok: true, arg: 0, value: ans.values[0], send_ok: true };
+                }
+            }
+            return { ok: false, arg: 0, value: 0, send_ok: ans.ok };
+        }
+        async register_read( addr, reg_addr  ) {
+            reg_addr = reg_addr & 0x1F;
+            reg_addr = 0x80 | this.checksum(reg_addr);
+            const ans = await this.READ( addr, reg_addr );
+            console.log("[REG READ] ans:", ans );
+            return ans;
+        }
+
+        // PACOTE WRITE ----------------------------------------------------------
+
+        async WRITE( addr, arg1, arg2 ) {
+            addr = 0xC0|(addr & 0x1F);
+            arg1 = arg1 & 0xFF;
+            arg2 = arg2 & 0xFF;
+            const ans = await this.send( new Uint8Array([addr,arg1,arg2]) );
+            console.log("[WRITE] ans:", ans );
+            if( ans.ok && ans.values.length >= 1 ){
+                return { ok: true, arg: 0, value: ans.values[0], send_ok: true };
+            }
+            return { ok: false, arg: 0, value: 0, send_ok: ans.ok };
+        }
+
+        async register_write( addr, reg_addr, val ) {
+            reg_addr = 0x80 | this.checksum(reg_addr); // 0x80 -> indica que é um registrador e não um comando
+            const ans = await this.WRITE( addr, reg_addr, val );
+            return ans;
+        }
+
+        async command( addr, cmd, val = null ) {
+            //console.log( `checksum ${cmd} -> ${(this.checksum(cmd)<<5)}` );
+            console.log( `[addr ${addr}] command: ${cmd} (${cmd.toString(2)}) val: ${val}` );
+            addr = (addr & 0x1F);
+            cmd = this.checksum(cmd);
+            console.log( `|->[addr ${addr}] command: ${cmd.toString(2)} val: ${val}` );
+            if( val ){
+                val = val & 0xFF;
+                return await this.WRITE( addr, cmd, val );
+            }
+            return await this.READ( addr, cmd );
+        }
+
+        async command_key( addr, cmd ) {
+            const key = await this.command( addr, 0x05 );
+            console.log("key",key);
+            if( key.value && key.ok ){
+                const KEY = 0xff&(255-key.value);
+                console.log("key:",key.value);
+                console.log("key\\:",KEY);
+                return await this.command( addr, cmd, KEY );
+            }
+            return { ok: false, arg: 0, value: 0, send_ok: key.send_ok };
         }
 
     }
@@ -297,14 +452,356 @@
     // ================================================
 
 
+    // ================================================
+    // CARDS
+    // ================================================
 
+    class widget{
+        constructor(device_id, name, defaultValue) {
+            //this.addr = addr;
+            this.name = name;
+            this.defaultValue = defaultValue;
+            this.currentValue = defaultValue;
+            this.inputValue = defaultValue;
+            this.type = 'none';
+            this.div = null;
+        }
+        trim(a){
+            console.log("[*] trim -> ", a.value );
+            console.log(a);
+            if(a.value<0) a.value = 0;
+            else if(a.value>255) a.value = 255;
+        }
+        html(){
+        }
+        display(){
+            //this.parameters[param].display( container.querySelector(`#param_${param}`) );
+        }
+    }
+
+    class widget_int extends widget{
+        constructor(device_id, name, defaultValue, Min, Max ) {
+            super(device_id, name, defaultValue);
+            this.type = "int";
+            this.min = Min;
+            this.max = Max;
+            this.input = null;
+            this.trim_callback = null;
+        }
+        html(){
+            this.div = document.createElement("label");
+            this.div.innerText = `${this.name}: `;
+            this.input = document.createElement("input");
+            this.input.type = "number";
+            this.input.id = `param_${this.name}`;
+            this.input.value = this.currentValue;
+            // Passando apenas o valor do input
+            //input.onblur = () => this.trim(input.value);
+            //input.onblur = () => this.trim(this.div.querySelector("input"));
+            this.input.onblur = () => this.trim(this.input);
+            this.div.appendChild(this.input);
+            return this.div;
+            //return
+            //`<label>${this.name}: 
+            //    <input type="number" id="param_${this.name}" value="${this.currentValue}" onblur="${this.trim()}(this)">
+            //</label>`;
+        }
+        value(){
+            return this.input.value;
+        }
+        trim(){
+            this.input.value = this.trim_num(this.input.value);
+            if( this.trim_callback ){
+                this.trim_callback(this);
+            }
+        }
+        trim_num(x) {
+            x = parseInt(x) || this.min; // Converte para inteiro e evita NaN
+            if (x < this.min) x = this.min;
+            else if (x > this.max) x = this.max;
+            return x;
+        }
+        display(x){
+            this.input.value = this.trim_num(x);
+        }
+    }
+
+    class widget_string extends widget{
+        constructor(device_id, name, defaultValue, len ) {
+            super(device_id, name, defaultValue);
+            this.type = "string";
+            this.len = len;
+        }
+        trim(a){}
+        html(){
+            const label = document.createElement("label");
+            label.innerText = `${this.name}: `;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.id = `param_${this.name}`;
+            input.value = this.currentValue;
+            input.maxLength=this.len;
+            // Passando apenas o valor do input
+            //input.onblur = () => this.trim(input.value);
+            //input.onblur = () => this.trim(label.querySelector("input"));
+            label.appendChild(input);
+            return label;
+        }
+        display(x){}
+    }
+
+    class devices_card {
+        constructor( Addr ) {
+            this.Addr = Addr;
+            this.deviceId = null;
+            this.foxWireVersion = null;
+            this.firmwareVersion = null;
+            this.lote = null;
+        }
+    }
+
+    class fxs50 extends devices_card {
+        constructor(Addr) {
+            super(Addr);
+            this.id = Cards.length;
+            this.parameters = {
+                addr: { addr: 0x00, wg: new widget_int(this.id,"Addr",0,0,31) },
+                name: { addr: 0x10, wg: new widget_string(this.id,"name","FX-S50",32) },
+                //CTRL: 0x01,
+                led_hz: { addr: 0x02, wg: new widget_int(this.id,"led_hz",120,0,255) },
+                led_brilho: { addr: 0x03, wg: new widget_int(this.id,"led_brilho",50,10,100) },
+                filter_size: { addr: 0x04, wg: new widget_int(this.id,"filter_size",5,0,50) },
+                filter_trigger: { addr: 0x05, wg: new widget_int(this.id,"filter_trigger",5,0,50) }
+                //READ: 0x06
+            };
+            this.parameters.addr.wg.currentValue = this.Addr;
+
+            this.parameters.addr.wg.trim_callback = (self) => {
+                console.log(`Lambda executado! Valor do objeto: ${self.value()}`);
+                for( const card of Cards ){
+                    if( card.id != this.id ){
+                        if( self.value() == card.Addr ){
+                            console.log(`ERRO esse endereço ja é utilizado por outro dispositivo da rede!`);
+                            self.input.value = this.Addr;
+                        }
+                    }
+                }
+            }
+
+            //this.graphs = {
+            //    read: { addr: 0x00, wg: new widget_int(this.id,"Addr",0,31) },
+            //}
+            this.grafico = {};
+            this.card = null;
+            
+        }
+
+        async html(){
+            let card = document.createElement("div");
+            this.card = card;
+            card.className = "user-card";
+            card.id = `device_${this.id}"`;
+            cards_container.appendChild(card);
+            const HTML = `
+                <div class="user-header">
+                    <img src=${"https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png"}>
+                    <div>
+                        <div class="device-title">${"FX-S50"} [${this.id}]</div>
+                        <div class="device-info">Modelo: ${"FX-S50"} | Lote: ${"2025"}</div>
+                    </div>
+                </div>
+                <div class="user-info"> </div>
+
+                <!-- Gráfico -->
+                <div class="chart-container">
+                    <canvas id="grafico"></canvas>
+                    <div class="chart-labels">Leitura em tempo real | 60 leituras</div>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="btn_apply">Apply</button>
+                    <button id="btn_read">Read</button>
+                    <button id="btn_save">Save</button>
+                    <button id="btn_default">Default</button>
+                    <button id="btn_reset">Reset</button>
+                </div>
+            `;
+            console.log(HTML);
+            card.innerHTML = HTML;
+            //container.appendChild(box);
+            let INFO = card.querySelector(".user-info");
+            for (const p in this.parameters){
+                INFO.appendChild( this.parameters[p].wg.html() );
+            }
+
+            const btn_read = card.querySelector("#btn_read");
+            if (btn_read) btn_read.addEventListener("click", () => this.read());
+            const btn_default = card.querySelector("#btn_default");
+            if (btn_default) btn_default.addEventListener("click", () => this.default());
+            const btn_save = card.querySelector("#btn_save");
+            if (btn_save) btn_save.addEventListener("click", () => this.save());
+            const btn_apply = card.querySelector("#btn_apply");
+            if (btn_apply) btn_apply.addEventListener("click", () => this.apply());
+            const btn_rst = card.querySelector("#btn_reset");
+            if (btn_rst) btn_rst.addEventListener("click", () => this.reset());
+            
+
+            this.canvas = card.querySelector("#grafico");
+            console.log(this.canvas);
+            this.grafico = {
+                canvas: this.canvas,
+                w: this.canvas.width,
+                h: this.canvas.height,
+                ctx: this.canvas.getContext("2d"),
+                data: new Array(50).fill(0),
+            };
+            console.log(this.grafico);
+            //this.grafico.interval = setInterval(this.adicionarValor.bind(this), 200);
+        }
+
+        async update(){
+            await this.adicionarValor();
+        }
+
+        atualizarGrafico() {
+            this.grafico.ctx.clearRect(0, 0, this.grafico.w, this.grafico.h);
+
+            const max_val = 1;
+            const min_val = 0;
+
+            // Definir estilos para as linhas limite
+            this.grafico.ctx.strokeStyle = "lightgray";
+            this.grafico.ctx.setLineDash([5, 5]); // Padrão tracejado
+
+            // Linha superior (máximo)
+            let yMax = 5 + (this.grafico.h - 10) * (1 - (max_val / max_val));
+            this.grafico.ctx.beginPath();
+            this.grafico.ctx.moveTo(0, yMax);
+            this.grafico.ctx.lineTo(this.grafico.w, yMax);
+            this.grafico.ctx.stroke();
+
+            // Linha inferior (mínimo)
+            let yMin = 5 + (this.grafico.h - 10) * (1 - (min_val / max_val));
+            this.grafico.ctx.beginPath();
+            this.grafico.ctx.moveTo(0, yMin);
+            this.grafico.ctx.lineTo(this.grafico.w, yMin);
+            this.grafico.ctx.stroke();
+
+            // Resetar estilo de linha para normal (sólido)
+            this.grafico.ctx.setLineDash([]);
+
+            // Linhas do gráfico principal
+            this.grafico.ctx.beginPath();
+            this.grafico.ctx.moveTo(0, 5 + (this.grafico.h - 10) * (1 - (this.grafico.data[0] / max_val)) );
+
+            for (let i = 1; i < this.grafico.data.length; i++) {
+                let x = (i / (this.grafico.data.length - 1)) * this.grafico.w;
+                let y = 5 + (this.grafico.h - 10) * (1 - (this.grafico.data[i] / max_val));
+                this.grafico.ctx.lineTo(x, y);
+            }
+
+            this.grafico.ctx.strokeStyle = "blue";
+            this.grafico.ctx.lineWidth = 1.5;
+            this.grafico.ctx.stroke();
+        }
+        
+        async adicionarValor() {
+            //console.log(this.grafico);
+            this.grafico.data.shift();
+            //this.grafico.data.push(Math.random() * 10);
+            let x = await fx.check( this.Addr );
+            console.log( "x: ", x );
+            this.grafico.data.push( parseInt(x.arg) );
+            this.atualizarGrafico();
+        }
+
+        async read(){
+            this.parameters.addr.wg.input.value = this.Addr;
+            console.log(`READ-BTN [0x${this.Addr} / ID: ${this.id}]`);
+            for( const param in this.parameters ){
+                if( param != "addr" && param != "name" ){
+                    const ans = await fx.register_read( this.Addr, this.parameters[param].addr  );
+                    if( ans.ok ){
+                        console.log(`READ-BTN-RESULT[${param} 0x${ this.parameters[param].addr }] ${ans.value}`);
+                        this.parameters[param].wg.display( ans.value );
+                    }else{
+                        console.log(`READ-BTN-RESULT[${param} 0x${ this.parameters[param].addr }] ERRO`);
+                    }
+                }
+            }
+        }
+        
+        async default(){
+            // Comando que retorna as configurações aos valores padrão
+            // mantendo o endereço do dispositivo
+            await fx.command_key(this.Addr,0x02);
+            await this.read();
+            //for( const param in this.parameters ){
+            //    //await this.parameters[param].wg.display( this.parameters[param].wg.defaultValue );
+            //}
+        }
+
+        async apply(){
+            console.log(`APPLY-BTN [0x${this.Addr} / ID: ${this.id}]`);
+            for( const param in this.parameters ){
+                if( param != "addr" && param != "name" ){
+                    const wg = this.parameters[param].wg;
+                    const reg_addr = this.parameters[param].addr;
+                    let IN = wg.input.value;
+                    let ans = await fx.register_write( this.Addr, reg_addr,  IN );
+                    if( ans.ok ){
+                        wg.display( ans.value );
+                    }else{
+                        console.log(`ERRO-1`);
+                    }
+                }else if( param == "addr" ){
+                    const wg = this.parameters[param].wg;
+                    //addr_check(); // vai verificar se existe conflito de endereço com outros dispositivos
+                    wg.trim();
+                    const new_addr = wg.value();
+                    if( new_addr != this.Addr ){
+                        const ans = await fx.register_write( this.Addr, this.parameters.addr.addr,  new_addr );
+                        if( ans.ok ){
+                            wg.display( ans.value );
+                            this.Addr = ans.value;
+                            console.log( `[DEVICE ${this.id}][CHANGE ADDR TO ${this.Addr}]` );
+                        }else{
+                            console.log(`ERRO ao alterar o endereço!!!`);
+                        }
+                    }
+                }
+            }
+        }
+
+        async save(){
+            console.log("comando de salvamento especifico do fxs50");
+            await this.apply();
+            let ans = await fx.command_key(this.Addr,0x03); // Comando de save
+            console.log( "save->", ans );
+            //ans = await fx.command(this.Addr,0x03); // Comando de READ
+            //console.log( "save/command(READ)->", ans );
+        }
+
+        async reset(){
+            await fx.command(this.Addr,0x04); // Comando de reset
+            await delay(20);
+            await this.read();
+        }
+
+    }
+
+    cards_interval = null;
+    let Cards = []
+    const cards_container = document.getElementById("cards");
+
+
+    // ===========================================================================
+    // Sidebar e funções gerais
+    // ===========================================================================
     // Função para aguardar um tempo específico
     function delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    
-    // "SERIAL" -----------------------------------------
-    let readingMode = "update";
     
     // "buttons" -----------------------------------------
     async function toggleConnection() {
@@ -323,6 +820,7 @@
             console.log("CONECTADO!!");
             startButton.classList.add('active');
             startButton.textContent = 'conectado';
+            await begin();
         }else{
             console.log("DESCONECTADO!!");
             startButton.classList.remove('active');
@@ -333,157 +831,108 @@
 
     // SCAN ------------------------------------------------
     async function scan() {
-        
-        if ( !fx.isConnected() ) {
+        if (!fx.isConnected()) {
             alert("Conecte primeiro a porta serial.");
             return;
         }
 
-        // Ajusta elementos graficos...
-        //clearInterval(intervalCHECK);
+        // Ajusta elementos gráficos...
         document.getElementById("result").textContent = "Escaneando...";
         document.getElementById("scannedAddresses").innerHTML = "";
         document.getElementById("progressBar").style.width = "0%";
         document.getElementById("progressContainer").style.display = "block";
-        //document.getElementById("addressCards").innerHTML = ""; // Limpa os cards anteriores
         const startButton = document.querySelector('.scan-btn');
         startButton.classList.add('active');
         startButton.textContent = "scanning...";
-        clearBoxes();
+        
+        clearCards();
 
-        // Lista de endereços válidos
         let validAddresses = [];
+
+        await delay(200);
+
+        // 1️⃣ **Verifica os endereços um por um**
         for (let i = 0; i <= 32; i++) {
-            const ans = await fx.check(i);
-            if (ans.ok) {
-                console.log(`Endereço ${i}: arg ${ans.arg}`);
-                document.getElementById("scannedAddresses").innerHTML +=  `Endereço ${i}: arg ${ans.arg}<br>`;
-                //validAddresses.push({ address: i, ans.arg, ans.raw });
-                validAddresses.push({ address: i });
-                addBox(i);
+            try {
+                const ans = await fx.check(i); // Aguarda a resposta antes de continuar
+                if (ans.ok) {
+                    validAddresses.push(i);
+                    console.log(`Endereço ${i}: arg ${ans.arg}`);
+                    document.getElementById("scannedAddresses").innerHTML += `Endereço ${i}<br>`; //: arg ${ans.arg}<br>`;
+                }
+            } catch (error) {
+                console.error(`Erro ao verificar endereço ${i}:`, error);
             }
+
+            // Atualiza progress bar
             document.getElementById("progressBar").style.width = `${(i / 32) * 100}%`;
         }
 
+        for (const i of validAddresses) {
+            await addCard(i);
+        }
+
+        // Finaliza scan
         startButton.classList.remove('active');
         startButton.textContent = "scan";
         document.getElementById("progressBar").style.width = "100%";
+        document.getElementById("result").textContent = "ok";
 
-    }
-    
-    // "USUARIOS" dispositivos ---------------------------------
-
-    function addBox(i) {
-        const container = document.getElementById("boxContainer");
-        const box = document.createElement("div");
-        box.classList.add("box");
-        box.id = `device_${i}`; // Adiciona um ID único ao box
-        box.textContent = i;
-        container.appendChild(box);
-    }
-
-    function clearBoxes() {
-        const container = document.getElementById("boxContainer");
-        container.innerHTML = ""; // Remove todos os elementos dentro do container
-    }
-
-
-    class fx_device {
-        constructor( Addr ) {
-            this.Addr = Addr;
-            this.deviceId = null;
-            this.foxWireVersion = null;
-            this.firmwareVersion = null;
-            this.lote = null;
-        }
-        async dump() {
-            const ans = await fx.check(this.Addr);
-            if (ans.ok) {
-                return true;
-            }
-            return false;
+        // Atualização em tempo real dos graficos
+        if( Cards.length ){
+            cards_interval = setInterval( cards_update, 200 );
         }
     }
 
-    //class fxs50 extends fx_device {
-    //    constructor(Addr, extraFeature) {
-    //        super(Addr); // Chama o construtor da classe pai
-    //        this.extraFeature = extraFeature; // Propriedade exclusiva da fxs50
+    async function addCard(i) {
+        const F = new fxs50(i);
+        F.html();
+        await F.read();
+        Cards.push(F);
+    }
+
+    function clearCards() {
+        if( cards_interval ) clearInterval(cards_interval);
+        // Esvazia o array e remove os elementos do DOM
+        Cards = [];
+        //document.getElementById("cards").innerHTML = "";
+        cards_container.innerHTML = "";
+    }
+
+    async function cards_update(){
+        console.log("update");
+        for (const card of Cards) {
+            await card.update();
+            await delay(30);
+        }
+    }
+
+    // ================================================
+
+
+
+    for (let i = 0; i < 32; i++) {
+        checksum = fx.checksum(i);
+        console.log(`i: ${i} | binário: ${i.toString(2).padStart(8, '0')} | checksum: ${checksum} | ${checksum.toString(2).padStart(8, '0')}`);
+    }
+
+    async function begin(){
+        await fx.command( 0x05, 0x03 );
+    }
+
+    //async command( addr, cmd, val = null ) {
+    //        //console.log( `checksum ${cmd} -> ${(this.checksum(cmd)<<5)}` );
+    //        console.log( `[addr ${addr}] command: ${cmd} (${cmd.toString(2)}) val: ${val}` );
+    //        addr = 0xC0|(addr & 0x1F);
+    //        cmd = this.checksum(cmd);
+    //        console.log( `|->[addr ${addr}] command: ${cmd.toString(2)} val: ${val}` );
+    //        if( val ){
+    //            val = val & 0xFF;
+    //            return await this.WRITE( addr, cmd, val );
+    //        }
+    //        return await this.READ( addr, cmd );
     //    }
-    //    getDetails() {
-    //        return `FXS50 - Addr: ${this.Addr}, Extra: ${this.extraFeature}`;
-    //    }
-    //}
 
-    let users = [];
-    //let userDataCopy = JSON.parse(JSON.stringify(users));
-
-    function addUser( user ) {
-        // Atualiza a lista global de usuários
-        users = [...users, user];
-        renderUsers( user );
-    }
-
-    function renderUsers( usersList ) {
-
-        const userContainer = document.getElementById("users");
-
-        userContainer.innerHTML = usersList.map((user, index) => `
-            <div class="user-card" id="user${index}">
-                <div class="user-header">
-                    <div>
-                        <img src="${user.img}" alt="${user.name}">
-                        <strong>${user.name}</strong>
-                    </div>
-                    <button class="edit-btn" onclick="editUser(${index})">Editar</button>
-                </div>
-                <div class="user-info">
-                    <label>Nome: <input type="text" id="name${index}" value="${user.name}" disabled></label><br>
-                    <label>Idade: <input type="text" id="age${index}" value="${user.age}" disabled></label><br>
-                    <label>País: <input type="text" id="country${index}" value="${user.country}" disabled></label><br>
-                    <label>Número: <input type="text" id="number${index}" value="${user.number}" disabled></label>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function editUser(index) {
-        document.getElementById(`name${index}`).disabled = false;
-        document.getElementById(`age${index}`).disabled = false;
-        document.getElementById(`country${index}`).disabled = false;
-        document.getElementById(`number${index}`).disabled = false;
-
-        const userCard = document.getElementById(`user${index}`);
-        const actionButtons = document.createElement('div');
-        actionButtons.classList.add('action-buttons');
-        actionButtons.innerHTML = `
-            <button onclick="saveUser(${index})">Salvar</button>
-            <button onclick="cancelEdit(${index})">Cancelar</button>
-        `;
-        userCard.appendChild(actionButtons);
-    }
-
-    function saveUser(index) {
-        users[index].name = document.getElementById(`name${index}`).value;
-        users[index].age = document.getElementById(`age${index}`).value;
-        users[index].country = document.getElementById(`country${index}`).value;
-        users[index].number = document.getElementById(`number${index}`).value;
-        userDataCopy = JSON.parse(JSON.stringify(users));
-        renderUsers();
-    }
-
-    function cancelEdit(index) {
-        document.getElementById(`name${index}`).value = userDataCopy[index].name;
-        document.getElementById(`age${index}`).value = userDataCopy[index].age;
-        document.getElementById(`country${index}`).value = userDataCopy[index].country;
-        document.getElementById(`number${index}`).value = userDataCopy[index].number;
-        renderUsers();
-    }
-
-    addUsers([
-        new User("Usuário A", 25, "Brasil", "+55 99999-9999", "https://flagsapi.com/BR/shiny/64.png"),
-        new User("Usuário B", 30, "EUA", "+1 88888-8888", "https://flagsapi.com/US/shiny/64.png")
-    ]);
 </script>
 
 </body>
