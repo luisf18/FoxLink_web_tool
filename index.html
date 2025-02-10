@@ -575,8 +575,8 @@
                 //CTRL: 0x01,
                 led_hz: { addr: 0x02, wg: new widget_int(this.id,"led_hz",120,0,255) },
                 led_brilho: { addr: 0x03, wg: new widget_int(this.id,"led_brilho",50,10,100) },
-                filter_size: { addr: 0x04, wg: new widget_int(this.id,"filter_size",5,0,50) },
-                filter_trigger: { addr: 0x05, wg: new widget_int(this.id,"filter_trigger",5,0,50) }
+                filter_size: { addr: 0x04, wg: new widget_int(this.id,"filter_size",5,0,255) },
+                filter_trigger: { addr: 0x05, wg: new widget_int(this.id,"filter_trigger",5,0,255) }
                 //READ: 0x06
             };
             this.parameters.addr.wg.currentValue = this.Addr;
