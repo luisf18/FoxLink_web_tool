@@ -174,6 +174,18 @@
         .user-info input[type="number"] {
             width: 70px;
         }
+
+        .user-info .wg-status {
+            width:   1rem; /* largura igual à altura da janela */
+            height:  1rem; /* altura igual à altura da janela */
+            border-radius: 50%;
+            background-color: #dc3545;
+            /*cursor: pointer;*/
+        }
+
+        .user-info .wg-status.ok {
+            background-color: #28a745;
+        }
         
         /* Gráfico */
         .chart-container {
@@ -214,8 +226,16 @@
             transition: background 0.3s ease-in-out;
         }
         .action-buttons button:hover {
-            background-color: #0056b3;
+            /*background-color: #0056b3;*/
+            filter: brightness(90%);
         }
+        .action-buttons .save-btn {
+            background-color: #dc3545;
+        }
+        .action-buttons .save-btn.ok {
+            background-color: #28a745;
+        }
+        
     </style>
 </head>
 <body>
@@ -470,6 +490,7 @@
             this.inputValue = defaultValue;
             this.type = 'none';
             this.div = null;
+            //this.value_change = false;
         }
         trim(a){
             console.log("[*] trim -> ", a.value );
@@ -492,6 +513,7 @@
             this.max = Max;
             this.input = null;
             this.trim_callback = null;
+            this.status = null;
         }
         html(){
             this.div = document.createElement("label");
@@ -505,6 +527,12 @@
             //input.onblur = () => this.trim(this.div.querySelector("input"));
             this.input.onblur = () => this.trim(this.input);
             this.div.appendChild(this.input);
+
+            //<div class="wg-status"></div>
+            this.status = document.createElement("div");
+            this.status.className = "wg-status";
+            this.div.appendChild(this.status);
+
             return this.div;
             //return
             //`<label>${this.name}: 
@@ -570,15 +598,16 @@
             super(Addr);
             this.id = Cards.length;
             this.parameters = {
-                addr: { addr: 0x00, wg: new widget_int(this.id,"Addr",0,0,31) },
-                name: { addr: 0x10, wg: new widget_string(this.id,"name","FX-S50",32) },
+                addr: { addr: 0x00, wg: new widget_int(this.id,"Addr",0,0,31), saved_value: this.Addr },
+                name: { addr: 0x10, wg: new widget_string(this.id,"name","FX-S50",32), saved_value: 0 },
                 //CTRL: 0x01,
-                led_hz: { addr: 0x02, wg: new widget_int(this.id,"led_hz",120,0,255) },
-                led_brilho: { addr: 0x03, wg: new widget_int(this.id,"led_brilho",50,10,100) },
-                filter_size: { addr: 0x04, wg: new widget_int(this.id,"filter_size",5,0,255) },
-                filter_trigger: { addr: 0x05, wg: new widget_int(this.id,"filter_trigger",5,0,255) }
+                led_hz: { addr: 0x02, wg: new widget_int(this.id,"led_hz",120,0,255), saved_value: 0 },
+                led_brilho: { addr: 0x03, wg: new widget_int(this.id,"led_brilho",50,10,100), saved_value: 0 },
+                filter_size: { addr: 0x04, wg: new widget_int(this.id,"filter_size",5,0,255), saved_value: 0 },
+                filter_trigger: { addr: 0x05, wg: new widget_int(this.id,"filter_trigger",5,0,255), saved_value: 0 }
                 //READ: 0x06
             };
+            
             this.parameters.addr.wg.currentValue = this.Addr;
 
             this.parameters.addr.wg.trim_callback = (self) => {
@@ -624,9 +653,9 @@
                 </div>
 
                 <div class="action-buttons">
-                    <button id="btn_apply">Apply</button>
                     <button id="btn_read">Read</button>
-                    <button id="btn_save">Save</button>
+                    <button id="btn_apply">Apply</button>
+                    <button class="save-btn" id="btn_save">Save</button>
                     <button id="btn_default">Default</button>
                     <button id="btn_reset">Reset</button>
                 </div>
@@ -665,6 +694,8 @@
         }
 
         async update(){
+            this.check_save();
+
             await this.adicionarValor();
         }
 
@@ -720,7 +751,11 @@
             this.atualizarGrafico();
         }
 
-        async read(){
+        async read( save_val = false ){
+            
+            const btn_save = this.card.querySelector("#btn_save");
+            btn_save.classList.add('ok');
+
             this.parameters.addr.wg.input.value = this.Addr;
             console.log(`READ-BTN [0x${this.Addr} / ID: ${this.id}]`);
             for( const param in this.parameters ){
@@ -729,6 +764,9 @@
                     if( ans.ok ){
                         console.log(`READ-BTN-RESULT[${param} 0x${ this.parameters[param].addr }] ${ans.value}`);
                         this.parameters[param].wg.display( ans.value );
+                        if( save_val ){
+                            this.parameters[param].saved_value = ans.value;
+                        }
                     }else{
                         console.log(`READ-BTN-RESULT[${param} 0x${ this.parameters[param].addr }] ERRO`);
                     }
@@ -746,7 +784,7 @@
             //}
         }
 
-        async apply(){
+        async apply( save_val = false ){
             console.log(`APPLY-BTN [0x${this.Addr} / ID: ${this.id}]`);
             for( const param in this.parameters ){
                 if( param != "addr" && param != "name" ){
@@ -756,6 +794,9 @@
                     let ans = await fx.register_write( this.Addr, reg_addr,  IN );
                     if( ans.ok ){
                         wg.display( ans.value );
+                        if( save_val ){
+                            this.parameters[param].saved_value = ans.value;
+                        }
                     }else{
                         console.log(`ERRO-1`);
                     }
@@ -770,6 +811,9 @@
                             wg.display( ans.value );
                             this.Addr = ans.value;
                             console.log( `[DEVICE ${this.id}][CHANGE ADDR TO ${this.Addr}]` );
+                            if( save_val ){
+                                this.parameters.addr.saved_value = ans.value;
+                            }
                         }else{
                             console.log(`ERRO ao alterar o endereço!!!`);
                         }
@@ -780,9 +824,12 @@
 
         async save(){
             console.log("comando de salvamento especifico do fxs50");
-            await this.apply();
+            await this.apply( true );
             let ans = await fx.command_key(this.Addr,0x03); // Comando de save
             console.log( "save->", ans );
+
+            const btn_save = this.card.querySelector("#btn_save");
+            btn_save.classList.add('ok');
             //ans = await fx.command(this.Addr,0x03); // Comando de READ
             //console.log( "save/command(READ)->", ans );
         }
@@ -790,7 +837,28 @@
         async reset(){
             await fx.command(this.Addr,0x04); // Comando de reset
             await delay(20);
-            await this.read();
+            await this.read( true );
+        }
+
+        async check_save(){
+            let all_saved = true;
+            const btn_save = this.card.querySelector("#btn_save");
+            for( const param in this.parameters ){
+                if( param != "name" ){
+                    if( this.parameters[param].saved_value != this.parameters[param].wg.value() ){
+                        //console.log( "[!=]",param," val:",this.parameters[param].saved_value," saved: ",this.parameters[param].wg.value() );
+                        this.parameters[param].wg.status.classList.remove('ok');
+                        all_saved = false;
+                    }else{
+                        this.parameters[param].wg.status.classList.add('ok');
+                    }
+                }
+            }
+            if( all_saved ){
+                btn_save.classList.add('ok');
+            }else{
+                btn_save.classList.remove('ok');
+            }
         }
 
     }
@@ -825,7 +893,6 @@
             console.log("CONECTADO!!");
             startButton.classList.add('active');
             startButton.textContent = 'conectado';
-            await begin();
         }else{
             console.log("DESCONECTADO!!");
             startButton.classList.remove('active');
@@ -892,7 +959,7 @@
     async function addCard(i) {
         const F = new fxs50(i);
         F.html();
-        await F.read();
+        await F.read(true);
         Cards.push(F);
     }
 
@@ -916,14 +983,14 @@
 
 
 
-    for (let i = 0; i < 32; i++) {
-        checksum = fx.checksum(i);
-        console.log(`i: ${i} | binário: ${i.toString(2).padStart(8, '0')} | checksum: ${checksum} | ${checksum.toString(2).padStart(8, '0')}`);
-    }
+    //for (let i = 0; i < 32; i++) {
+    //    checksum = fx.checksum(i);
+    //    console.log(`i: ${i} | binário: ${i.toString(2).padStart(8, '0')} | checksum: ${checksum} | ${checksum.toString(2).padStart(8, '0')}`);
+    //}
 
-    async function begin(){
-        await fx.command( 0x05, 0x03 );
-    }
+    //async function begin(){
+    //    await fx.command( 0x05, 0x03 );
+    //}
 
     //async command( addr, cmd, val = null ) {
     //        //console.log( `checksum ${cmd} -> ${(this.checksum(cmd)<<5)}` );

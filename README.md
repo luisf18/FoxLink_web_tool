@@ -12,8 +12,12 @@ Por enquanto esses são os dispositivos suportados:
 - ❌ NEW ESC
 
 **Ideias de Mellhorias**  
-- Indicador em tempo para cada parametro, informando se ja foi atualizado ou não ( 🔴🟢 )
+- ✅ Indicador em tempo real para cada parametro, informando se ja foi atualizado ou não ( 🔴🟢 )
+- usar a cor amarela para apply 🟡.
+- deixar o botão de status clicavel;
 - Botões individuais para cada parametro de default, read e apply.
+- ✅cor diferente no botão de salvar
 - Colocar cores diferentes nos botões em função do estado (se ja foi salvo ou se esta atualizado)
 - Botão de calibração automatica para FX-S50
+- Campo de nome do FX-S50 (não foi implementado ainda)
 - Suporte ao modo shell, serial monitor e plotter
