@@ -275,6 +275,45 @@
     // FOXWIRE 
     // ================================================
 
+    const FX_S50_REG = Object.freeze({
+        cmd: {
+            DEVICE_ID_L:        0x00,
+            DEVICE_ID_H:        0x01,
+            LOT_L:              0x02,
+            LOT_H:              0x03,
+            LOT_DATE_L:         0x04,
+            LOT_DATE_H:         0x05,
+            FOXWIRE_VERSION_ID: 0x06,
+            FIRMWARE_ID:        0x07,
+            FIRMWARE_VERSION:   0x08,
+            REQUEST_WRITE:      0x09,
+            MCU_RESET:          0x0A,
+            MCU_VOLTAGE:        0x0B,
+            MCU_TEMPERATURE:    0x0C,
+            READ:               0x0D
+        },
+        cmd_write: {
+            SAVE:               0x01,
+            RESTORE:            0x02,
+            RESTORE_KEPP_ADDR:  0x03
+        },
+        reg: {
+            ADDR:          0x00,
+            CTRL:          0x01,
+            L_HZ:          0x02,
+            L_DC:          0x03,
+            F_TOP:         0x04,
+            F_TRIG:        0x05,
+            CTRL1:         0x06,
+            CTRL2:         0x07,
+            NAME:          0x08, // 16 bytes
+            SCAN_COUNT:    0x18, // 24 em decimal
+            SCAN_VALUE:    0x19, // 25 em decimal
+            SCAN_DELAY:    0x1A, // 26 em decimal
+            SCAN_PERIODE:  0x1B  // 27 em decimal
+        }
+    });
+
     class FoxWire {        
         
         constructor(baudRate = 115200) {
@@ -282,15 +321,15 @@
             this.reader = null;
             this.writer = null;
             this.baudRate = baudRate;
-            this.CMD_DEVICE_ID             = 0x00;
-            this.CMD_FIRMWARE_ID           = 0x01;
-            this.CMD_FOXWIRE_VERSION_ID    = 0x02;
-            this.CMD_READ                  = 0x03;
-            this.CMD_RESET                 = 0x04;
-            this.CMD_REQUEST_WRITE         = 0x05;
-            this.CMD_W_RESTORE             = 0x01;
-            this.CMD_W_RESTORE_KEPP_ADDR   = 0x02;
-            this.CMD_W_SAVE                = 0x03;
+            this.CMD_DEVICE_ID             = FX_S50_REG.cmd.DEVICE_ID_L;
+            this.CMD_FIRMWARE_ID           = FX_S50_REG.cmd.FIRMWARE_ID;
+            this.CMD_FOXWIRE_VERSION_ID    = FX_S50_REG.cmd.FOXWIRE_VERSION_ID;
+            this.CMD_READ                  = FX_S50_REG.cmd.READ;
+            this.CMD_RESET                 = FX_S50_REG.cmd.MCU_RESET;
+            this.CMD_REQUEST_WRITE         = FX_S50_REG.cmd.REQUEST_WRITE;
+            this.CMD_W_RESTORE             = FX_S50_REG.cmd_write.RESTORE;
+            this.CMD_W_RESTORE_KEPP_ADDR   = FX_S50_REG.cmd_write.RESTORE_KEPP_ADDR;
+            this.CMD_W_SAVE                = FX_S50_REG.cmd_write.SAVE;
             this.busy = false;
         }
 
@@ -336,7 +375,7 @@
         }
 
         // Envia bytes e aguarda resposta dentro de um timeout
-        async sendAndReceive(sendData, timeout = 10) {
+        async sendAndReceive( sendData, timeout = 10 ) {
             if (!this.writer || !this.reader) {
                 throw new Error("A conexão serial não está aberta.");
                 return [];
@@ -364,14 +403,14 @@
             receivedData.push(...value);
 
             this.busy = false;
-            //console.log("[SendAndRecive] Dados recebidos:", receivedData);
+            //if(log) console.log("[SendAndRecive] Dados recebidos:", receivedData);
             return receivedData;
         }
 
         // envia e remove os bytes repetidos
-        async send(data) {
+        async send(data,log=false) {
             const recive = await this.sendAndReceive(data); // Aguarda resposta
-            console.log(`[Send: ${data}][Receive: ${recive}]`);
+            if(log)console.log(`[Send: ${data}][Receive: ${recive}]`);
             if (recive.length < data.length) {
                 return { ok: false, values: [] }; // Erro: resposta muito curta
             }
@@ -383,9 +422,9 @@
             return { ok: true, values: recive.slice(data.length) }; // Sucesso
         }
 
-        async check( addr ) {
-            const ans = await this.send( new Uint8Array([0x80|addr]) );
-            console.log("[CHECK] ans:", ans );
+        async check( addr, log=false ) {
+            const ans = await this.send( new Uint8Array([0x80|addr]), log );
+            if(log)console.log("[CHECK] ans:", ans );
             if( ans.ok ){
                 if(ans.values.length >= 1){
                     if( (ans.values[0] & 0x1F) == addr ){
@@ -405,11 +444,11 @@
         }
 
         // READ ----------------------------------------------------------
-        async READ( addr, arg  ) {
+        async READ( addr, arg, log=false  ) {
             addr = 0xA0|(addr & 0x1F);
             arg = arg & 0xFF;
-            const ans = await this.send( new Uint8Array([addr,arg]) );
-            console.log("[READ] ans:", ans );
+            const ans = await this.send( new Uint8Array([addr,arg]), log );
+            //console.log("[READ] ans:", ans );
             if( ans.ok ){
                 if(ans.values.length >= 1){
                     return { ok: true, arg: 0, value: ans.values[0], send_ok: true };
@@ -417,21 +456,21 @@
             }
             return { ok: false, arg: 0, value: 0, send_ok: ans.ok };
         }
-        async register_read( addr, reg_addr  ) {
+        async register_read( addr, reg_addr, log = false  ) {
             reg_addr = reg_addr & 0x1F;
             reg_addr = 0x80 | this.checksum(reg_addr);
-            const ans = await this.READ( addr, reg_addr );
-            console.log("[REG READ] ans:", ans );
+            const ans = await this.READ( addr, reg_addr, log );
+            if(log) console.log("[REG READ] ans:", ans );
             return ans;
         }
 
         // PACOTE WRITE ----------------------------------------------------------
 
-        async WRITE( addr, arg1, arg2 ) {
+        async WRITE( addr, arg1, arg2, log=false ) {
             addr = 0xC0|(addr & 0x1F);
             arg1 = arg1 & 0xFF;
             arg2 = arg2 & 0xFF;
-            const ans = await this.send( new Uint8Array([addr,arg1,arg2]) );
+            const ans = await this.send( new Uint8Array([addr,arg1,arg2]), log );
             console.log("[WRITE] ans:", ans );
             if( ans.ok && ans.values.length >= 1 ){
                 return { ok: true, arg: 0, value: ans.values[0], send_ok: true };
@@ -439,33 +478,35 @@
             return { ok: false, arg: 0, value: 0, send_ok: ans.ok };
         }
 
-        async register_write( addr, reg_addr, val ) {
+        async register_write( addr, reg_addr, val, log=false ) {
             reg_addr = 0x80 | this.checksum(reg_addr); // 0x80 -> indica que é um registrador e não um comando
-            const ans = await this.WRITE( addr, reg_addr, val );
+            const ans = await this.WRITE( addr, reg_addr, val, log );
             return ans;
         }
 
-        async command( addr, cmd, val = null ) {
+        async command( addr, cmd, val = null, log = false) {
             //console.log( `checksum ${cmd} -> ${(this.checksum(cmd)<<5)}` );
-            console.log( `[addr ${addr}] command: ${cmd} (${cmd.toString(2)}) val: ${val}` );
+            if(log)console.log( `[addr ${addr}] command: ${cmd} (${cmd.toString(2)}) val: ${val}` );
             addr = (addr & 0x1F);
             cmd = this.checksum(cmd);
-            console.log( `|->[addr ${addr}] command: ${cmd.toString(2)} val: ${val}` );
+            if(log)console.log( `|->[addr ${addr}] command: ${cmd.toString(2)} val: ${val}` );
             if( val ){
                 val = val & 0xFF;
-                return await this.WRITE( addr, cmd, val );
+                return await this.WRITE( addr, cmd, val, log );
             }
-            return await this.READ( addr, cmd );
+            return await this.READ( addr, cmd, log );
         }
 
-        async command_key( addr, cmd ) {
-            const key = await this.command( addr, 0x05 );
+        async command_key( addr, cmd, log=false) {
+            const key = await this.command( addr, FX_S50_REG.cmd.REQUEST_WRITE, null, log );
             console.log("key",key);
             if( key.value && key.ok ){
                 const KEY = 0xff&(255-key.value);
-                console.log("key:",key.value);
-                console.log("key\\:",KEY);
-                return await this.command( addr, cmd, KEY );
+                if(log){
+                    console.log("key:",key.value);
+                    console.log("key\\:",KEY);
+                }
+                return await this.command( addr, cmd, KEY, log );
             }
             return { ok: false, arg: 0, value: 0, send_ok: key.send_ok };
         }
@@ -598,13 +639,13 @@
             super(Addr);
             this.id = Cards.length;
             this.parameters = {
-                addr: { addr: 0x00, wg: new widget_int(this.id,"Addr",0,0,31), saved_value: this.Addr },
-                name: { addr: 0x10, wg: new widget_string(this.id,"name","FX-S50",32), saved_value: 0 },
+                addr: { addr: FX_S50_REG.reg.ADDR, wg: new widget_int(this.id,"Addr",0,0,31), saved_value: this.Addr },
+                name: { addr: FX_S50_REG.reg.NAME, wg: new widget_string(this.id,"name","FX-S50",32), saved_value: 0 },
                 //CTRL: 0x01,
-                led_hz: { addr: 0x02, wg: new widget_int(this.id,"led_hz",120,0,255), saved_value: 0 },
-                led_brilho: { addr: 0x03, wg: new widget_int(this.id,"led_brilho",50,10,100), saved_value: 0 },
-                filter_size: { addr: 0x04, wg: new widget_int(this.id,"filter_size",5,0,255), saved_value: 0 },
-                filter_trigger: { addr: 0x05, wg: new widget_int(this.id,"filter_trigger",5,0,255), saved_value: 0 }
+                led_hz: { addr: FX_S50_REG.reg.L_HZ, wg: new widget_int(this.id,"led_hz",120,0,255), saved_value: 0 },
+                led_brilho: { addr: FX_S50_REG.reg.L_DC, wg: new widget_int(this.id,"led_brilho",50,0,200), saved_value: 0 },
+                filter_size: { addr: FX_S50_REG.reg.F_TOP, wg: new widget_int(this.id,"filter_size",5,0,255), saved_value: 0 },
+                filter_trigger: { addr: FX_S50_REG.reg.F_TRIG, wg: new widget_int(this.id,"filter_trigger",5,0,255), saved_value: 0 }
                 //READ: 0x06
             };
             
@@ -746,7 +787,7 @@
             this.grafico.data.shift();
             //this.grafico.data.push(Math.random() * 10);
             let x = await fx.check( this.Addr );
-            console.log( "x: ", x );
+            //console.log( "x: ", x );
             this.grafico.data.push( parseInt(x.arg) );
             this.atualizarGrafico();
         }
@@ -777,7 +818,8 @@
         async default(){
             // Comando que retorna as configurações aos valores padrão
             // mantendo o endereço do dispositivo
-            await fx.command_key(this.Addr,0x02);
+            await fx.command_key(this.Addr,FX_S50_REG.cmd_write.RESTORE_KEPP_ADDR, true);
+            await delay(20);
             await this.read();
             //for( const param in this.parameters ){
             //    //await this.parameters[param].wg.display( this.parameters[param].wg.defaultValue );
@@ -825,7 +867,7 @@
         async save(){
             console.log("comando de salvamento especifico do fxs50");
             await this.apply( true );
-            let ans = await fx.command_key(this.Addr,0x03); // Comando de save
+            let ans = await fx.command_key(this.Addr,FX_S50_REG.cmd_write.SAVE,true); // Comando de save
             console.log( "save->", ans );
 
             const btn_save = this.card.querySelector("#btn_save");
@@ -835,7 +877,7 @@
         }
 
         async reset(){
-            await fx.command(this.Addr,0x04); // Comando de reset
+            await fx.command(this.Addr,FX_S50_REG.cmd.MCU_RESET, null, true); // Comando de reset
             await delay(20);
             await this.read( true );
         }
@@ -972,7 +1014,7 @@
     }
 
     async function cards_update(){
-        console.log("update");
+        //console.log("update");
         for (const card of Cards) {
             await card.update();
             await delay(30);

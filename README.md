@@ -21,3 +21,4 @@ Por enquanto esses são os dispositivos suportados:
 - Botão de calibração automatica para FX-S50
 - Campo de nome do FX-S50 (não foi implementado ainda)
 - Suporte ao modo shell, serial monitor e plotter
+- adicionar status de conexão
