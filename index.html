@@ -33,6 +33,27 @@
             padding: 20px;
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
             height: 100vh;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+        
+        .content {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            font-size: 16px;
         }
 
         /*/
@@ -88,24 +109,38 @@
         }
 
         .logo-container {
-            height: 20%;
-            width: 100%; /* Ocupa toda a largura da sidebar */
+            /*height: 20%;*/
+            /*width: 100%;  Ocupa toda a largura da sidebar */
             text-align: center;
-            padding-bottom: 20px;
+            /*padding-bottom: 20px;*/
+            margin-bottom: 0px;
         }
 
         .logo-container img {
-            height: 100%; /* width: 200px; Ajuste conforme necessário */
-            opacity: 0.8;
+            max-width: 60%;
+            /*height: 100%; width: 200px; Ajuste conforme necessário */
+            /*opacity: 0.8;*/
         }
 
-        .logo-container img:hover {
+        /*.logo-container img:hover {
             opacity: 1;
+        }
+        */
+
+        .sidebar a {
+            display: block;
+            color: #3575dc;
+            text-decoration: none;
+            text-align: center;
+            margin-top: 8px;
         }
 
         /* Sidebar ----------------------------------------------- */
+
+
         .devices-container {
-            flex: 1;
+            margin-left: 320px;
+            flex-grow: 1; /*flex: 1;*/
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
             gap: 15px;
@@ -235,6 +270,8 @@
         .action-buttons .save-btn.ok {
             background-color: #28a745;
         }
+
+        
         
     </style>
 </head>
@@ -242,9 +279,18 @@
 
 <div class="sidebar">
 
-    <div style="height: 70%">
+    <div class="content">
         <h2>Web Fox Link</h2>
         <h3 style=" color: #555; font-size: 18px; margin: 2px 0;">Versão beta 0.2</h3>
+        <hr>
+        <h3 for="opcoes">Link:</h3>
+        <select id="opcoes">
+            <option value="USBSerial">USB Serial</option>
+            <option value="Arduino">Arduino</option>
+        </select><br>
+        <!--button onclick="fx.check(0,true)">check</button><br-->
+        <!--button onclick="fx.command_key(0,FX_S50_REG.cmd_write.RESTORE_KEPP_ADDR,true)">restore</button><br-->
+        <!--button onclick="fx.command(0,FX_S50_REG.cmd.READ,null,true)">read</button><br-->
         <hr>
         <h3>Conecte seus dispositivos FoxWire</h3>
         <button class="start-btn" onclick="toggleConnection()">Connectar</button>
@@ -259,10 +305,13 @@
         <div id="users"></div>
     </div>
 
+
     <!-- Adicionando a logo -->
     <div class="logo-container">
         <img src="logo.png" alt="FoxWire Logo">
     </div>
+    <a href="https://github.com/luisf18/FoxLink_web_tool" target="_blank">Github FoxLink webtool</a>
+    <a href="https://github.com/luisf18/FXDevices" target="_blank">Github Sensores</a>
 </div>
 
 <div class="devices-container" id="cards">
@@ -270,6 +319,7 @@
 </div>
 
 <script>
+    
 
     // ================================================
     // FOXWIRE 
@@ -331,6 +381,11 @@
             this.CMD_W_RESTORE_KEPP_ADDR   = FX_S50_REG.cmd_write.RESTORE_KEPP_ADDR;
             this.CMD_W_SAVE                = FX_S50_REG.cmd_write.SAVE;
             this.busy = false;
+            this.busy_counter = 0;
+
+            this.timeout_read = 20;
+            this.timeout_write = 5;
+            this.retry = false;
         }
 
         isConnected() {
@@ -374,57 +429,135 @@
             }
         }
 
+        async read(){
+            //const reader = port.readable.getReader();
+            const timeoutController = new AbortController();
+            const signal = timeoutController.signal;
+
+            let ret = {
+                value: new Uint8Array([]), // Correto
+                done: false
+            };
+
+
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    timeoutController.abort();
+                    reject(new Error("Timeout atingido na leitura da porta serial!"));
+                }, this.timeout_read);
+            });
+
+            try {
+                const readPromise = this.reader.read();
+                ret = await Promise.race([readPromise, timeoutPromise]);
+            } catch (error) {
+                console.error("Erro:", error.message);
+            }
+            
+            //finally {
+            //    this.reader.releaseLock(); // Libera o leitor da porta
+            //}
+            return ret;
+        }
+
         // Envia bytes e aguarda resposta dentro de um timeout
-        async sendAndReceive( sendData, timeout = 10 ) {
+        async sendAndReceive( sendData ) {
             if (!this.writer || !this.reader) {
                 throw new Error("A conexão serial não está aberta.");
                 return [];
             }
 
+            //if (this.reader) {
+            //    console.log("O reader está aberto!");
+            //} else {
+            //    console.log("O reader foi fechado!");
+            //}
+
+            if( this.busy_counter > 10 ){
+                console.error("[ERRO] muitos acessos simultaneos as port. reinicie a página",this.busy_counter);
+                return [];
+            }
+            this.busy_counter++;
             while( this.busy ){
+                console.log('.b');
                 await new Promise(resolve => setTimeout(resolve, 20));
             }
+            this.busy_counter--;
 
             this.busy = true;
 
+            if( this.port ){
+                // Cancela o reader e fecha o writer atuais
+                if (this.reader) {
+                    await this.reader.cancel();
+                }
+                if (this.writer) {
+                    await this.writer.close();
+                }
+                // Cria novos writer e reader
+                this.writer = this.port.writable.getWriter();
+                this.reader = this.port.readable.getReader();
+            }
+
+            //console.log('.1');
             // Envia os dados
             await this.writer.write(sendData);
             //console.log("Dados enviados:", sendData);
-
-            await new Promise(resolve => setTimeout(resolve, timeout));
-
+            //console.log('.2');
+            await new Promise(resolve => setTimeout(resolve, this.timeout_write));
             // Aguarda resposta
             const receivedData = [];
-            const { value, done } = await this.reader.read();
+            //console.log('.3');
+            const { value, done } = await this.read( 10 ); //this.reader.read();
+            //console.log('.3.done');
             if (done){
                 this.busy = false;
+                //console.log('.4');
                 return [];
             }
             receivedData.push(...value);
 
             this.busy = false;
             //if(log) console.log("[SendAndRecive] Dados recebidos:", receivedData);
+            //console.log('.5');
             return receivedData;
         }
 
         // envia e remove os bytes repetidos
         async send(data,log=false) {
-            const recive = await this.sendAndReceive(data); // Aguarda resposta
-            if(log)console.log(`[Send: ${data}][Receive: ${recive}]`);
-            if (recive.length < data.length) {
-                return { ok: false, values: [] }; // Erro: resposta muito curta
-            }
-            for (let i = 0; i < data.length; i++) {
-                if (data[i] !== recive[i]) {
-                    return { ok: false, values: [] }; // Erro: dados não batem
+            //if(log) console.log("*");
+            let recive = new Uint8Array([]);
+            let n = (this.retry | 0);
+            while( n >= 0  ){
+                let ok = true;
+                recive = await this.sendAndReceive(data); // Aguarda resposta
+                if(log)console.log(`[Send: ${data}][Receive: ${recive}]`);
+                if (recive.length < data.length) {
+                    if( n > 0 ){
+                        ok = false;
+                    }else{
+                        return { ok: false, values: [] }; // Erro: resposta muito curta
+                    }
                 }
+                for (let i = 0; i < data.length; i++) {
+                    if (data[i] !== recive[i]) {
+                        if( n > 0 ){
+                            ok = false;
+                            break;
+                        }else{
+                            return { ok: false, values: [] }; // Erro: dados não batem
+                        }
+                    }
+                }
+                if( ok ) break;
+                n--;
             }
             return { ok: true, values: recive.slice(data.length) }; // Sucesso
         }
 
         async check( addr, log=false ) {
             const ans = await this.send( new Uint8Array([0x80|addr]), log );
-            if(log)console.log("[CHECK] ans:", ans );
+            //if(log)console.log("[CHECK] ans:", ans );
             if( ans.ok ){
                 if(ans.values.length >= 1){
                     if( (ans.values[0] & 0x1F) == addr ){
@@ -434,7 +567,7 @@
                 }
                 return { ok: false, arg: 0, value: 0, send_ok: true };
             }
-            return { ok: false, arg: 0, value: 0, send_ok: false }; // Sucesso
+            return { ok: false, arg: 0, value: 0, send_ok: false };
         }
 
         checksum(v){
@@ -471,7 +604,7 @@
             arg1 = arg1 & 0xFF;
             arg2 = arg2 & 0xFF;
             const ans = await this.send( new Uint8Array([addr,arg1,arg2]), log );
-            console.log("[WRITE] ans:", ans );
+            //console.log("[WRITE] ans:", ans );
             if( ans.ok && ans.values.length >= 1 ){
                 return { ok: true, arg: 0, value: ans.values[0], send_ok: true };
             }
@@ -486,10 +619,10 @@
 
         async command( addr, cmd, val = null, log = false) {
             //console.log( `checksum ${cmd} -> ${(this.checksum(cmd)<<5)}` );
-            if(log)console.log( `[addr ${addr}] command: ${cmd} (${cmd.toString(2)}) val: ${val}` );
+            //if(log)console.log( `[addr ${addr}] command: ${cmd} (${cmd.toString(2)}) val: ${val}` );
             addr = (addr & 0x1F);
             cmd = this.checksum(cmd);
-            if(log)console.log( `|->[addr ${addr}] command: ${cmd.toString(2)} val: ${val}` );
+            //if(log)console.log( `|->[addr ${addr}] command: ${cmd.toString(2)} val: ${val}` );
             if( val ){
                 val = val & 0xFF;
                 return await this.WRITE( addr, cmd, val, log );
@@ -499,7 +632,7 @@
 
         async command_key( addr, cmd, log=false) {
             const key = await this.command( addr, FX_S50_REG.cmd.REQUEST_WRITE, null, log );
-            console.log("key",key);
+            //console.log("key",key);
             if( key.value && key.ok ){
                 const KEY = 0xff&(255-key.value);
                 if(log){
@@ -514,6 +647,42 @@
     }
 
     const fx = new FoxWire(115200);
+
+    // seletor do tipo de placa que ira fazer o link os os sensores
+    async function selectLink( link_name ){
+        console.log("Selecionado:", link_name);
+        if( link_name == "Arduino" ){
+            fx.timeout_read = 15;
+            fx.timeout_write = 5;
+            fx.retry = 5;
+        }else{
+            fx.retry = 1;
+            fx.timeout_read = 10;
+            fx.timeout_write = 10;
+        }
+        console.log( "-> timeout read: ", fx.timeout_read );
+        console.log( "-> timeout write: ", fx.timeout_write );
+        console.log( "-> timeout retry: ", fx.retry );
+
+        if( fx.port ){
+            // Cancela o reader e fecha o writer atuais
+            if (fx.reader) {
+                await fx.reader.cancel();
+            }
+            if (fx.writer) {
+                await fx.writer.close();
+            }
+
+            // Cria novos writer e reader
+            fx.writer = fx.port.writable.getWriter();
+            fx.reader = fx.port.readable.getReader();
+        }
+    }
+    
+    const sel_link = document.getElementById("opcoes");
+    //sel_link.addEventListener("change", selectLink(this.value));
+    sel_link.addEventListener("change", (event) => selectLink(event.target.value));
+    selectLink(sel_link.value);
 
     // ================================================
 
@@ -534,8 +703,8 @@
             //this.value_change = false;
         }
         trim(a){
-            console.log("[*] trim -> ", a.value );
-            console.log(a);
+            //console.log("[*] trim -> ", a.value );
+            //console.log(a);
             if(a.value<0) a.value = 0;
             else if(a.value>255) a.value = 255;
         }
@@ -652,7 +821,7 @@
             this.parameters.addr.wg.currentValue = this.Addr;
 
             this.parameters.addr.wg.trim_callback = (self) => {
-                console.log(`Lambda executado! Valor do objeto: ${self.value()}`);
+                //console.log(`Lambda executado! Valor do objeto: ${self.value()}`);
                 for( const card of Cards ){
                     if( card.id != this.id ){
                         if( self.value() == card.Addr ){
@@ -965,10 +1134,12 @@
 
         await delay(200);
 
+        console.log(`SCANNING`);
+
         // 1️⃣ **Verifica os endereços um por um**
         for (let i = 0; i <= 32; i++) {
             try {
-                const ans = await fx.check(i); // Aguarda a resposta antes de continuar
+                const ans = await fx.check(i,true); // Aguarda a resposta antes de continuar
                 if (ans.ok) {
                     validAddresses.push(i);
                     console.log(`Endereço ${i}: arg ${ans.arg}`);
