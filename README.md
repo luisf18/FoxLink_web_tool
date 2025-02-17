@@ -88,9 +88,9 @@ A segunda opção é usando um **Arduino Nano** ou **UNO**, existe duas opções
 
 ### Op. 2.1 codigo bitwise ASM
 
-Abra o arduino e faça upload do código abaixo e em seguida conecte o pino de sinal do sensor, "FX", ao pino 0 também conhecido como "RX".
+Abra o Arduino IDE, faça upload do código abaixo e em seguida conecte o pino de sinal do sensor, "FX", ao pino 0 também conhecido como "RX".
 
-**vantagens e desvantagens:** melhor código de Arduino (até o momento) para usar com o **webtool**. Funciona também com o modo "shell" através do serial monitor do Arduino, mas as vezes falha quanto tem muito texto, comando curtos funciona melhor.
+**vantagens e desvantagens:** melhor código de Arduino (até o momento) para usar com o **webtool**. Funciona também com o modo "shell" através do serial monitor do Arduino, mas as vezes falha quando tem muito texto, comandos curtos funcionam melhor.
 
 ```c++
 // Fox Dynamics Team
@@ -116,13 +116,13 @@ void loop() {
 ![Texto alternativo](images/foxlink_arduino_asm.png)
 
 
-### Op. 2.2 codigo usando software serial + diodo rapido
+### Op. 2.2 codigo usando software serial + diodo rápido
 
-Abra o arduino e faça upload do código abaixo e em seguida conecte o pino de sinal do sensor, "FX", ao pino 10.
+Abra o Arduino IDE e faça upload do código abaixo e em seguida conecte o pino de sinal do sensor, "FX", ao pino 10.
 
 **vantagens e desvantagens:** não funciona tão bem no **webtool**, é mais indicado para o modo "shell" através do serial monitor do Arduino.
 
-**Diodo:** É melhor usar um diodo rapido como 1N4148 ou 1N5819.
+**Diodo:** É recomendavel usar um diodo rápido como 1N4148 ou 1N5819.
 
 ```c++
 // Fox Dynamics Team
