@@ -211,8 +211,8 @@
         }
 
         .user-info .wg-status {
+            width:   1rem; /* largura igual à altura da janela */
             height:  1rem; /* altura igual à altura da janela */
-            aspect-ratio: 1 / 1;
             border-radius: 50%;
             background-color: #dc3545;
             /*cursor: pointer;*/
@@ -281,7 +281,7 @@
 
     <div class="content">
         <h2>Web Fox Link</h2>
-        <h3 style=" color: #555; font-size: 18px; margin: 2px 0;">Versão beta 0.3</h3>
+        <h3 style=" color: #555; font-size: 18px; margin: 2px 0;">Versão beta 0.2</h3>
         <hr>
         <h3 for="opcoes">Link:</h3>
         <select id="opcoes">
@@ -713,9 +713,6 @@
         display(){
             //this.parameters[param].display( container.querySelector(`#param_${param}`) );
         }
-        value(){
-            return null;
-        }
     }
 
     class widget_int extends widget{
@@ -794,68 +791,7 @@
             return label;
         }
         display(x){}
-
-        value(){
-            return this.input.value;
-        }
     }
-
-    class widget_select extends widget {
-        constructor(device_id, name, defaultValue, options) {
-            super(device_id, name, defaultValue);
-            this.type = "select";
-            this.options = options;
-            this.select = null;
-        }
-
-        html() {
-            this.div = document.createElement("label");
-            this.div.innerText = `${this.name}: `;
-
-            this.select = document.createElement("select");
-            this.select.id = `param_${this.name}`;
-
-            for( const option in this.options ){
-                const opt = document.createElement("option");
-                opt.value = option;
-                opt.innerText = option;
-                if (option === this.defaultValue) {
-                    opt.selected = true;
-                }
-                this.select.appendChild(opt);
-            }
-
-            this.select.onchange = () => {
-                this.currentValue = this.select.value;
-                console.log(this.value());
-            };
-
-            this.div.appendChild(this.select);
-
-            this.status = document.createElement("div");
-            this.status.className = "wg-status";
-            this.div.appendChild(this.status);
-            
-            return this.div;
-        }
-
-        value() {
-            return this.options[this.select.value];
-        }
-
-        display(x) {
-            for( const option in this.options ){
-                if( this.options[option] == x ) {
-                    console.log("option:",option);
-                    this.select.value = option;
-                    this.currentValue = x;
-                    return;
-                }
-            }
-            this.select.value = x;
-        }
-    }
-
 
     class devices_card {
         constructor( Addr ) {
@@ -870,12 +806,10 @@
     class fxs50 extends devices_card {
         constructor(Addr) {
             super(Addr);
-            this.firmwareVersion = 1002;
             this.id = Cards.length;
             this.parameters = {
                 addr: { addr: FX_S50_REG.reg.ADDR, wg: new widget_int(this.id,"Addr",0,0,31), saved_value: this.Addr },
                 name: { addr: FX_S50_REG.reg.NAME, wg: new widget_string(this.id,"name","FX-S50",32), saved_value: 0 },
-                CTRL1: { addr: FX_S50_REG.reg.CTRL1, wg: new widget_select(this.id,"Read mode",0,{"Digital":0,"Analog":1}), saved_value: 0 },
                 //CTRL: 0x01,
                 led_hz: { addr: FX_S50_REG.reg.L_HZ, wg: new widget_int(this.id,"led_hz",120,0,255), saved_value: 0 },
                 led_brilho: { addr: FX_S50_REG.reg.L_DC, wg: new widget_int(this.id,"led_brilho",50,0,200), saved_value: 0 },
@@ -901,21 +835,9 @@
             //this.graphs = {
             //    read: { addr: 0x00, wg: new widget_int(this.id,"Addr",0,31) },
             //}
-            this.graph_mode = 'digital';
             this.grafico = {};
             this.card = null;
             
-        }
-
-        async get_firmware_version(){
-            let fw1 = await fx.command( this.Addr, FX_S50_REG.cmd.FIRMWARE_ID  );
-            let fw2 = await fx.command( this.Addr, FX_S50_REG.cmd.FIRMWARE_VERSION  );
-            if( fw1.ok && fw1.ok ){
-                this.firmwareVersion = fw1.value*1000 + fw2.value;
-            }else{
-                this.firmwareVersion = 1002;
-            }
-            console.log( "Version:", this.firmwareVersion );
         }
 
         async html(){
@@ -929,7 +851,7 @@
                     <img src=${"https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png"}>
                     <div>
                         <div class="device-title">${"FX-S50"} [${this.id}]</div>
-                        <div class="device-info">Modelo: ${"FX-S50"} | Lote: ${"2025"} | V${parseInt(this.firmwareVersion/1000)}.${this.firmwareVersion%1000} </div>
+                        <div class="device-info">Modelo: ${"FX-S50"} | Lote: ${"2025"}</div>
                     </div>
                 </div>
                 <div class="user-info"> </div>
@@ -953,9 +875,7 @@
             //container.appendChild(box);
             let INFO = card.querySelector(".user-info");
             for (const p in this.parameters){
-                if( this.param_available(p) ){
-                    INFO.appendChild( this.parameters[p].wg.html() );
-                }
+                INFO.appendChild( this.parameters[p].wg.html() );
             }
 
             const btn_read = card.querySelector("#btn_read");
@@ -978,7 +898,6 @@
                 h: this.canvas.height,
                 ctx: this.canvas.getContext("2d"),
                 data: new Array(50).fill(0),
-                mode: 'digital'
             };
             console.log(this.grafico);
             //this.grafico.interval = setInterval(this.adicionarValor.bind(this), 200);
@@ -986,21 +905,15 @@
 
         async update(){
             this.check_save();
+
             await this.adicionarValor();
         }
 
         atualizarGrafico() {
             this.grafico.ctx.clearRect(0, 0, this.grafico.w, this.grafico.h);
 
-            let max_val = 1;
-            let min_val = 0;
-
-            if(this.firmwareVersion>1002){
-                if( this.grafico.mode == 'analogico' ){
-                    max_val = 20;
-                    min_val = 0;
-                }
-            }
+            const max_val = 1;
+            const min_val = 0;
 
             // Definir estilos para as linhas limite
             this.grafico.ctx.strokeStyle = "lightgray";
@@ -1042,41 +955,21 @@
             //console.log(this.grafico);
             this.grafico.data.shift();
             //this.grafico.data.push(Math.random() * 10);
-            //let x = await fx.check( this.Addr );
-            //let x = await fx.command( this.Addr, 13, null, true );
-            let x = await fx.command( this.Addr, FX_S50_REG.cmd.READ );
-
-            if( this.firmwareVersion > 1002 ){
-                let mode = await fx.register_read( this.Addr, this.parameters.CTRL1.addr );
-                if( mode.ok ){
-                    if( mode.value == 1 ) this.grafico.mode = 'analogico';
-                    else this.grafico.mode = 'digital';
-                }
-            }
-            
-            this.grafico.data.push( parseInt(x.value) );
+            let x = await fx.check( this.Addr );
+            //console.log( "x: ", x );
+            this.grafico.data.push( parseInt(x.arg) );
             this.atualizarGrafico();
         }
 
-        param_available( p ){
-            if( this.firmwareVersion <= 1002 ){
-                return ( p!="CTRL1" );
-            }
-            return 1;
-        }
-
         async read( save_val = false ){
-
+            
             const btn_save = this.card.querySelector("#btn_save");
             btn_save.classList.add('ok');
 
-            // atualiza o endereço
             this.parameters.addr.wg.input.value = this.Addr;
-            //console.log(`READ-BTN [0x${this.Addr} / ID: ${this.id}]`);
-            
-            // Le cada parâmetro
+            console.log(`READ-BTN [0x${this.Addr} / ID: ${this.id}]`);
             for( const param in this.parameters ){
-                if( param != "addr" && param != "name" && this.param_available( param ) ){
+                if( param != "addr" && param != "name" ){
                     const ans = await fx.register_read( this.Addr, this.parameters[param].addr  );
                     if( ans.ok ){
                         console.log(`READ-BTN-RESULT[${param} 0x${ this.parameters[param].addr }] ${ans.value}`);
@@ -1105,12 +998,10 @@
         async apply( save_val = false ){
             console.log(`APPLY-BTN [0x${this.Addr} / ID: ${this.id}]`);
             for( const param in this.parameters ){
-                //if( param != "addr" && param != "name" ){
-                if( param != "addr" && param != "name" && this.param_available( param ) ){
+                if( param != "addr" && param != "name" ){
                     const wg = this.parameters[param].wg;
                     const reg_addr = this.parameters[param].addr;
-                    //let IN = wg.input.value;
-                    let IN = wg.value();
+                    let IN = wg.input.value;
                     let ans = await fx.register_write( this.Addr, reg_addr,  IN );
                     if( ans.ok ){
                         wg.display( ans.value );
@@ -1164,7 +1055,7 @@
             let all_saved = true;
             const btn_save = this.card.querySelector("#btn_save");
             for( const param in this.parameters ){
-                if( param != "name"  && this.param_available( param ) ){
+                if( param != "name" ){
                     if( this.parameters[param].saved_value != this.parameters[param].wg.value() ){
                         //console.log( "[!=]",param," val:",this.parameters[param].saved_value," saved: ",this.parameters[param].wg.value() );
                         this.parameters[param].wg.status.classList.remove('ok');
@@ -1274,13 +1165,12 @@
 
         // Atualização em tempo real dos graficos
         if( Cards.length ){
-            cards_interval = setInterval( cards_update, 400 );
+            cards_interval = setInterval( cards_update, 200 );
         }
     }
 
     async function addCard(i) {
         const F = new fxs50(i);
-        await F.get_firmware_version();
         F.html();
         await F.read(true);
         Cards.push(F);
@@ -1301,8 +1191,6 @@
             await delay(30);
         }
     }
-
-    console.log( "READ: ", FX_S50_REG.cmd.READ );
 
     // ================================================
 

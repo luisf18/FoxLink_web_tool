@@ -13,7 +13,7 @@ _FoxLink_web_tool_ é uma ferramenta web para configurar as placas e sensores da
 
 ## Dispositivos Suportados
 Atualmente, os seguintes dispositivos são suportados:
-- ✅ [FX-S50](https://github.com/luisf18/FXDevices/tree/main/Sensor_FXS50)
+- ✅ [FX-S50](https://github.com/luisf18/FXDevices/tree/main/Sensor_FXS50) [ V1.2 e V1.3 ]
 - ❌ FX-S200
 - ❌ NEW ESC
 
@@ -53,6 +53,11 @@ Atualmente, os seguintes dispositivos são suportados:
 
 ### Como alterar o alcance do sensor 📏
 A forma mais simples é alterando o parâmetro **led_brilho**, que controla a luminosidade do emissor do sensor. Quanto maior a luminosidade, maior o alcance. Este parâmetro pode variar de 5 a 100.
+
+---
+
+## Versões anteriores
+- Versão [beta 0.2](https://luisf18.github.io/FoxLink_web_tool/index_foxwire_v0_2)
 
 ---
 
