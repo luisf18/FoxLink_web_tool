@@ -89,74 +89,38 @@ Conecte o TX da placa com o RX usando um resistor de 1Kohm. O pino RX será o pi
 
 ## [Opção 2] Fox Link usando Arduino Nano ou UNO
 
-A segunda opção é usando um **Arduino Nano** ou **UNO**, existe duas opções de codigos. No entanto, a comunicação não é tão estavel como usando o conversor USB Serial, recomendo se for usar testar mais de uma vez se as configurações de fato foram salvas.
+A segunda opção é usar um **Arduino Nano** ou **UNO** como interface entre o computador e os sensores. No entanto, a comunicação não é tão estavel como usando um conversor USB Serial, recomendo se for usar testar mais de uma vez se as configurações de fato foram salvas.
 
-### Op. 2.1 codigo bitwise ASM
+### Código FoxLink bitwise ASM
 
-Abra o Arduino IDE, faça upload do código abaixo e em seguida conecte o pino de sinal do sensor, "FX", ao pino 0 também conhecido como "RX".
+Abra o Arduino IDE, faça upload do código abaixo, em seguida conecte o pino de sinal do sensor, "FX", ao pino 0 também conhecido como "RX".
 
-**vantagens e desvantagens:** melhor código de Arduino (até o momento) para usar com o **webtool**. Funciona também com o modo "shell" através do serial monitor do Arduino, mas as vezes falha quando tem muito texto, comandos curtos funcionam melhor.
+✅ _A versão atual melhorou significativamente o desempenho._
 
 ```c++
 // Fox Dynamics Team
-// FoxLink bitwise ASM
+// FoxLink bitwise ASM V0.2
+#include <avr/io.h>
 
-void setup() {
-    DDRD = 0b00000010;
+int main() {
+  DDRD = (1 << PD1);
+  PORTD = (1 << PD0);
+  while (1) {
+      asm volatile (
+          "in r0, %[pin]" "\n\t"
+          "bst r0, 0" "\n\t"
+          "bld r0, 1" "\n\t"
+          "out %[port], r0" "\n\t"
+          :
+          : [pin] "I" (_SFR_IO_ADDR(PIND)),
+            [port] "I" (_SFR_IO_ADDR(PORTD))
+          : "r0"
+      );
+  }
 }
-
-void loop() {
-    asm volatile (
-        "in r24, %[pind]  \n"
-        "lsl r24          \n"
-        "andi r24, 0x02   \n"
-        "out %[portd], r24 \n"
-        :
-        : [pind] "I" (_SFR_IO_ADDR(PIND)), [portd] "I" (_SFR_IO_ADDR(PORTD))
-        : "r24"
-    );
-} 
 ```
 
 ![Texto alternativo](images/foxlink_arduino_asm.png)
-
-
-### Op. 2.2 codigo usando software serial + diodo rápido
-
-Abra o Arduino IDE e faça upload do código abaixo e em seguida conecte o pino de sinal do sensor, "FX", ao pino 10.
-
-**vantagens e desvantagens:** não funciona tão bem no **webtool**, é mais indicado para o modo "shell" através do serial monitor do Arduino.
-
-**Diodo:** É recomendavel usar um diodo rápido como 1N4148 ou 1N5819.
-
-```c++
-// Fox Dynamics Team
-// FoxLink software serial
-
-#include <SoftwareSerial.h>
-
-SoftwareSerial fx(10, 11); // RX, TX
-
-void setup() {
-  Serial.begin(115200);
-  Serial.setTimeout(20);
-  fx.begin(115200);
-  fx.setTimeout(20);
-}
-
-void loop() { // run over and over
-  if(fx.available()) {
-    Serial.write(fx.read());
-  }
-  if(Serial.available()) {
-    char x = Serial.read();
-    Serial.write(x);
-    fx.write(x);
-  }
-}
-```
-
-![Texto alternativo](images/foxlink_arduino_softwareserial.png)
 
 
 
