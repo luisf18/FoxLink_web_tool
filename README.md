@@ -14,6 +14,7 @@ _FoxLink_web_tool_ é uma ferramenta web para configurar as placas e sensores da
 ## Dispositivos Suportados
 Atualmente, os seguintes dispositivos são suportados:
 - ✅ [FX-S50](https://github.com/luisf18/FXDevices/tree/main/Sensor_FXS50) [ V1.2 e V1.3 ]
+- ✅ IR-Key
 - ❌ FX-S200
 - ❌ NEW ESC
 
