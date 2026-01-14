@@ -2,6 +2,7 @@
 // FOXWIRE 
 // ================================================
 
+// valores comuns a todos os dispositivos
 const FX_BASE = Object.freeze({
     cmd: {
         DEVICE_ID_L:        0x00,
@@ -31,7 +32,7 @@ const FX_BASE = Object.freeze({
 });
 
 
-class FoxWire {        
+class FoxWire {
     constructor(baudRate = 115200) {
         this.port = null;
         this.reader = null;

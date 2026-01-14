@@ -281,10 +281,10 @@
 
     <div class="content">
         <h2>Web Fox Link</h2>
-        <h3 style=" color: #555; font-size: 18px; margin: 2px 0;">Versão beta 0.3</h3>
+        <h3 style=" color: #555; font-size: 18px; margin: 2px 0;">Versão 0.4</h3>
         <hr>
-        <h3 for="opcoes">Link:</h3>
-        <select id="opcoes">
+        <h3 for="in_link_sel">Link:</h3>
+        <select id="in_link_sel">
             <option value="USBSerial">USB Serial</option>
             <option value="Arduino">Arduino</option>
         </select><br>
@@ -325,9 +325,16 @@
 
 <script>
 
+    // ===========================================================================
+    // [1] Inicia FoxWire
+    // ===========================================================================
     const fx = new FoxWire(115200);
 
-    // seletor do tipo de placa que ira fazer o link os os sensores
+    // ===========================================================================
+    // [2] Seleção do tipo de Link
+    // seletor do tipo de placa que ira fazer o link com os sensores e placas
+    // ===========================================================================
+    
     async function selectLink( link_name ){
         console.log("Selecionado:", link_name);
         if( link_name == "Arduino" ){
@@ -358,28 +365,71 @@
         }
     }
     
-    const sel_link = document.getElementById("opcoes");
+    const sel_link = document.getElementById("in_link_sel");
     //sel_link.addEventListener("change", selectLink(this.value));
     sel_link.addEventListener("change", (event) => selectLink(event.target.value));
     selectLink(sel_link.value);
 
-    // ================================================
 
+    // ===========================================================================
+    // [3] "Cards" dos dispositivos
+    // ===========================================================================
     cards_interval = null;
     let Cards = []
     const cards_container = document.getElementById("cards");
 
+    async function addCard( device ) {
+        if( device.ID == 0x01 ){
+            console.log(`[CARD-ADD] FXS50`);
+            const F = new fxs50(device.addr);
+            await F.get_firmware_version();
+            F.html();
+            await F.read(true);
+            Cards.push(F);
+        }else if( device.ID == 0x20 ){
+            console.log(`[CARD-ADD] IR-KEY`);
+            const F = new IrKey(device.addr);
+            await F.get_firmware_version();
+            F.html();
+            await F.read(true);
+            Cards.push(F);
+        }else{
+            console.log(`[CARD-ADD] Fail, device id unknown`);
+        }
+    }
+
+    function clearCards() {
+        console.log(`[CARD-CLEAR]`);
+        if( cards_interval ) clearInterval(cards_interval);
+        // Esvazia o array e remove os elementos do DOM
+        Cards = [];
+        //document.getElementById("cards").innerHTML = "";
+        cards_container.innerHTML = "";
+    }
+
+    async function cards_update(){
+        //console.log("update");
+        for (const card of Cards) {
+            await card.update();
+            await delay(30);
+        }
+    }
+
     // ===========================================================================
-    // Sidebar e funções gerais
+    // [4] utils
     // ===========================================================================
+
     // Função para aguardar um tempo específico
     function delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+    // ===========================================================================
+    // [5] Ações da interface
+    // ===========================================================================
     
-    // "buttons" -----------------------------------------
     async function toggleConnection() {
-        
+
         if(fx.isConnected()){
             console.log("DESCONECTANDO...");
             await fx.disconnect();
@@ -401,15 +451,16 @@
         }
     }
 
-
-    // SCAN ------------------------------------------------
+    // Escaneia a linha buscando dispositivos conectados
     async function scan() {
+
+        // 1 - verifica se esta conectado
         if (!fx.isConnected()) {
             alert("Conecte primeiro a porta serial.");
             return;
         }
 
-        // Ajusta elementos gráficos...
+        // 2 - Ajusta elementos gráficos...
         document.getElementById("result").textContent = "Escaneando...";
         document.getElementById("scannedAddresses").innerHTML = "";
         document.getElementById("progressBar").style.width = "0%";
@@ -418,15 +469,15 @@
         startButton.classList.add('active');
         startButton.textContent = "scanning...";
         
+        // 3 - Limpa os cards
         clearCards();
 
+        // 4 - Verifica os endereços um por um
+        
         let validAddresses = [];
-
         await delay(200);
-
         console.log(`SCANNING`);
-
-        // 1️⃣ **Verifica os endereços um por um**
+        
         for (let i = 0; i <= 32; i++) {
             try {
                 const ans = await fx.check(i,true); // Aguarda a resposta antes de continuar
@@ -436,13 +487,14 @@
                     if( ID.ok ){
                         validAddresses.push({ addr: i, ID: ID.value });
                         console.log(`Endereço ${i}: arg ${ID.value}`);
-                        document.getElementById("scannedAddresses").innerHTML += `Endereço ${i} (${ID.value})<br>`; //: arg ${ans.arg}<br>`;
+                        // printa na barra lateral o endereço encontrado
+                        document.getElementById("scannedAddresses").innerHTML += `Endereço ${i}<br>`; //: arg ${ans.arg}<br>`;
+                        //document.getElementById("scannedAddresses").innerHTML += `Endereço ${i} (${ID.value})<br>`; //: arg ${ans.arg}<br>`;
                     }
                 }
-            } catch (error) {
+            }catch (error) {
                 console.error(`Erro ao verificar endereço ${i}:`, error);
             }
-
             // Atualiza progress bar
             document.getElementById("progressBar").style.width = `${(i / 32) * 100}%`;
         }
@@ -463,44 +515,8 @@
         }
     }
 
-    async function addCard( device ) {
-        if( device.ID == 1 ){
-            const F = new fxs50(device.addr);
-            await F.get_firmware_version();
-            F.html();
-            await F.read(true);
-            Cards.push(F);
-        }else if( device.ID == 0x20 ){
-            const F = new IrKey(device.addr);
-            await F.get_firmware_version();
-            F.html();
-            await F.read(true);
-            Cards.push(F);
-        }
-    }
-
-    function clearCards() {
-        if( cards_interval ) clearInterval(cards_interval);
-        // Esvazia o array e remove os elementos do DOM
-        Cards = [];
-        //document.getElementById("cards").innerHTML = "";
-        cards_container.innerHTML = "";
-    }
-
-    async function cards_update(){
-        //console.log("update");
-        for (const card of Cards) {
-            await card.update();
-            await delay(30);
-        }
-    }
-
-    console.log( "READ: ", FX_S50_REG.cmd.READ );
-
     // ================================================
-
-
-
+    // console.log( "READ: ", FX_S50_REG.cmd.READ );
     //for (let i = 0; i < 32; i++) {
     //    checksum = fx.checksum(i);
     //    console.log(`i: ${i} | binário: ${i.toString(2).padStart(8, '0')} | checksum: ${checksum} | ${checksum.toString(2).padStart(8, '0')}`);
