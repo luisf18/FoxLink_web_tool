@@ -177,3 +177,7 @@ class devices_card {
         this.lote = null;
     }
 }
+
+
+
+

@@ -41,56 +41,78 @@ const FX_S50_REG = Object.freeze({
     }
 });
 
+class fxs50 extends FxDevice {
+    constructor(addr) {
+        super(addr, {
+            name: "FxS50",
+            model: "FX-S50",
+            image: "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png",
+            graph_mode: "digital",
+            REG: FX_S50_REG,
+            parameters: (self) => ({
+                addr: {
+                    addr: FX_S50_REG.reg.ADDR,
+                    wg: new widget_int(self.id, "Addr", 0, 0, 31),
+                    saved_value: addr
+                },
+                name: {
+                    addr: FX_S50_REG.reg.NAME,
+                    wg: new widget_string(self.id, "name", "FX-S50", 32),
+                    saved_value: 0
+                },
+                CTRL1: {
+                    addr: FX_S50_REG.reg.CTRL1,
+                    wg: new widget_select(self.id, "Read mode", 0, {
+                        Digital: 0,
+                        Analog: 1
+                    }),
+                    saved_value: 0
+                },
+                led_hz: {
+                    addr: FX_S50_REG.reg.L_HZ,
+                    wg: new widget_int(self.id, "led_hz", 120, 0, 255),
+                    saved_value: 0
+                },
+                led_brilho: {
+                    addr: FX_S50_REG.reg.L_DC,
+                    wg: new widget_int(self.id, "led_brilho", 50, 0, 200),
+                    saved_value: 0
+                },
+                filter_size: {
+                    addr: FX_S50_REG.reg.F_TOP,
+                    wg: new widget_int(self.id, "filter_size", 5, 0, 255),
+                    saved_value: 0
+                },
+                filter_trigger: {
+                    addr: FX_S50_REG.reg.F_TRIG,
+                    wg: new widget_int(self.id, "filter_trigger", 5, 0, 255),
+                    saved_value: 0
+                }
+            })
+        });
 
-class fxs50 extends devices_card {
-    constructor(Addr) {
-        super(Addr);
-        this.firmwareVersion = 1002;
-        this.id = Cards.length;
-        this.parameters = {
-            addr: { addr: FX_S50_REG.reg.ADDR, wg: new widget_int(this.id,"Addr",0,0,31), saved_value: this.Addr },
-            name: { addr: FX_S50_REG.reg.NAME, wg: new widget_string(this.id,"name","FX-S50",32), saved_value: 0 },
-            CTRL1: { addr: FX_S50_REG.reg.CTRL1, wg: new widget_select(this.id,"Read mode",0,{"Digital":0,"Analog":1}), saved_value: 0 },
-            //CTRL: 0x01,
-            led_hz: { addr: FX_S50_REG.reg.L_HZ, wg: new widget_int(this.id,"led_hz",120,0,255), saved_value: 0 },
-            led_brilho: { addr: FX_S50_REG.reg.L_DC, wg: new widget_int(this.id,"led_brilho",50,0,200), saved_value: 0 },
-            filter_size: { addr: FX_S50_REG.reg.F_TOP, wg: new widget_int(this.id,"filter_size",5,0,255), saved_value: 0 },
-            filter_trigger: { addr: FX_S50_REG.reg.F_TRIG, wg: new widget_int(this.id,"filter_trigger",5,0,255), saved_value: 0 }
-            //READ: 0x06
-        };
-        
+        /* callback de conflito de endereço */
         this.parameters.addr.wg.currentValue = this.Addr;
-
         this.parameters.addr.wg.trim_callback = (self) => {
-            //console.log(`Lambda executado! Valor do objeto: ${self.value()}`);
-            for( const card of Cards ){
-                if( card.id != this.id ){
-                    if( self.value() == card.Addr ){
-                        console.log(`ERRO esse endereço ja é utilizado por outro dispositivo da rede!`);
-                        self.input.value = this.Addr;
-                    }
+            for (const card of Cards) {
+                if (card.id !== this.id && self.value() === card.Addr) {
+                    console.log("ERRO: endereço já utilizado!");
+                    self.input.value = this.Addr;
                 }
             }
-        }
+        };
 
-        //this.graphs = {
-        //    read: { addr: 0x00, wg: new widget_int(this.id,"Addr",0,31) },
-        //}
         this.graph_mode = 'digital';
         this.grafico = {};
         this.card = null;
-        
     }
 
-    async get_firmware_version(){
-        let fw1 = await fx.command( this.Addr, FX_S50_REG.cmd.FIRMWARE_ID  );
-        let fw2 = await fx.command( this.Addr, FX_S50_REG.cmd.FIRMWARE_VERSION  );
-        if( fw1.ok && fw1.ok ){
-            this.firmwareVersion = fw1.value*1000 + fw2.value;
-        }else{
-            this.firmwareVersion = 1002;
+    /* firmware antigo não possui CTRL1 */
+    param_available(p) {
+        if (this.firmwareVersion <= 1002) {
+            return p !== "CTRL1";
         }
-        console.log( "Version:", this.firmwareVersion );
+        return true;
     }
 
     async html(){
@@ -159,10 +181,88 @@ class fxs50 extends devices_card {
         //this.grafico.interval = setInterval(this.adicionarValor.bind(this), 200);
     }
 
-    async update(){
-        this.check_save();
-        await this.adicionarValor();
+    /* gráfico específico do FXS50 */
+    atualizarGrafico() {
+        const g = this.grafico;
+        g.ctx.clearRect(0, 0, g.w, g.h);
+
+        let max_val = 1;
+        let min_val = 0;
+
+        if (this.firmwareVersion > 1002 && g.mode === "analogico") {
+            max_val = 20;
+        }
+
+        g.ctx.strokeStyle = "lightgray";
+        g.ctx.setLineDash([5, 5]);
+
+        const yMax = 5;
+        const yMin = 5 + (g.h - 10);
+
+        g.ctx.beginPath();
+        g.ctx.moveTo(0, yMax);
+        g.ctx.lineTo(g.w, yMax);
+        g.ctx.stroke();
+
+        g.ctx.beginPath();
+        g.ctx.moveTo(0, yMin);
+        g.ctx.lineTo(g.w, yMin);
+        g.ctx.stroke();
+
+        g.ctx.setLineDash([]);
+
+        g.ctx.beginPath();
+        g.ctx.moveTo(
+            0,
+            5 + (g.h - 10) * (1 - g.data[0] / max_val)
+        );
+
+        for (let i = 1; i < g.data.length; i++) {
+            const x = (i / (g.data.length - 1)) * g.w;
+            const y = 5 + (g.h - 10) * (1 - g.data[i] / max_val);
+            g.ctx.lineTo(x, y);
+        }
+
+        g.ctx.strokeStyle = "blue";
+        g.ctx.lineWidth = 1.5;
+        g.ctx.stroke();
     }
+
+    async adicionarValor() {
+        this.grafico.data.shift();
+
+        const x = await fx.command(this.Addr, FX_S50_REG.cmd.READ);
+
+        if (this.firmwareVersion > 1002) {
+            const mode = await fx.register_read(this.Addr, this.parameters.CTRL1.addr);
+            if (mode.ok) {
+                this.grafico.mode = mode.value === 1 ? "analogico" : "digital";
+            }
+        }
+
+        this.grafico.data.push(parseInt(x.value));
+        this.atualizarGrafico();
+    }
+
+    /* reset do FXS50 é diferente */
+    //async reset() {
+    //    await fx.command(this.Addr, FX_S50_REG.cmd.MCU_RESET, null, true);
+    //    await delay(20);
+    //    await this.read(true);
+    //}
+
+    /* get_firmware_version do FXS50 é diferente */
+    async get_firmware_version(){
+        let fw1 = await fx.command( this.Addr, FX_S50_REG.cmd.FIRMWARE_ID  );
+        let fw2 = await fx.command( this.Addr, FX_S50_REG.cmd.FIRMWARE_VERSION  );
+        if( fw1.ok && fw1.ok ){
+            this.firmwareVersion = fw1.value*1000 + fw2.value;
+        }else{
+            this.firmwareVersion = 1002;
+        }
+        console.log( "Version:", this.firmwareVersion );
+    }
+
 
     atualizarGrafico() {
         this.grafico.ctx.clearRect(0, 0, this.grafico.w, this.grafico.h);
@@ -212,7 +312,7 @@ class fxs50 extends devices_card {
         this.grafico.ctx.lineWidth = 1.5;
         this.grafico.ctx.stroke();
     }
-    
+
     async adicionarValor() {
         //console.log(this.grafico);
         this.grafico.data.shift();
@@ -233,127 +333,8 @@ class fxs50 extends devices_card {
         this.atualizarGrafico();
     }
 
-    param_available( p ){
-        if( this.firmwareVersion <= 1002 ){
-            return ( p!="CTRL1" );
-        }
-        return 1;
+    async update(){
+        this.save_status();
+        await this.adicionarValor();
     }
-
-    async read( save_val = false ){
-
-        const btn_save = this.card.querySelector("#btn_save");
-        btn_save.classList.add('ok');
-
-        // atualiza o endereço
-        this.parameters.addr.wg.input.value = this.Addr;
-        //console.log(`READ-BTN [0x${this.Addr} / ID: ${this.id}]`);
-        
-        // Le cada parâmetro
-        for( const param in this.parameters ){
-            if( param != "addr" && param != "name" && this.param_available( param ) ){
-                const ans = await fx.register_read( this.Addr, this.parameters[param].addr  );
-                if( ans.ok ){
-                    console.log(`READ-BTN-RESULT[${param} 0x${ this.parameters[param].addr }] ${ans.value}`);
-                    this.parameters[param].wg.display( ans.value );
-                    if( save_val ){
-                        this.parameters[param].saved_value = ans.value;
-                    }
-                }else{
-                    console.log(`READ-BTN-RESULT[${param} 0x${ this.parameters[param].addr }] ERRO`);
-                }
-            }
-        }
-    }
-    
-    async default(){
-        // Comando que retorna as configurações aos valores padrão
-        // mantendo o endereço do dispositivo
-        await fx.command_key(this.Addr,FX_S50_REG.cmd_write.RESTORE_KEPP_ADDR, true);
-        await delay(20);
-        await this.read();
-        //for( const param in this.parameters ){
-        //    //await this.parameters[param].wg.display( this.parameters[param].wg.defaultValue );
-        //}
-    }
-
-    async apply( save_val = false ){
-        console.log(`APPLY-BTN [0x${this.Addr} / ID: ${this.id}]`);
-        for( const param in this.parameters ){
-            //if( param != "addr" && param != "name" ){
-            if( param != "addr" && param != "name" && this.param_available( param ) ){
-                const wg = this.parameters[param].wg;
-                const reg_addr = this.parameters[param].addr;
-                //let IN = wg.input.value;
-                let IN = wg.value();
-                let ans = await fx.register_write( this.Addr, reg_addr,  IN );
-                if( ans.ok ){
-                    wg.display( ans.value );
-                    if( save_val ){
-                        this.parameters[param].saved_value = ans.value;
-                    }
-                }else{
-                    console.log(`ERRO-1`);
-                }
-            }else if( param == "addr" ){
-                const wg = this.parameters[param].wg;
-                //addr_check(); // vai verificar se existe conflito de endereço com outros dispositivos
-                wg.trim();
-                const new_addr = wg.value();
-                if( new_addr != this.Addr ){
-                    const ans = await fx.register_write( this.Addr, this.parameters.addr.addr,  new_addr );
-                    if( ans.ok ){
-                        wg.display( ans.value );
-                        this.Addr = ans.value;
-                        console.log( `[DEVICE ${this.id}][CHANGE ADDR TO ${this.Addr}]` );
-                        if( save_val ){
-                            this.parameters.addr.saved_value = ans.value;
-                        }
-                    }else{
-                        console.log(`ERRO ao alterar o endereço!!!`);
-                    }
-                }
-            }
-        }
-    }
-
-    async save(){
-        console.log("comando de salvamento especifico do fxs50");
-        await this.apply( true );
-        let ans = await fx.command_key(this.Addr,FX_S50_REG.cmd_write.SAVE,true); // Comando de save
-        console.log( "save->", ans );
-
-        const btn_save = this.card.querySelector("#btn_save");
-        btn_save.classList.add('ok');
-        //ans = await fx.command(this.Addr,0x03); // Comando de READ
-        //console.log( "save/command(READ)->", ans );
-    }
-
-    async reset(){
-        await fx.command(this.Addr,FX_S50_REG.cmd.MCU_RESET, null, true); // Comando de reset
-        await delay(20);
-        await this.read( true );
-    }
-
-    async check_save(){
-        let all_saved = true;
-        const btn_save = this.card.querySelector("#btn_save");
-        for( const param in this.parameters ){
-            if( param != "name"  && this.param_available( param ) ){
-                if( this.parameters[param].saved_value != this.parameters[param].wg.value() ){
-                    //console.log( "[!=]",param," val:",this.parameters[param].saved_value," saved: ",this.parameters[param].wg.value() );
-                    this.parameters[param].wg.status.classList.remove('ok');
-                    all_saved = false;
-                }else{
-                    this.parameters[param].wg.status.classList.add('ok');
-                }
-            }
-        }
-        if( all_saved ){
-            btn_save.classList.add('ok');
-        }else{
-            btn_save.classList.remove('ok');
-        }
-    }
-
 }
