@@ -64,23 +64,30 @@ A forma mais simples é alterando o parâmetro **led_brilho**, que controla a lu
 
 ## Ideias de Melhorias
 - ✅ Indicador em tempo real para cada parâmetro, informando se já foi atualizado ou não (🔴🟢)
+- ✅ Campo para nomeação do FX-S50
+- ✅ Cor diferente no botão de salvar
 - 🟡 Usar a cor amarela para _Apply_
 - Tornar o botão de status clicável
 - Adicionar botões individuais para cada parâmetro (_Default_, _Read_ e _Apply_)
-- ✅ Cor diferente no botão de salvar
 - Diferenciar as cores dos botões com base no estado (se já foi salvo ou se está atualizado)
 - Botão de calibração automática para o [FX-S50](https://foxdynamics.com/fx-s50)
-- Campo para nomeação do FX-S50 (ainda não implementado)
 - Suporte ao modo _Shell_, _Serial Monitor_ e _Plotter_
 - Adicionar status de conexão
 
 ---
 
-# Placa Fox Link
+# Como conectar com o cmoputador?
 
-A placa Fox Link é o circuito que faz a comunicação entre o computador e os dispositivos. É um conversor USB Serial configurado para funcionar em modo HalfDuplex. A seguir algumas formas de montar.
+Um FoxLink é o circuito que faz a comunicação entre o computador e os dispositivos. É um conversor USB Serial configurado para funcionar em modo HalfDuplex. A seguir algumas formas de montar ou usar o FoxLink oficial.
 
-## [Opção 1] Fox Link usando um conversor USB Serial ⭐️
+## [Opção 1] FoxLink oficial ⭐️
+
+A fox fornece um FoxLink oficial multiprotocolo. Ele é 4 em 1, funciona com dispositivos Fox, ESCs BLHeli e AM32 e também pode ser usando como conversor USB serial. O uso é simples basta conectar o device nos primeiros 3 pinos (da direita pra esquerda, conforme a imagem). Obs: o jumper precisa estar conectado.
+
+![Texto alternativo](images/FoxLink.png)
+![Texto alternativo](images/FoxLink_connected.png)
+
+## [Opção 2] Fox Link usando um conversor USB Serial
 
 Conecte o TX da placa com o RX usando um resistor de 1Kohm. O pino RX será o pino de comunicação (Pino FX) que deverá ser conectado aos sensores.
 
@@ -88,7 +95,7 @@ Conecte o TX da placa com o RX usando um resistor de 1Kohm. O pino RX será o pi
 
 ![Texto alternativo](images/foxlink_usbserial.png)
 
-## [Opção 2] Fox Link usando Arduino Nano ou UNO
+## [Opção 3] Fox Link usando Arduino Nano ou UNO
 
 A segunda opção é usar um **Arduino Nano** ou **UNO** como interface entre o computador e os sensores. No entanto, a comunicação não é tão estavel como usando um conversor USB Serial, recomendo se for usar testar mais de uma vez se as configurações de fato foram salvas.
 
