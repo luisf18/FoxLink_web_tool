@@ -93,9 +93,11 @@ class fxs50 extends devices_card {
     }
 
     async html(){
+        
         let card = document.createElement("div");
         this.card = card;
         card.className = "user-card";
+        
         card.id = `device_${this.id}"`;
         cards_container.appendChild(card);
         const HTML = `
@@ -106,6 +108,7 @@ class fxs50 extends devices_card {
                     <div class="device-info">Modelo: ${"FX-S50"} | Lote: ${"2025"} | V${parseInt(this.firmwareVersion/1000)}.${this.firmwareVersion%1000} </div>
                 </div>
             </div>
+            
             <div class="user-info"> </div>
 
             <!-- Gráfico -->
