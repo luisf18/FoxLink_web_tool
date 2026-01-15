@@ -52,6 +52,17 @@ class IrKey extends FxDevice {
             image: "devices/IrKey.png",
             graph_mode: "analog",
             REG: IRKEY_REG,
+            graphOptions: {
+                points: 60,
+                autoScale: true,
+                min: 0,
+                max: 1,
+                hideLegend: true,
+                hideYAxis: true,
+                variables: [
+                    { name: "sensor", color: "blue" }
+                ]
+            },
             parameters: (self) => ({
                 addr: { addr: FX_BASE.reg.ADDR, wg: new widget_int(self.id,"Addr",0,0,31), saved_value: self.Addr },
                 name: { addr: IRKEY_REG.reg.NAME, wg: new widget_string(self.id,"name","IrKey",32), saved_value: 0 },
