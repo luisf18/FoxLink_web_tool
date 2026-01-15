@@ -84,7 +84,7 @@ Um FoxLink é o circuito que faz a comunicação entre o computador e os disposi
 
 A fox fornece um FoxLink oficial multiprotocolo. Ele é 4 em 1, funciona com dispositivos Fox, ESCs BLHeli e AM32 e também pode ser usando como conversor USB serial. O uso é simples basta conectar o device nos primeiros 3 pinos (da direita pra esquerda, conforme a imagem). Obs: o jumper precisa estar conectado.
 
-![Texto alternativo](images/FoxLink.png)
+![Texto alternativo](images/foxlink.png)
 ![Texto alternativo](images/FoxLink_connected.png)
 
 ## [Opção 2] Fox Link usando um conversor USB Serial
