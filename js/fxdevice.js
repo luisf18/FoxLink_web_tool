@@ -249,6 +249,7 @@ class FxDevice extends devices_card {
                     wg.display( ans.value );
                     if( save_val ){
                         this.parameters[param].saved_value = ans.value;
+                        console.log( `[BTN-APPLY][ADDR ${this.Addr}][save ${param} ${ans.value}]` );
                     }
                 }else{
                     console.log(`[BTN-APPLY] ERRO-1`);
