@@ -4,6 +4,8 @@ class MultiLineGraph {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
 
+        this.config  = config;
+
         this.width  = canvas.width;
         this.height = canvas.height;
         this.points = config.points || 50;
@@ -18,7 +20,13 @@ class MultiLineGraph {
         this.margin_y = 35;
         this.margin_x = this.hideYAxis ? 10 : 50;
         this.marginRight = 10;
-        
+
+        this.legendHeight = this.hideLegend ? 0 : 25;
+        this.topOffset = this.margin_y + this.legendHeight;
+        this.bottomOffset = this.margin_y;
+
+        this.yExponent = 0;
+        this.useExponent = true; // pode virar config depois
 
         // Unidade e fonte
         this.unit = config.unit || "";
@@ -31,15 +39,56 @@ class MultiLineGraph {
         this.variables = config.variables || [];
         this.data = [];
 
-        this.legendHeight = this.hideLegend ? 0 : 25;
+        this.yTicks = 2;
+
+        this.resize();
+
+        this.clear();
+    }
+
+    clear(){
+        for (let i = 0; i < this.variables.length; i++) {
+            this.data[i] = new Array(this.points).fill(0);
+        }
+    }
+
+    /* ==============================
+       Ajusta resolução
+    ============================== */
+    resize(){
+
+        const rect = this.canvas.getBoundingClientRect();
+        const dpr  = window.devicePixelRatio || 1;
+        
+        this.width  = rect.width;
+        this.height = rect.height;
+        //this.canvas.width  = this.width  * dpr;
+        //this.canvas.height = this.height * dpr;
+        //this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        //this.computeLayout();
+
+        const base = Math.min(this.width, this.height);
+
+        this.font.size = Math.max(12, base * 0.035);
+
+        this.margin_y = this.font.size*0.5;
+        this.margin_x = this.hideYAxis ? 10 : this.font.size*3.5;
+        this.marginRight = 10;
+
+        this.legendHeight = this.hideLegend ? 0 : this.font.size*2.5;
         this.topOffset = this.margin_y + this.legendHeight;
         this.bottomOffset = this.margin_y;
 
-        this.yExponent = 0;
-        this.useExponent = true; // pode virar config depois
+        //this.margin_x.left   = this.fontSize * 3.5;
+        //this.margin.right  = 10;
+        //this.margin.top    = this.fontSize * 2;
+        //this.margin.bottom = this.fontSize * 2.5;
+
+        //this.yTicks = Math.max(2, Math.floor(this.height / 80));
 
         this.yTicks = (
-            config.yTicks ||
+            this.config.yTicks ||
             Math.max( 
                 2,
                 2*Math.floor(
@@ -47,11 +96,8 @@ class MultiLineGraph {
                 )
             )
         );
-
-        for (let i = 0; i < this.variables.length; i++) {
-            this.data[i] = new Array(this.points).fill(0);
-        }
     }
+
 
     /* ==============================
        CONFIGURAÇÕES
@@ -113,9 +159,9 @@ class MultiLineGraph {
         }
 
         this.drawZeroLine(min, max);
-        this.drawYAxis(min, max);
         this.drawLimits(min, max);
         this.drawLines(min, max);
+        this.drawYAxis(min, max);
         this.drawLegend();
     }
 
@@ -178,19 +224,31 @@ class MultiLineGraph {
 
         if(this.hideYAxis){
             // Imprime a escala do eixo y
-            ctx.textAlign = "left";
+
+            let rect_w =  (this.font.size+1)*3.2;
+
+            this.ctx.fillStyle = "#0016bad3";
+            this.ctx.fillRect(
+                this.margin_x, this.topOffset,
+                rect_w,
+                this.height-this.topOffset-this.bottomOffset
+            );
+
+            //ctx.textAlign = "left";
+            ctx.textAlign = "center";
             ctx.textBaseline = "top";
             ctx.font = `${this.font.size+1}px ${this.font.family}`;
-            ctx.fillStyle = "#0f0f0fff";
+            ctx.fillStyle = "#ffffffff";
             ctx.fillText(
                 max.toFixed(2),
-                this.margin_x + 5,
-                this.topOffset - 22
+                //this.margin_x + 5,
+                this.margin_x + rect_w/2,
+                this.topOffset + 12
             );
             ctx.fillText(
                 min.toFixed(2),
-                this.margin_x + 5,
-                this.height - this.bottomOffset + 12
+                this.margin_x + rect_w/2,
+                this.height - this.bottomOffset - 22
             );
             return;
         }

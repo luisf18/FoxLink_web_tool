@@ -47,8 +47,18 @@ class fxs50 extends FxDevice {
             name: "FxS50",
             model: "FX-S50",
             image: "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png",
-            graph_mode: "digital",
             REG: FX_S50_REG,
+            graphOptions: {
+                points: 60,
+                autoScale: true,
+                min: 0,
+                max: 1,
+                hideLegend: true,
+                hideYAxis: true,
+                variables: [
+                    { name: "sensor", color: "blue" }
+                ]
+            },
             parameters: (self) => ({
                 addr: {
                     addr: FX_S50_REG.reg.ADDR,
@@ -101,26 +111,9 @@ class fxs50 extends FxDevice {
     }
 
     async graph_add() {
-
-        console.log(this.grafico);
-
-        this.grafico.data.shift();
-
-        const x = await fx.command(this.Addr, FX_S50_REG.cmd.READ);
-
-        if (this.firmwareVersion > 1002) {
-            const mode = await fx.register_read(this.Addr, this.parameters.CTRL1.addr);
-            if (mode.ok) {
-                this.grafico.mode = mode.value === 1 ? "analogico" : "digital";
-            }
-        }
-
-        this.grafico.data.push(parseInt(x.value));
-        this.graph_update();
+        const x = await fx.command(this.Addr, this.REG.cmd.READ);
+        if (!x.ok) return;
+        this.grafico.addValue(0, x.value);
     }
 
-    async update(){
-        this.save_status();
-        await this.graph_add();
-    }
 }

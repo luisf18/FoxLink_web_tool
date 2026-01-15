@@ -21,8 +21,8 @@ class FxDevice extends devices_card {
         this.lot = 0;
 
         // Gráfico
-        this.graph_mode = options.graph_mode ?? null;
-        this.grafico = null;
+        this.graphOptions = options.graphOptions ?? null;
+        this.grafico      = null;
 
         if( this.parameters.addr ){
             /* callback de conflito de endereço */
@@ -76,7 +76,7 @@ class FxDevice extends devices_card {
 
             <div class="user-info"></div>
 
-            ${this.graph_mode ? `
+            ${this.graphOptions ? `
             <!-- Gráfico -->
             <div class="chart-container">
                 <canvas id="grafico"></canvas>
@@ -103,9 +103,7 @@ class FxDevice extends devices_card {
 
         this.bind_buttons();
 
-        if (this.graph_mode) {
-            this.graph_init();
-        }
+        this.graph_init();
     }
 
     bind_buttons() {
@@ -119,89 +117,30 @@ class FxDevice extends devices_card {
     // ============================================================
     // Gráfico
     // ============================================================
-    graph_init(){
-        //console.log("[GRAPH-NEW]")
+    graph_init() {
         this.canvas = this.card.querySelector("#grafico");
-        console.log(this.canvas);
-        this.grafico = {
-            canvas: this.canvas,
-            w: this.canvas.width,
-            h: this.canvas.height,
-            ctx: this.canvas.getContext("2d"),
-            data: new Array(50).fill(0),
-            mode: this.graph_mode
-        };
-        //console.log(this.grafico);
+        if (!this.canvas) return;
+
+        const dpr = window.devicePixelRatio || 1;
+
+        const rect = this.canvas.getBoundingClientRect();
+
+        this.canvas.width  = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+
+        const ctx = this.canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        this.grafico = new MultiLineGraph(
+            this.canvas,
+            this.graphOptions || {}
+        );
     }
 
-    graph_update() {
-        this.grafico.ctx.clearRect(0, 0, this.grafico.w, this.grafico.h);
-
-        // ajusta intervalo
-        let max_val = 1;
-        let min_val = 0;
-
-        if(this.firmwareVersion>1002){
-            if( this.grafico.mode == 'analogico' ){
-                max_val = 20;
-                min_val = 0;
-            }
-        }
-
-        // Definir estilos para as linhas limite
-        this.grafico.ctx.strokeStyle = "lightgray";
-        this.grafico.ctx.setLineDash([5, 5]); // Padrão tracejado
-
-        // Linha superior (máximo)
-        let yMax = 5 + (this.grafico.h - 10) * (1 - (max_val / max_val));
-        this.grafico.ctx.beginPath();
-        this.grafico.ctx.moveTo(0, yMax);
-        this.grafico.ctx.lineTo(this.grafico.w, yMax);
-        this.grafico.ctx.stroke();
-
-        // Linha inferior (mínimo)
-        let yMin = 5 + (this.grafico.h - 10) * (1 - (min_val / max_val));
-        this.grafico.ctx.beginPath();
-        this.grafico.ctx.moveTo(0, yMin);
-        this.grafico.ctx.lineTo(this.grafico.w, yMin);
-        this.grafico.ctx.stroke();
-
-        // Resetar estilo de linha para normal (sólido)
-        this.grafico.ctx.setLineDash([]);
-
-        // Linhas do gráfico principal
-        this.grafico.ctx.beginPath();
-        this.grafico.ctx.moveTo(0, 5 + (this.grafico.h - 10) * (1 - (this.grafico.data[0] / max_val)) );
-
-        for (let i = 1; i < this.grafico.data.length; i++) {
-            let x = (i / (this.grafico.data.length - 1)) * this.grafico.w;
-            let y = 5 + (this.grafico.h - 10) * (1 - (this.grafico.data[i] / max_val));
-            this.grafico.ctx.lineTo(x, y);
-        }
-
-        this.grafico.ctx.strokeStyle = "blue";
-        this.grafico.ctx.lineWidth = 1.5;
-        this.grafico.ctx.stroke();
-    }
-    
     async graph_add() {
-        //console.log(this.grafico);
-        this.grafico.data.shift();
-        //this.grafico.data.push(Math.random() * 10);
-        //let x = await fx.check( this.Addr );
-        //let x = await fx.command( this.Addr, 13, null, true );
-        let x = await fx.command( this.Addr, this.REG.cmd.READ );
-
-        //if( this.firmwareVersion > 1002 ){
-        //    let mode = await fx.register_read( this.Addr, this.parameters.CTRL1.addr );
-        //    if( mode.ok ){
-        //        if( mode.value == 1 ) this.grafico.mode = 'analogico';
-        //        else this.grafico.mode = 'digital';
-        //    }
-        //}
-        
-        this.grafico.data.push( parseInt(x.value) );
-        this.atualizarGrafico();
+        const x = await fx.command(this.Addr, this.REG.cmd.READ);
+        if (!x.ok) return;
+        this.grafico.addValue(0, x.value);
     }
 
 
@@ -290,6 +229,9 @@ class FxDevice extends devices_card {
         await fx.reset(this.Addr, true);
         await delay(20);
         await this.read(true);
+        if( this.grafico ){
+            this.grafico.clear();
+        }
     }
 
     // Botão default
@@ -328,8 +270,10 @@ class FxDevice extends devices_card {
     // atualização
     async update(){
         this.save_status();
-        if( this.graph_mode ){
-            await this.graph_update();
+        if(this.grafico){
+            this.graph_add();
+            this.grafico.update();
         }
     }
+
 }
