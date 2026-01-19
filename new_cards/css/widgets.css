@@ -1,0 +1,90 @@
+.widget {
+    background: #f7f7f7;
+    border-radius: 10px;
+    padding: 8px;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.widget-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.widget-name {
+    font-weight: 600;
+    min-width: 50px;
+}
+
+.widget-right {
+    min-width: 55px;
+    margin-left: auto;
+    display: flex;
+    align-items: center;   /* ✅ */
+    justify-content: flex-end; /* ✅ garante ficar à direita */
+    gap: 6px;
+}
+
+.real-value {
+    font-size: 13px;
+    color: #777;
+    min-width: 36px;
+    text-align: center;
+}
+
+.real-value.abs {
+    font-size: 12px;
+    min-width: 48px;
+    text-align: right;
+    color: #666;
+}
+
+.real-value.editable {
+    cursor: pointer;
+}
+
+.real-input,
+.abs-input {
+    width: 52px;
+    font-size: 11px;
+    display: none;
+}
+
+.status {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #dc3545;
+}
+
+.status.ok {
+    background: #28a745;
+}
+
+.checkbox-group-vertical {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.int-input {
+    width: 60px;
+    font-size: 13px;
+    flex: 1;
+    padding: 3px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+
+.string-input {
+    width: 60px;
+    font-size: 13px;
+    flex: 1;
+    padding: 3px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}

@@ -1,0 +1,134 @@
+body {
+    margin: 0;
+    padding: 20px;
+    background: #f2f2f2;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 16px;
+
+    min-width: 350px;
+    max-width: 400px;
+
+    min-height: 500px;
+    max-height: 550px;
+    /*height: 420px;*/
+    
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+.card-body {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+.card-footer {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;   /* 👈 empilha */
+    gap: 10px;
+    background: #fafafa;
+}
+
+.card-footer-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.card-footer-buttons button {
+    flex: 1;                  /* 👈 todos iguais */
+    padding: 7px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    background: #ff974d;
+    color: #ffffff;
+}
+
+
+/*
+.card-footer button {
+    flex: 1;
+    padding: 7px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    background: #ff974d;
+    color: #ffffff;
+}
+*/
+
+/*=====================================================*/
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    background: #ff7310;
+    border-bottom: 1px solid #e0e0e0;
+    color: #fff;
+}
+
+/* container do texto */
+.device-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* nome principal */
+.device-title {
+    font-size: 22px;
+    font-weight: 700;
+    /*color: #000;*/
+    /*color: #fff;*/
+}
+
+/* [id] discreto */
+.device-id {
+    font-size: 16px;
+    font-weight: 500;
+    /*color: #e6e6e6;*/
+}
+
+/* linha secundária */
+.device-meta {
+    font-size: 13px;
+    /*color: #dedede;*/
+}
+
+.device-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;        /* 🔵 circular */
+    object-fit: contain;
+    background: #ffffff;       /* fundo branco */
+    padding: 3px;              /* espaço interno */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    flex-shrink: 0;
+}
+
+
+.btn-clear  { background: #e74c3c; color: #fff; }
+.btn-text   { background: #3498db; color: #fff; }
+.btn-int    { background: #2ecc71; color: #fff; }
+.btn-slide  { background: #9b59b6; color: #fff; }
+.btn-string { background: #f39c12; color: #fff; }
+.btn-check  { background: #34495e; color: #fff; }
