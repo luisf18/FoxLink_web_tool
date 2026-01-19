@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Widget Test</title>
+    <style>
+.params {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.param {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.param-name {
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.param-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.param-row input[type="number"],
+.param-row input[type="text"] {
+    width: 90px;
+}
+
+.param-row input[type="range"] {
+    flex: 1;
+}
+
+.param-value {
+    min-width: 50px;
+    padding: 4px 6px;
+    font-size: 0.9rem;
+    text-align: center;
+    background: #f5f5f5;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-family: monospace;
+}
+
+.param-row.bitmask {
+    flex-wrap: wrap;
+    gap: 6px 10px;
+}
+
+.param-row.bitmask label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.9rem;
+}
+
+    </style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="params">
+
+    <!-- INT -->
+    <div class="param">
+        <div class="param-name">Gain</div>
+        <div class="param-row">
+            <input type="number" min="0" max="255" value="120">
+            <div class="param-value">0x78</div>
+            <div class="wg-status"></div>
+        </div>
+    </div>
+
+    <!-- SLIDER -->
+    <div class="param">
+        <div class="param-name">Threshold</div>
+        <div class="param-row">
+            <input type="range" min="0" max="100" value="50">
+            <div class="param-value">128</div>
+            <div class="wg-status ok"></div>
+        </div>
+    </div>
+
+    <!-- STRING -->
+    <div class="param">
+        <div class="param-name">Device Name</div>
+        <div class="param-row">
+            <input type="text" maxlength="16" value="Sensor-A">
+            <div class="wg-status"></div>
+        </div>
+    </div>
+
+    <!-- BITMASK -->
+    <div class="param">
+        <div class="param-name">Features</div>
+        <div class="param-row bitmask">
+            <label><input type="checkbox"> OP1</label>
+            <label><input type="checkbox"> OP2</label>
+            <label><input type="checkbox"> OP3</label>
+            <label><input type="checkbox"> OP4</label>
+
+            <div class="param-value">0x05</div>
+            <div class="wg-status"></div>
+        </div>
+    </div>
+
+</div>
+
+
+
+<script src="js/widgets.js"></script>
+
+<script>
+/* ===============================
+   TESTE DO CARD
+   =============================== */
+
+const card = document.createElement("div");
+card.className = "card";
+
+const title = document.createElement("h3");
+title.innerText = "Device FX-S50";
+card.appendChild(title);
+
+// Criando widgets
+const w_gain   = new widget_int(1, "Gain", 50, 0, 255);
+const w_name   = new widget_string(1, "Name", "Sensor A", 16);
+const w_mode   = new widget_select(1, "Mode", "AUTO", {
+    AUTO: 0,
+    MANUAL: 1,
+    TEST: 2
+});
+const w_int2   = new widget_int2( 1, "Int2", 10, 20, 200 );
+
+// Adicionando ao card
+card.appendChild(w_gain.html());
+card.appendChild(w_name.html());
+card.appendChild(w_mode.html());
+card.appendChild(w_int2.html());
+
+// Botão para ler valores
+const btn = document.createElement("button");
+btn.className = "btn-read";
+btn.innerText = "Ler valores";
+btn.onclick = () => {
+    console.log("Gain:", w_gain.value());
+    console.log("Name:", w_name.value());
+    console.log("Mode:", w_mode.value());
+    console.log("Mode:", w_int2.value());
+};
+
+card.appendChild(btn);
+
+document.getElementById("app").appendChild(card);
+
+</script>
+</body>
+</html>

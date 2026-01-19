@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Text Cards Example</title>
+
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f0f0f0;
+        padding: 20px;
+    }
+
+    /* Card ------------------------------------------------- */
+    .cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+    .text-card {
+        width: 320px;
+        height: 420px;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Topo fixo -------------------------------------------- */
+    .card-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #ddd;
+        font-size: 1.1rem;
+        font-weight: bold;
+        background: #fafafa;
+        border-radius: 12px 12px 0 0;
+    }
+
+    /* Conteúdo rolável ------------------------------------- */
+    .card-content {
+        flex: 1;
+        padding: 12px 16px;
+        overflow-y: auto;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    /* Rodapé fixo ------------------------------------------ */
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-top: 1px solid #ddd;
+        background: #fafafa;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .card-footer button {
+        flex: 1;
+        margin: 0 4px;
+        padding: 8px;
+        font-size: 0.9rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #fff;
+    }
+
+    .btn-clear {
+        background: #dc3545;
+    }
+
+    .btn-generate {
+        background: #007bff;
+    }
+
+    .card-footer button:hover {
+        filter: brightness(90%);
+    }
+</style>
+</head>
+<body>
+
+<div class="cards-container">
+
+<!-- Card 1 -->
+<div class="text-card">
+    <div class="card-header">Log A</div>
+
+    <div class="card-content" id="content-1">
+        Este é um exemplo de texto inicial do card A.
+        <br><br>
+        Ele pode crescer e, quando ultrapassar o tamanho
+        máximo do card, uma barra de rolagem aparecerá
+        automaticamente.
+    </div>
+
+    <div class="card-footer">
+        <button class="btn-clear" onclick="clearText('content-1')">
+            Limpar
+        </button>
+        <button class="btn-generate" onclick="generateText('content-1')">
+            Gerar Texto
+        </button>
+    </div>
+</div>
+
+<!-- Card 2 -->
+<div class="text-card">
+    <div class="card-header">Log B</div>
+
+    <div class="card-content" id="content-2">
+        Card B iniciado com outro conteúdo.
+    </div>
+
+    <div class="card-footer">
+        <button class="btn-clear" onclick="clearText('content-2')">
+            Limpar
+        </button>
+        <button class="btn-generate" onclick="generateText('content-2')">
+            Gerar Texto
+        </button>
+    </div>
+</div>
+
+<!-- Card 3 -->
+<div class="text-card">
+    <div class="card-header">Log C</div>
+
+    <div class="card-content" id="content-3">
+        Card C iniciado com outro conteúdo.
+    </div>
+
+    <div class="card-footer">
+        <button class="btn-clear" onclick="clearText('content-3')">
+            Limpar
+        </button>
+        <button class="btn-generate" onclick="generateText('content-3')">
+            Gerar Texto
+        </button>
+    </div>
+</div>
+
+</div>
+
+<script>
+    function clearText(id) {
+        document.getElementById(id).innerText = "";
+    }
+
+    function generateText(id) {
+        const text = `
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum.
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+`;
+
+        const el = document.getElementById(id);
+        el.innerText += text + "\n\n";
+        el.scrollTop = el.scrollHeight; // rola para o final
+    }
+</script>
+
+</body>
+</html>

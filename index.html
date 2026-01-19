@@ -9,282 +9,9 @@
     <link rel="shortcut icon" href="favicon/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
     <link rel="manifest" href="favicon/site.webmanifest" />
-    <style>
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            gap: 30px;
-            height: 100vh;
-        }
-
-        /* Sidebar ----------------------------------------------- */
-        .sidebar {
-            width: 300px;
-            background: #ffffff;
-            padding: 20px;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-            height: 100vh;
-
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: fixed;
-            left: 0;
-            top: 0;
-        }
-        
-        .content {
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
-        select {
-            width: 100%;
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            background-color: #fff;
-            font-size: 16px;
-        }
-
-        /*/
-        .sidebar h2 {
-            color: #333;
-            font-size: 22px;
-            margin-bottom: 10px;
-        }
-        /*/
-
-        /*/
-        .sidebar h3 {
-            color: #555;
-            font-size: 18px;
-            margin: 2px 0;
-        }
-        /*/
-
-        .sidebar hr {
-            border: none;
-            height: 2px;
-            background-color: #ccc;
-            margin: 10px 0;
-        }
-        .start-btn {
-            
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-
-            background-color: #dc3545;
-            color: #fff;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .start-btn.active {
-            background-color: #28a745;
-        }
-
-        .scan-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            background-color: #3575dc;
-            color: #fff;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .scan-btn.active {
-            background-color: #f34500;
-        }
-
-        .logo-container {
-            /*height: 20%;*/
-            /*width: 100%;  Ocupa toda a largura da sidebar */
-            text-align: center;
-            /*padding-bottom: 20px;*/
-            margin-bottom: 0px;
-        }
-
-        .logo-container img {
-            max-width: 60%;
-            /*height: 100%; width: 200px; Ajuste conforme necessário */
-            /*opacity: 0.8;*/
-        }
-
-        /*.logo-container img:hover {
-            opacity: 1;
-        }
-        */
-
-        .sidebar a {
-            display: block;
-            color: #3575dc;
-            text-decoration: none;
-            text-align: center;
-            margin-top: 8px;
-        }
-
-        /* Sidebar ----------------------------------------------- */
-
-
-        .devices-container {
-            margin-left: 320px;
-            flex-grow: 1; /*flex: 1;*/
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 15px;
-            padding: 20px; /* Adicionando espaço no topo para evitar sobreposição */
-            max-width: 100vw; /* Garante que não ultrapasse a largura da tela */
-            overflow-x: auto; /* Permite rolagem horizontal caso necessário */
-        }
-
-        .user-card {
-            background: #ffffff;
-            /*/width: 350px;/*/
-            
-            min-width: 350px;
-            max-width: 400px;
-            /*/max-width: 100%;/*/ /* Evita que os cartões ultrapassem a largura do contêiner */
-
-            min-height: 500px;
-            max-height: 550px;
-
-            
-            padding: 16px 20px;
-            border-radius: 8px;
-            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-            gap: 16px; /* Reduzi o espaçamento entre os elementos */
-            justify-content: space-between;
-
-        }
-        .user-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .user-header img {
-            width: 70px;
-            height: 70px;
-            border-radius: 5px;
-        }
-        .device-title {
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        .device-info {
-            font-size: 1rem;
-            color: #666;
-        }
-        .user-info {
-            display: flex;
-            flex-direction: column;
-            gap: 5px; /* Reduzi o espaçamento entre os inputs */
-        }
-        .user-info label {
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .user-info input {
-            flex: 1;
-            padding: 3px;
-            font-size: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .user-info input[type="number"] {
-            width: 70px;
-        }
-
-        .user-info .wg-status {
-            height:  1rem; /* altura igual à altura da janela */
-            aspect-ratio: 1 / 1;
-            border-radius: 50%;
-            background-color: #dc3545;
-            /*cursor: pointer;*/
-        }
-
-        .user-info .wg-status.ok {
-            background-color: #28a745;
-        }
-        
-        /* Gráfico */
-        .chart-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 8px;
-        }
-        canvas {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            width: 100%; /* Agora não estica mais */
-            height: 80px; /* Reduzi a altura */
-        }
-        .chart-labels {
-            font-size: 0.8rem;
-            text-align: center;
-            color: #666;
-            margin-top: 2px;
-        }
-
-        /* Botões */
-        .action-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 5px; /* Reduzi o espaçamento */
-        }
-        .action-buttons button {
-            padding: 6px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            background-color: #007BFF;
-            color: #fff;
-            transition: background 0.3s ease-in-out;
-        }
-        .action-buttons button:hover {
-            /*background-color: #0056b3;*/
-            filter: brightness(90%);
-        }
-        .action-buttons .save-btn {
-            background-color: #dc3545;
-        }
-        .action-buttons .save-btn.ok {
-            background-color: #28a745;
-        }
-
-        /*
-        .chart-container {
-            width: 100%;
-        }
-        .chart-container canvas {
-            width: 100%;
-            height: 120px;
-            display: block;
-        }
-        */
-
-        
-        
-    </style>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/charts.css">
+    <link rel="stylesheet" href="css/buttons.css">
 </head>
 <body>
 
@@ -335,6 +62,7 @@
 <script src="js/fxdevice.js"></script>
 <script src="js/fxs50.js"></script>
 <script src="js/IR_KEY.js"></script>
+<script src="js/BESC_8p.js"></script>
 
 <script>
 
@@ -406,8 +134,15 @@
             F.html();
             await F.read(true);
             Cards.push(F);
+        }else if( device.ID == 0x200 ){
+            console.log(`[CARD-ADD] ESC brushed duplo 8p`);
+            const F = new besc8p(device.addr);
+            await F.get_firmware_version();
+            F.html();
+            await F.read(true);
+            Cards.push(F);
         }else{
-            console.log(`[CARD-ADD] Fail, device id unknown`);
+            console.log(`[CARD-ADD] Fail, device id unknown ${device.ID}`);
         }
     }
 

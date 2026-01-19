@@ -180,4 +180,69 @@ class devices_card {
 
 
 
+class widget_int2 extends widget{
+    constructor(device_id, name, defaultValue, Min, Max ) {
+        super(device_id, name, defaultValue);
+        this.type = "int2";
+        this.min = Min;
+        this.max = Max;
+        this.input = null;
+        this.trim_callback = null;
+        this.status = null;
+    }
+    html(){
+        this.div = document.createElement("label");
+        this.div.innerText = `${this.name}: `;
+        
+        this.input = document.createElement("input");
+        this.input.type = "number";
+        this.input.id = `param_${this.name}`;
+        this.input.value = this.currentValue;
+        // Passando apenas o valor do input
+        //input.onblur = () => this.trim(input.value);
+        //input.onblur = () => this.trim(this.div.querySelector("input"));
+        this.input.onblur = () => this.trim(this.input);
+        this.div.appendChild(this.input);
+
+        this.input2 = document.createElement("input");
+        this.input2.type = "number";
+        this.input2.id = `param_${this.name}_2`;
+        this.input2.value = this.currentValue;
+        this.input2.onblur = () => this.trim(this.input2);
+
+        this.div.appendChild(this.input2);
+
+        //<div class="wg-status"></div>
+        this.status = document.createElement("div");
+        this.status.className = "wg-status";
+        this.div.appendChild(this.status);
+
+        return this.div;
+        //return
+        //`<label>${this.name}: 
+        //    <input type="number" id="param_${this.name}" value="${this.currentValue}" onblur="${this.trim()}(this)">
+        //</label>`;
+    }
+    value(){
+        return this.input.value;
+    }
+    trim(){
+        this.input.value = this.trim_num(this.input.value);
+        if( this.trim_callback ){
+            this.trim_callback(this);
+        }
+    }
+    trim_num(x) {
+        x = parseInt(x) || this.min; // Converte para inteiro e evita NaN
+        if (x < this.min) x = this.min;
+        else if (x > this.max) x = this.max;
+        return x;
+    }
+    display(x){
+        this.input.value = this.trim_num(x);
+    }
+}
+
+
+
 
