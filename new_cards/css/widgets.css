@@ -1,3 +1,4 @@
+/* div widgets */
 .widget {
     background: #f7f7f7;
     border-radius: 10px;
@@ -6,6 +7,7 @@
     font-size: 14px;
 }
 
+/*  */
 .widget-row {
     display: flex;
     align-items: center;
@@ -13,11 +15,29 @@
     flex-wrap: nowrap;
 }
 
+/* widget nome */
 .widget-name {
     font-weight: 600;
     min-width: 50px;
 }
 
+.widget-main {
+    flex: 1;          /* ocupa o espaço livre */
+    display: flex;    /* controla os filhos */
+    align-items: center;
+}
+
+input[type="range"] {
+    accent-color: #ff7a18;   /* cursor + fill */
+    background: #ffe0cc;     /* fundo */
+    border: none;
+    outline: none;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* canto direito do widget "real value" + "status" */
 .widget-right {
     min-width: 55px;
     margin-left: auto;
@@ -27,6 +47,8 @@
     gap: 6px;
 }
 
+/* valor real da variavel */
+.hide-span,
 .real-value {
     font-size: 13px;
     color: #777;
@@ -34,6 +56,20 @@
     text-align: center;
 }
 
+.hide-span.slide {
+    padding-right: 5px;
+}
+
+/* Valor real input */
+.hide-input,
+.real-input {
+    display: none;
+    width: 52px;
+    min-height: 16px;
+    font-size: 13px;
+}
+
+/* abs?? */
 .real-value.abs {
     font-size: 12px;
     min-width: 48px;
@@ -41,33 +77,40 @@
     color: #666;
 }
 
+/* abs?? */
 .real-value.editable {
     cursor: pointer;
 }
 
-.real-input,
 .abs-input {
-    width: 52px;
-    font-size: 11px;
-    display: none;
+    width: 60px;
+    font-size: 13px;
+    flex: 1;
+    padding: 3px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    display: inline-block;
 }
 
+/* Status */
 .status {
     width: 12px;
     height: 12px;
     border-radius: 50%;
     background: #dc3545;
 }
-
+/* Status ok */
 .status.ok {
     background: #28a745;
 }
+
 
 .checkbox-group-vertical {
     margin-top: 6px;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    accent-color: #ffb47d;   /* cursor + fill */
 }
 
 .int-input {
@@ -79,7 +122,7 @@
     border-radius: 4px;
 }
 
-
+/* Input de string */
 .string-input {
     width: 60px;
     font-size: 13px;

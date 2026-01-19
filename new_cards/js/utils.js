@@ -6,6 +6,18 @@ function abstractValue(byte) {
     return 5 * byte + 860;
 }
 
+function intResize( x, i, I, o, O ){
+	if( i == I || x <= i ) return o;
+    if( x >= I ) return O;
+	return Math.floor( ((x-i)*(O-o))/(I-i) + o );
+}
+
+function intResizeClamp( x, i, I, o, O ){
+	if( i == I || x <= i ) return o;
+    if( x >= I ) return O;
+	return Math.floor( ((x-i)*(O-o))/(I-i) + o );
+}
+
 function makeEditable(span, input, onCommit) {
     span.onclick = () => {
         const n = parseInt(span.textContent.replace(/\D/g, '')) || 0;

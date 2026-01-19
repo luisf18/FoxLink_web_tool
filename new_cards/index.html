@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" translate="no">
 <head>
+<meta name="google" content="notranslate">
 <meta charset="UTF-8">
 <title>Cards com Widgets</title>
 
@@ -11,47 +12,42 @@
 
 <body>
 
-    <button onclick="connect()">connect</button>
-    <div class="card-grid"></div>
+    <div class="card-grid" translate="no">
+        <div class="card">
+            <div class="card-header">Card A</div>
+            <div class="card-body"></div>
+            <div class="card-footer">
+                <button class="btn-clear" data-action="clear">Apagar</button>
+                <button class="btn-text" data-action="text">Texto</button>
+                <button class="btn-int" data-action="int">Int</button>
+                <button class="btn-slide" data-action="slide">Slide</button>
+                <button class="btn-string" data-action="string">String</button>
+                <button class="btn-check" data-action="check">Check</button>
+            </div>
+        </div>
+    </div>
 
 <script src="js/utils.js"></script>
 <script src="js/widgets.js"></script>
-<script src="js/cards.js"></script>
-<script src="js/foxwire.js"></script>
 <script src="js/graph.js"></script>
-<script src="js/devices.js"></script>
 
 <script>
-    
-    const fx = new FoxWire(115200);
 
-    async function connect() {
-        console.log("CONECTANDO...");
-        await fx.connect();
-    }
-
-    card1 = new FxDevice(
-        0, 5,
-        document.querySelector(".card-grid"),
-        {
-            model: "FX-S50",
-            image: "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png",
-            graphOptions: {
-                points: 60,
-                autoScale: true,
-                min: 0,
-                max: 1,
-                hideLegend: true,
-                hideYAxis: true,
-                //yBarColor: "#0016bad3",
-                variables: [
-                    { name: "sensor", color: "orange" }
-                ]
-            }
+    const cg = document.querySelector('.card-body');
+    cg.appendChild( new Widget( { name: "Addr", limit: [0,31] } ).el );
+    cg.appendChild( new Widget( { name: "Kp", limit: [-1000, 1000], outputType: 'u16' } ).el );
+    cg.appendChild( new Widget( { name: "Nome", type: "string", savedValue: "Sensor" } ).el );
+    cg.appendChild( new Widget( { name: "channel 1", type: "slide", abstract: [1000, 2000], abstractLimit: [1500, 1800] } ).el );
+    cg.appendChild( new Widget( { name: "CTRL1", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
+    cg.appendChild( new Widget( { name: "CTRL2", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
+    cg.appendChild(
+        new Widget( { name: "Mode", type: "select",
+        selOptions:{
+            "Analog": 10,
+            "Digital": 12
         }
-    );
-
-    new fxs50( 1, 0, document.querySelector(".card-grid") );
+    } ).el );
+    
 </script>
 
 

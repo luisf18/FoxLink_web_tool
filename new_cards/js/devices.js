@@ -155,7 +155,12 @@ class fxs50 extends FxDevice {
                 },
                 CTRL1: {
                     addr: 2, //FX_S50_REG.reg.CTRL1,
-                    wg: new CheckWidget("Read mode", ['Analog'], 0, 0),
+                    wg: new CheckWidget("Read mode", ['Analog','Limit Frequency'], 0, 0),
+                    saved_value: 0
+                },
+                CTRL2: {
+                    addr: 2, //FX_S50_REG.reg.CTRL1,
+                    wg: new SlideWidget("CTRL2", 10, 0, 0),
                     saved_value: 0
                 }
             }
