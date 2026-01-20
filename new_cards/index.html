@@ -5,26 +5,61 @@
 <meta charset="UTF-8">
 <title>Cards com Widgets</title>
 
+<link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="css/cards.css">
 <link rel="stylesheet" href="css/widgets.css">
 <link rel="stylesheet" href="css/charts.css">
 </head>
 
 <body>
-
-    <div class="card-grid" translate="no">
-        <!--div class="card">
-            <div class="card-header">Card A</div>
-            <div class="card-body"></div>
-            <div class="card-footer">
-                <button class="btn-clear" data-action="clear">Apagar</button>
-                <button class="btn-text" data-action="text">Texto</button>
-                <button class="btn-int" data-action="int">Int</button>
-                <button class="btn-slide" data-action="slide">Slide</button>
-                <button class="btn-string" data-action="string">String</button>
-                <button class="btn-check" data-action="check">Check</button>
+    <div class="sidebar">
+        <div class="content">
+            <h2>Web Fox Link</h2>
+            <span class="sidebar-version">v0.4.2</span>
+            <hr>
+            
+            <div class="sidebar-section">
+                <h3>Link</h3>
+                <select id="in_link_sel">
+                    <option value="USBSerial">USB Serial</option>
+                    <option value="Arduino">Arduino</option>
+                </select><br>
             </div>
-        </div-->
+
+            <div class="sidebar-section">
+                <h3>Dispositivos</h3>
+                <button class="start-btn">Conectar</button>
+                <button class="scan-btn">Scan devices</button>
+            </div>
+            
+            <!--button onclick="fx.check(0,true)">check</button><br-->
+            <!--button onclick="fx.command_key(0,FX_S50_REG.cmd_write.RESTORE_KEPP_ADDR,true)">restore</button><br-->
+            <!--button onclick="fx.command(0,FX_S50_REG.cmd.READ,null,true)">read</button><br-->
+            <hr>
+            <h3>Conecte seus dispositivos FoxWire</h3>
+            <button class="start-btn" onclick="toggleConnection()">Connectar</button>
+            
+            <button class="scan-btn" onclick="scan()">scan devices</button>
+            
+            <div id="progressContainer" style="display:none; width: 100%; background-color: #ddd; border-radius: 5px; margin-top: 10px;">
+                <div id="progressBar" style="width: 0%; height: 20px; background-color: #4caf50; border-radius: 5px;"></div>
+            </div>
+            <div id="result"></div>
+            <div id="scannedAddresses"></div> <!-- Mostra os endereços buscados -->
+            <div id="users"></div>
+        </div>
+
+
+        <!-- Adicionando a logo -->
+        <div class="logo-container">
+            <img src="logo.png" alt="FoxWire Logo">
+        </div>
+        <a href="https://github.com/luisf18/FoxLink_web_tool" target="_blank">Github FoxLink webtool</a>
+        <a href="https://github.com/luisf18/FXDevices" target="_blank">Github Sensores</a>
+    </div>
+    
+    <div class="devices-container" id="cards">
+        <!--div class="card-grid" translate="no"></div-->
     </div>
 
 <script src="js/utils.js"></script>
@@ -32,80 +67,13 @@
 <script src="js/graph.js"></script>
 <script src="js/cards2.js"></script>
 
-<script>
-    const cg = document.querySelector('.card-grid');
-    const card = new FxdeviceCard( 0, 0, {
-            model: "FX-S50",
-            image: "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png"
-    } )
-    cg.appendChild( card.el );
-    const cb = card.el.querySelector( ".card-body" );
-    //const cg = document.querySelector('.card-body');
-    cb.appendChild( new Widget( { name: "Addr", limit: [0,31] } ).el );
-    cb.appendChild( new Widget( { name: "Kp", limit: [-1000, 1000], outputType: 'u16' } ).el );
-    cb.appendChild( new Widget( { name: "Nome", type: "string", defaultValue: "Sensor" } ).el );
-    cb.appendChild( new Widget( { name: "channel 1", type: "slide", abstract: [1000, 2000], abstractLimit: [1500, 1800] } ).el );
-    cb.appendChild( new Widget( { name: "CTRL1", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
-    cb.appendChild( new Widget( { name: "CTRL2", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
-    cb.appendChild(
-        new Widget( { name: "Mode", type: "select",
-        selOptions:{
-            "Analog": 10,
-            "Digital": 12
-        }
-    } ).el );
+<script type="module">
+    import { deviceRegistry, deviceDefs } from "./js/devices2.js";
+    import { resolveDevice } from "./js/device_resolver.js";
 
+    const cg = document.querySelector('#cards');
     cg.appendChild(
-        new FxdeviceCard( 0, 0, {
-                model: "ESC",
-                image: "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png",
-                graphOptions: {
-                    points: 60,
-                    autoScale: true,
-                    min: 0,
-                    max: 1,
-                    hideLegend: true,
-                    hideYAxis: true,
-                    variables: [ { name: "read", color: "orange" } ]
-                },
-                param: {
-                    "addr": {
-                        addr: 0,
-                        wg: { name: "Addr", limit: [0,31] }
-                    },
-                    "name": {
-                        addr: 2,
-                        wg: { name: "Name", type: "string", defaultValue: "Sensor", savedValue: "FX-S50", outputLen: 16 }
-                    },
-                    "kp": {
-                        addr: 3,
-                        wg: { name: "Kp", limit: [-1000, 1000], outputType: 'i16', defaultValue: 150 }
-                    },
-                    "Channel 1": {
-                        addr: 3,
-                        wg: { name: "Channel 1", type: "slide", abstract: [1000, 2000], abstractLimit: [1500, 1800], defaultValue: 200 }
-                    },
-                    "CTRL1": {
-                        addr: 4,
-                        wg: { name: "CTRL1", type: "check", defaultValue: 10, checkOptions: ["Analog","Fixed Frequency","Clock On"] }
-                    },
-                    "CTRL2": {
-                        addr: 5,
-                        wg: { name: "CTRL2", type: "check", defaultValue: 1, checkOptions: ["Analog","Fixed Frequency","Clock On"] }
-                    },
-                    "Mode": {
-                        addr: 6,
-                        wg: {
-                            name: "Mode", type: "select",
-                            defaultValue: 10,
-                            selOptions:{
-                                "Analog": 10,
-                                "Digital": 12
-                            }
-                        }
-                    }
-                }
-        } ).el
+        new FxdeviceCard( 0, 0, resolveDevice(1,2) ).el
     )
     
 </script>
