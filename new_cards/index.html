@@ -13,7 +13,7 @@
 <body>
 
     <div class="card-grid" translate="no">
-        <div class="card">
+        <!--div class="card">
             <div class="card-header">Card A</div>
             <div class="card-body"></div>
             <div class="card-footer">
@@ -24,29 +24,89 @@
                 <button class="btn-string" data-action="string">String</button>
                 <button class="btn-check" data-action="check">Check</button>
             </div>
-        </div>
+        </div-->
     </div>
 
 <script src="js/utils.js"></script>
 <script src="js/widgets.js"></script>
 <script src="js/graph.js"></script>
+<script src="js/cards2.js"></script>
 
 <script>
-
-    const cg = document.querySelector('.card-body');
-    cg.appendChild( new Widget( { name: "Addr", limit: [0,31] } ).el );
-    cg.appendChild( new Widget( { name: "Kp", limit: [-1000, 1000], outputType: 'u16' } ).el );
-    cg.appendChild( new Widget( { name: "Nome", type: "string", savedValue: "Sensor" } ).el );
-    cg.appendChild( new Widget( { name: "channel 1", type: "slide", abstract: [1000, 2000], abstractLimit: [1500, 1800] } ).el );
-    cg.appendChild( new Widget( { name: "CTRL1", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
-    cg.appendChild( new Widget( { name: "CTRL2", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
-    cg.appendChild(
+    const cg = document.querySelector('.card-grid');
+    const card = new FxdeviceCard( 0, 0, {
+            model: "FX-S50",
+            image: "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png"
+    } )
+    cg.appendChild( card.el );
+    const cb = card.el.querySelector( ".card-body" );
+    //const cg = document.querySelector('.card-body');
+    cb.appendChild( new Widget( { name: "Addr", limit: [0,31] } ).el );
+    cb.appendChild( new Widget( { name: "Kp", limit: [-1000, 1000], outputType: 'u16' } ).el );
+    cb.appendChild( new Widget( { name: "Nome", type: "string", defaultValue: "Sensor" } ).el );
+    cb.appendChild( new Widget( { name: "channel 1", type: "slide", abstract: [1000, 2000], abstractLimit: [1500, 1800] } ).el );
+    cb.appendChild( new Widget( { name: "CTRL1", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
+    cb.appendChild( new Widget( { name: "CTRL2", type: "check", checkOptions: ["Analog","Fixed Frequency","Clock On"] } ).el );
+    cb.appendChild(
         new Widget( { name: "Mode", type: "select",
         selOptions:{
             "Analog": 10,
             "Digital": 12
         }
     } ).el );
+
+    cg.appendChild(
+        new FxdeviceCard( 0, 0, {
+                model: "ESC",
+                image: "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png",
+                graphOptions: {
+                    points: 60,
+                    autoScale: true,
+                    min: 0,
+                    max: 1,
+                    hideLegend: true,
+                    hideYAxis: true,
+                    variables: [ { name: "read", color: "orange" } ]
+                },
+                param: {
+                    "addr": {
+                        addr: 0,
+                        wg: { name: "Addr", limit: [0,31] }
+                    },
+                    "name": {
+                        addr: 2,
+                        wg: { name: "Name", type: "string", defaultValue: "Sensor", savedValue: "FX-S50", outputLen: 16 }
+                    },
+                    "kp": {
+                        addr: 3,
+                        wg: { name: "Kp", limit: [-1000, 1000], outputType: 'i16', defaultValue: 150 }
+                    },
+                    "Channel 1": {
+                        addr: 3,
+                        wg: { name: "Channel 1", type: "slide", abstract: [1000, 2000], abstractLimit: [1500, 1800], defaultValue: 200 }
+                    },
+                    "CTRL1": {
+                        addr: 4,
+                        wg: { name: "CTRL1", type: "check", defaultValue: 10, checkOptions: ["Analog","Fixed Frequency","Clock On"] }
+                    },
+                    "CTRL2": {
+                        addr: 5,
+                        wg: { name: "CTRL2", type: "check", defaultValue: 1, checkOptions: ["Analog","Fixed Frequency","Clock On"] }
+                    },
+                    "Mode": {
+                        addr: 6,
+                        wg: {
+                            name: "Mode", type: "select",
+                            defaultValue: 10,
+                            selOptions:{
+                                "Analog": 10,
+                                "Digital": 12
+                            }
+                        }
+                    }
+                }
+        } ).el
+    )
     
 </script>
 

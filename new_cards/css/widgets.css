@@ -39,7 +39,14 @@ input[type="range"] {
 
 /* canto direito do widget "real value" + "status" */
 .widget-right {
-    min-width: 55px;
+    
+    /*
+    border-radius: 4px;
+    background-color: #c4c4c4;
+     */
+
+    height: 20px;
+    min-width: 100px;
     margin-left: auto;
     display: flex;
     align-items: center;   /* ✅ */
@@ -47,17 +54,26 @@ input[type="range"] {
     gap: 6px;
 }
 
+/*
+.widget-right > * {
+    display: flex;
+    align-items: center;
+}
+*/
+
+
 /* valor real da variavel */
 .hide-span,
 .real-value {
     font-size: 13px;
     color: #777;
     min-width: 36px;
-    text-align: center;
+    text-align: right;
 }
 
 .hide-span.slide {
     padding-right: 5px;
+    text-align: center;
 }
 
 /* Valor real input */
@@ -94,8 +110,13 @@ input[type="range"] {
 
 /* Status */
 .status {
-    width: 12px;
-    height: 12px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
     background: #dc3545;
 }
@@ -130,4 +151,36 @@ input[type="range"] {
     padding: 3px;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+/* botão da casa */
+.return-btn {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: #999;          /* cinza quando NÃO é default */
+}
+
+/* quando está no valor default */
+.return-btn.active {
+    /*color: #268fff;*/
+    color: #ffa353;
+}
+
+/* botão da casa */
+.home-btn {
+    width: 16px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: #999;          /* cinza quando NÃO é default */
+}
+
+/* quando está no valor default */
+.home-btn.active {
+    /*color: #268fff;*/
+    color: #ffa353;
 }

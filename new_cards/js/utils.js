@@ -45,3 +45,38 @@ function makeEditable(span, input, onCommit) {
         }
     };
 }
+
+function stringToBytes(str, len) {
+    const bytes = [];
+    for (let i = 0; i < len-1; i++) {
+        if (i < str.length) {
+            bytes.push(str.charCodeAt(i) & 0xFF);
+        } else {
+            bytes.push(0x00);
+        }
+    }
+    bytes[len-1] = 0;
+    return bytes;
+}
+
+function numberToBytes(value, byteLength, signed, endian) {
+    const buffer = new ArrayBuffer(byteLength);
+    const view = new DataView(buffer);
+
+    switch (byteLength) {
+        case 1:
+            signed ? view.setInt8(0, value) : view.setUint8(0, value);
+            break;
+        case 2:
+            signed
+                ? view.setInt16(0, value, endian === 'little')
+                : view.setUint16(0, value, endian === 'little');
+            break;
+    }
+
+    return Array.from(new Uint8Array(buffer));
+}
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
