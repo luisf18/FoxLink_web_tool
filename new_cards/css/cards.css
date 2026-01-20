@@ -1,16 +1,13 @@
-body {
-    margin: 0;
-    padding: 20px;
-    background: #f2f2f2;
-    font-family: Arial, Helvetica, sans-serif;
-}
 
+/* Container dos cards -------------------------------------------- */
 .card-grid {
+    padding: 20px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 20px;
 }
 
+/* cards -------------------------------------------- */
 .card {
     background: #fff;
     border-radius: 16px;
@@ -26,7 +23,88 @@ body {
     flex-direction: column;
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
     overflow: hidden;
+    
+    position: relative;
 }
+
+/* Elemento Fake apenas para o brilho
+ -------------------------------------------- */
+
+.card::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 20px;
+
+    box-shadow: 0 0 0 rgba(255,115,16,0);
+    pointer-events: none;
+}
+
+/* Animação de piscar */
+@keyframes cardBlink {
+    0%   { box-shadow: 0 0 0 rgba(255,115,16,0); }
+    50%  { box-shadow: 0 0 22px rgba(255,115,16,0.7); }
+    100% { box-shadow: 0 0 0 rgba(255,115,16,0); }
+}
+
+.card.just-connected::after,
+.card.blink,
+.card.just-connected {
+    animation: cardBlink 0.6s ease-in-out 2;
+}
+
+/* Header (topo) -------------------------------------------- */
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    background: #ff7310;
+    border-bottom: 1px solid #e0e0e0;
+    color: #fff;
+}
+
+/* container do texto */
+.card-device-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* nome principal */
+.card-device-title {
+    font-size: 22px;
+    font-weight: 700;
+    /*color: #000;*/
+    /*color: #fff;*/
+}
+
+/* [id] discreto */
+.card-device-id {
+    font-size: 16px;
+    font-weight: 500;
+    /*color: #e6e6e6;*/
+}
+
+/* linha secundária */
+.card-device-meta {
+    font-size: 13px;
+    /*color: #dedede;*/
+}
+
+.card-device-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;        /* 🔵 circular */
+    object-fit: contain;
+    background: #ffffff;       /* fundo branco */
+    padding: 3px;              /* espaço interno */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    flex-shrink: 0;
+}
+
+/* Body (corpo) -------------------------------------------- */
 
 .card-body {
     flex: 1;
@@ -35,6 +113,8 @@ body {
     border-top: 1px solid #ddd;
     border-bottom: 1px solid #ddd;
 }
+
+/* footer (rodape) -------------------------------------------- */
 
 .card-footer {
     padding: 10px;
@@ -74,75 +154,53 @@ body {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-
-/*
-.card-footer button {
-    flex: 1;
-    padding: 7px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 12px;
-    background: #ff974d;
-    color: #ffffff;
+.card.inactive {
+    opacity: 0.55;
+    filter: grayscale(100%);
+    pointer-events: none;   /* 🔥 trava interação */
 }
-*/
 
-/*=====================================================*/
+/* Card novo! ---------------------------------- */
 
-.card-header {
+.card-status {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 12px 14px;
-    background: #ff7310;
-    border-bottom: 1px solid #e0e0e0;
-    color: #fff;
+    gap: 6px;
+
+    font-size: 11px;
+    color: #777;
 }
 
-/* container do texto */
-.device-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+.card-status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #999;
 }
 
-/* nome principal */
-.device-title {
-    font-size: 22px;
-    font-weight: 700;
-    /*color: #000;*/
-    /*color: #fff;*/
+.card.connected {
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
 }
 
-/* [id] discreto */
-.device-id {
-    font-size: 16px;
-    font-weight: 500;
-    /*color: #e6e6e6;*/
+.card.connected .card-status .dot {
+    background: #2ecc71;
 }
 
-/* linha secundária */
-.device-meta {
-    font-size: 13px;
-    /*color: #dedede;*/
-}
-
-.device-img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;        /* 🔵 circular */
-    object-fit: contain;
-    background: #ffffff;       /* fundo branco */
-    padding: 3px;              /* espaço interno */
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    flex-shrink: 0;
+.card.connected .card-status .label {
+    color: #2e7d32;
 }
 
 
-.btn-clear  { background: #e74c3c; color: #fff; }
-.btn-text   { background: #3498db; color: #fff; }
-.btn-int    { background: #2ecc71; color: #fff; }
-.btn-slide  { background: #9b59b6; color: #fff; }
-.btn-string { background: #f39c12; color: #fff; }
-.btn-check  { background: #34495e; color: #fff; }
+.card.inactive .card-status .dot {
+    background: #999;
+}
+
+.card.inactive .card-status .label {
+    color: #888;
+}

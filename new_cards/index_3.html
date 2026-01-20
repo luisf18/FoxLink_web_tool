@@ -5,11 +5,20 @@
 <meta charset="UTF-8">
 <title>Cards com Widgets</title>
 
-<link rel="stylesheet" href="css/main2.css">
-<link rel="stylesheet" href="css/sidebar.css">
+
+<link rel="stylesheet" href="css/main.css">
+<style>
+    body {
+        margin: 0;
+        padding: 20px;
+        background: #f2f2f2;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+</style>
+<!--link rel="stylesheet" href="css/sidebar.css"-->
+<link rel="stylesheet" href="css/cards.css">
 <link rel="stylesheet" href="css/widgets.css">
 <link rel="stylesheet" href="css/charts.css">
-<link rel="stylesheet" href="css/cards.css">
 </head>
 
 <body>
@@ -18,7 +27,7 @@
             <div class="brand-row">
                 <div class="brand" onclick="openRepo()">
                     <!--span class="brand-icon">🔗</span-->
-                    <span class="brand-text">Fox webtool</span>
+                    <span class="brand-text">FoxLink</span>
                 </div>
                 <span class="version">v0.4.2</span>
             </div>
@@ -44,7 +53,7 @@
             </div>
         </div>
 
-        <div class="sidebar-footer">
+        <!--div class="sidebar-footer">
             <img src="https://luisf18.github.io/FoxLink_web_tool/logo.png" class="footer-logo">
             <a href="https://github.com/luisf18/FoxLink_web_tool" target="_blank">
                 FoxLink WebTool
@@ -52,30 +61,26 @@
             <a href="https://github.com/luisf18/FXDevices/wiki" target="_blank">
                 Wiki das Placas
             </a>
-        </div>
+        </div-->
 
     </div>
     
-    <div class="cards-container" id="cards">
-        <!--div class="cards-grid" id="cards-scroll"></div-->
+    <div class="devices-container" id="cards">
+        <!--div class="card-grid" translate="no"></div-->
     </div>
 
 <script src="js/utils.js"></script>
 <script src="js/widgets.js"></script>
 <script src="js/graph.js"></script>
 <script src="js/cards2.js"></script>
-<script src="js/sidebar.js"></script>
 
 <script type="module">
     import { deviceRegistry, deviceDefs } from "./js/devices2.js";
     import { resolveDevice } from "./js/device_resolver.js";
 
-    const cc = document.querySelector('#cards');
-    cc.appendChild(
-        new FxdeviceCard( 1, 1, resolveDevice(1,2) ).el
-    )
-    cc.appendChild(
-        new FxdeviceCard( 2, 3, resolveDevice(1,0) ).el
+    const cg = document.querySelector('#cards');
+    cg.appendChild(
+        new FxdeviceCard( 0, 0, resolveDevice(1,2) ).el
     )
     
 </script>

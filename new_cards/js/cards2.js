@@ -36,16 +36,16 @@ class FxdeviceCard {
         
         this.el = document.createElement("div");
         this.el.className = "card";
-        this.el.id = `device_${this.id}"`;
+        this.el.id = `card-${this.id}`;
         this.el.innerHTML = `
             <div class="card-header">
-                <img class="device-img" src="${this.image}" alt="${this.model}">
+                <img class="card-device-img" src="${this.image}" alt="${this.model}">
                 
-                <div class="device-info">
-                    <div class="device-title">
+                <div class="card-device-info">
+                    <div class="card-device-title">
                         ${this.model} [${this.id}]
                     </div>
-                    <div class="device-meta">
+                    <div class="card-device-meta">
                         Firmware: V${Math.floor(this.firmwareVersion / 1000)}.${this.firmwareVersion % 1000} |
                         Lote: ${this.lot}
                     </div>
@@ -80,7 +80,7 @@ class FxdeviceCard {
 
         // Parametros
         this.cardBody = this.el.querySelector(".card-body");
-        this.renderParam();
+        this.renderParams();
 
         // Botões de baixo
         this.bindButtons();
@@ -107,7 +107,7 @@ class FxdeviceCard {
         );
     }
 
-    renderParam(){
+    renderParams(){
         // Parametros
         this.param = {};
 

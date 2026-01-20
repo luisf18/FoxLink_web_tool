@@ -126,103 +126,6 @@ body {
     gap: 20px;
 }
 
-.card {
-    width: 160px;
-    height: 120px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-}
-
-.card {
-    position: relative;
-    width: 160px;
-    height: 120px;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    font-weight: bold;
-    transition: opacity 0.2s, filter 0.2s;
-}
-
-.card.inactive {
-    opacity: 0.55;
-    filter: grayscale(100%);
-    pointer-events: none;   /* 🔥 trava interação */
-}
-
-.card-status {
-    position: absolute;
-    top: 6px;
-    left: 8px;
-
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    font-size: 11px;
-    color: #777;
-}
-
-.card-status .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #999;
-}
-
-.card.connected {
-    opacity: 1;
-    filter: none;
-    pointer-events: auto;
-}
-
-.card.connected .card-status .dot {
-    background: #2ecc71;
-}
-
-.card.connected .card-status .label {
-    color: #2e7d32;
-}
-
-
-.card.inactive .card-status .dot {
-    background: #999;
-}
-
-.card.inactive .card-status .label {
-    color: #888;
-}
-
-
-
-
-/* Animação de piscar */
-@keyframes blink {
-    0% { box-shadow: 0 0 0 rgba(255,115,16,0); }
-    50% { box-shadow: 0 0 15px rgba(255,115,16,0.9); }
-    100% { box-shadow: 0 0 0 rgba(255,115,16,0); }
-}
-
-.card.blink {
-    animation: blink 0.6s ease-in-out 2;
-}
-
-.card.just-connected {
-    animation: blink 0.6s ease-in-out 2;
-}
-
-
-
 .sidebar-header {
     display: flex;
     flex-direction: column;
@@ -378,3 +281,99 @@ body {
 }
 
 
+
+/* cards --------------------------------------------------------------- */
+
+
+.card {
+    width: 160px;
+    height: 120px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.card {
+    position: relative;
+    width: 160px;
+    height: 120px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-weight: bold;
+    transition: opacity 0.2s, filter 0.2s;
+}
+
+.card.inactive {
+    opacity: 0.55;
+    filter: grayscale(100%);
+    pointer-events: none;   /* 🔥 trava interação */
+}
+
+.card-status {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    font-size: 11px;
+    color: #777;
+}
+
+.card-status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #999;
+}
+
+.card.connected {
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
+}
+
+.card.connected .card-status .dot {
+    background: #2ecc71;
+}
+
+.card.connected .card-status .label {
+    color: #2e7d32;
+}
+
+
+.card.inactive .card-status .dot {
+    background: #999;
+}
+
+.card.inactive .card-status .label {
+    color: #888;
+}
+
+
+/* Animação de piscar */
+@keyframes blink {
+    0% { box-shadow: 0 0 0 rgba(255,115,16,0); }
+    50% { box-shadow: 0 0 15px rgba(255,115,16,0.9); }
+    100% { box-shadow: 0 0 0 rgba(255,115,16,0); }
+}
+
+.card.blink {
+    animation: blink 0.6s ease-in-out 2;
+}
+
+.card.just-connected {
+    animation: blink 0.6s ease-in-out 2;
+}
