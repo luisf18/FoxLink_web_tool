@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Bytes ⇄ Type Converter</title>
+
+<style>
+
+    *, *::before, *::after {
+        box-sizing: border-box;
+    }
+
+    .card {
+        padding: 20px;
+    }
+
+    body {
+        font-family: monospace;
+        background: #1e1e2f;
+        color: #ddd;
+        padding: 20px;
+        max-width: 700px;
+        margin: auto;
+    }
+
+    h2 {
+        color: #ff9f43;
+        text-align: center;
+    }
+
+    .panel {
+        background: #2a2a40;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    label {
+        font-size: 12px;
+        color: #aaa;
+    }
+
+    textarea, input, select, button {
+        width: 100%;
+        margin: 6px 0 12px;
+        padding: 8px;
+        border-radius: 6px;
+        border: none;
+        font-family: monospace;
+        font-size: 14px;
+    }
+
+    textarea {
+        min-height: 70px;
+        resize: vertical;
+    }
+
+    textarea[readonly], input[readonly] {
+        background: #1c1c2b;
+        color: #888;
+    }
+
+    select, input, textarea {
+        background: #1f1f33;
+        color: #fff;
+    }
+
+    button {
+        background: linear-gradient(135deg, #ff9f43, #ff6b6b);
+        color: #000;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover {
+        opacity: 0.9;
+    }
+
+    .row {
+        display: flex;
+        gap: 10px;
+    }
+
+    .row > div {
+        flex: 1;
+    }
+
+    .hexdump {
+        background: #0f0f1a;
+        padding: 10px;
+        border-radius: 6px;
+        color: #2ecc71;
+        white-space: pre;
+        font-size: 13px;
+    }
+
+    .mode {
+        text-align: center;
+        margin-bottom: 10px;
+        color: #74b9ff;
+        font-weight: bold;
+    }
+
+
+    textarea, input, select {
+        background: #25254a;
+        color: #ffffff;
+        border: 1px solid #3a3a6a;
+    }
+
+    textarea {
+        width: 100%;
+        padding: 12px;
+        resize: vertical;
+    }
+
+    /* EDITÁVEL */
+    textarea:not([readonly]),
+    input:not([readonly]) {
+        background: #2f2f66;
+        border: 1px solid #ff9f43;
+    }
+
+    /* NÃO EDITÁVEL */
+    textarea[readonly],
+    input[readonly] {
+        background: #141424;
+        color: #777;
+        border: 1px dashed #333;
+    }
+
+    textarea.active {
+        background: #2f2f66;
+        border-color: #ff9f43;
+    }
+
+    textarea:read-only {
+        background: #121225;
+        color: #666;
+        border-style: dashed;
+    }
+
+</style>
+</head>
+
+<body>
+
+<h2>Bytes ⇄ Type Converter</h2>
+
+<div class="panel">
+
+    <div class="mode" id="modeLabel">Modo: Bytes → Tipo</div>
+
+    <div class="row">
+        <div>
+            <label>Tipo</label>
+            <select id="typeSelect">
+                <option>u8</option>
+                <option>i8</option>
+                <option>u16</option>
+                <option>i16</option>
+                <option>u32</option>
+                <option>i32</option>
+                <option>char</option>
+                <option>str</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Endian</label>
+            <select id="endianSelect">
+                <option value="little">Little</option>
+                <option value="big">Big</option>
+            </select>
+        </div>
+    </div>
+
+    <label>Valores tipados</label>
+    <textarea id="valuesInput" readonly></textarea>
+
+    <label>Bytes HEX (ex: A0 BB AF)</label>
+    <textarea id="bytesHexInput" readonly></textarea>
+
+    <label>Bytes (ex: 65 66 67 ou 0x01 0x00)</label>
+    <textarea id="bytesInput"></textarea>
+
+    <!--button onclick="toggleMode()">🔁 Trocar direção</button-->
+
+    <label>Hexdump</label>
+    <div class="hexdump" id="hexDump">—</div>
+
+</div>
+
+<script>
+let fromByteMode = true;
+
+function bytesToValue(bytes, type, little) {
+    if (type === 'str')
+        return String.fromCharCode(...bytes);
+
+    if (type === 'char')
+        return bytes.map(b => String.fromCharCode(b));
+
+    const signed = type.startsWith('i');
+    const bits = parseInt(type.slice(1));
+    const size = bits / 8;
+
+    const view = new DataView(new ArrayBuffer(size));
+    const out = [];
+
+    for (let i = 0; i < bytes.length; i += size) {
+        for (let j = 0; j < size; j++)
+            view.setUint8(j, bytes[i + j]);
+
+        let v;
+        if (size === 1) v = signed ? view.getInt8(0) : view.getUint8(0);
+        if (size === 2) v = signed ? view.getInt16(0, little) : view.getUint16(0, little);
+        if (size === 4) v = signed ? view.getInt32(0, little) : view.getUint32(0, little);
+        out.push(v);
+    }
+
+    return out.length === 1 ? out[0] : out;
+}
+
+function valueToBytes(values, type, little) {
+    if (type === 'str')
+        return [...values].map(c => c.charCodeAt(0));
+
+    if (type === 'char')
+        return values.map(v => v.charCodeAt(0));
+
+    const signed = type.startsWith('i');
+    const bits = parseInt(type.slice(1));
+    const size = bits / 8;
+
+    const arr = [];
+    const view = new DataView(new ArrayBuffer(size));
+
+    values.forEach(v => {
+        if (size === 1) signed ? view.setInt8(0,v) : view.setUint8(0,v);
+        if (size === 2) signed ? view.setInt16(0,v,little) : view.setUint16(0,v,little);
+        if (size === 4) signed ? view.setInt32(0,v,little) : view.setUint32(0,v,little);
+        arr.push(...new Uint8Array(view.buffer));
+    });
+
+    return arr;
+}
+
+//function hexdump(bytes) {
+//    return bytes.map((b,i) =>
+//        `${i.toString(16).padStart(4,'0')}: ${b.toString(16).padStart(2,'0')}`
+//    ).join('\n');
+//}
+
+function hexdump(bytes, perLine = 8) {
+    let out = "";
+
+    for (let i = 0; i < bytes.length; i += perLine) {
+        const slice = bytes.slice(i, i + perLine);
+
+        const addr = i.toString(16).padStart(4, '0').toUpperCase();
+
+        const hex = slice
+            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+            .join(' ')
+            .padEnd(perLine * 3 - 1, ' ');
+
+        const ascii = slice
+            .map(b => {
+                const c = (b >= 32 && b <= 126)
+                    ? String.fromCharCode(b)
+                    : '.';
+                return c.padEnd(2, ' ');
+            })
+            .join('')
+            .padEnd(perLine * 2, ' ');
+
+        out += `${addr}  ${hex}  ${ascii}\n`;
+    }
+
+    return out || '—';
+}
+
+function parseBytes(text) {
+    return text
+        .trim()
+        .split(/\s+/)
+        .map(v => {
+            if (v.startsWith('0x') || v.startsWith('0X')) {
+                return parseInt(v, 16);
+            }
+            return parseInt(v, 10);
+        })
+        .filter(v => !isNaN(v) && v >= 0 && v <= 255);
+}
+
+function parseHexBytes(text) {
+    return text
+        .trim()
+        .split(/\s+/)
+        .map(v => parseInt(v, 16))
+        .filter(v => !isNaN(v) && v >= 0 && v <= 255);
+}
+
+function update() {
+    const type   = typeSelect.value;
+    const little = endianSelect.value === 'little';
+
+    if (fromByteMode) {
+        // =========================
+        // BYTES → TIPO
+        // =========================
+        const bytes = parseBytes(bytesInput.value);
+
+        // sincroniza HEX
+        bytesHexInput.value = bytes
+            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+            .join(' ');
+
+        // converte para tipo
+        const val = bytesToValue(bytes, type, little);
+
+        if (Array.isArray(val)) {
+            valuesInput.value = val.join(type === 'char' ? '' : ', ');
+        } else {
+            valuesInput.value = val ?? '';
+        }
+
+        // hexdump
+        hexDump.textContent = hexdump(bytes);
+
+    } else {
+        // =========================
+        // TIPO → BYTES
+        // =========================
+        let parsed;
+
+        if (type === 'str') {
+            parsed = valuesInput.value;
+        }
+        else if (type === 'char') {
+            parsed = valuesInput.value.split('');
+        }
+        else {
+            parsed = valuesInput.value
+                .split(/[,\s]+/)
+                .map(v => Number(v))
+                .filter(v => !isNaN(v));
+        }
+
+        const bytes = valueToBytes(parsed, type, little);
+
+        // sincroniza bytes DEC
+        bytesInput.value = bytes.join(' ');
+
+        // sincroniza bytes HEX
+        bytesHexInput.value = bytes
+            .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+            .join(' ');
+
+        // hexdump
+        hexDump.textContent = hexdump(bytes);
+    }
+}
+
+
+function applyMode() {
+    // editabilidade
+    bytesInput.readOnly    = !fromByteMode;
+    bytesHexInput.readOnly = !fromByteMode;
+    valuesInput.readOnly  = fromByteMode;
+
+    // visual
+    bytesInput.classList.toggle('active', fromByteMode);
+    bytesHexInput.classList.toggle('active', fromByteMode);
+    valuesInput.classList.toggle('active', !fromByteMode);
+
+    // label
+    document.getElementById("modeLabel").textContent =
+        fromByteMode
+            ? "Modo: Bytes → Tipo"
+            : "Modo: Tipo → Bytes";
+}
+
+
+function toggleMode() {
+    fromByteMode = !fromByteMode;
+    applyMode();
+    update();
+}
+
+function setFromByteMode() {
+    if (!fromByteMode) {
+        fromByteMode = true;
+        applyMode();
+        update();
+    }
+}
+
+function setFromTypeMode() {
+    if (fromByteMode) {
+        fromByteMode = false;
+        applyMode();
+        update();
+    }
+}
+
+// troca automática ao clicar
+bytesInput.addEventListener('focus', () => {
+    if (!fromByteMode) {
+        fromByteMode = true;
+        applyMode();
+        update();
+    }
+});
+
+bytesHexInput.addEventListener('focus', () => {
+    if (!fromByteMode) {
+        fromByteMode = true;
+        applyMode();
+        update();
+    }
+});
+
+valuesInput.addEventListener('focus', () => {
+    if (fromByteMode) {
+        fromByteMode = false;
+        applyMode();
+        update();
+    }
+});
+
+
+bytesInput.oninput =
+valuesInput.oninput =
+typeSelect.onchange =
+endianSelect.onchange = update;
+
+</script>
+
+</body>
+</html>
