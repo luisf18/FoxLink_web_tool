@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoxWire WebTool</title>
+    <link rel="icon" type="image/png" href="../favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="../favicon/favicon.svg" />
+    <link rel="shortcut icon" href="../favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png" />
+    <link rel="manifest" href="../favicon/site.webmanifest" />
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/charts.css">
+    <link rel="stylesheet" href="css/buttons.css">
+</head>
+<body>
+
+<div class="sidebar">
+
+    <div class="content">
+        <h2>Web Fox Link</h2>
+        <h3 style=" color: #555; font-size: 18px; margin: 2px 0;">Versão 0.4.2</h3>
+        <hr>
+        <h3 for="in_link_sel">Link:</h3>
+        <select id="in_link_sel">
+            <option value="USBSerial">USB Serial</option>
+            <option value="Arduino">Arduino</option>
+        </select><br>
+        <!--button onclick="fx.check(0,true)">check</button><br-->
+        <!--button onclick="fx.command_key(0,FX_S50_REG.cmd_write.RESTORE_KEPP_ADDR,true)">restore</button><br-->
+        <!--button onclick="fx.command(0,FX_S50_REG.cmd.READ,null,true)">read</button><br-->
+        <hr>
+        <h3>Conecte seus dispositivos FoxWire</h3>
+        <button class="start-btn" onclick="toggleConnection()">Connectar</button>
+        
+        <button class="scan-btn" onclick="scan()">scan devices</button>
+        
+        <div id="progressContainer" style="display:none; width: 100%; background-color: #ddd; border-radius: 5px; margin-top: 10px;">
+            <div id="progressBar" style="width: 0%; height: 20px; background-color: #4caf50; border-radius: 5px;"></div>
+        </div>
+        <div id="result"></div>
+        <div id="scannedAddresses"></div> <!-- Mostra os endereços buscados -->
+        <div id="users"></div>
+    </div>
+
+
+    <!-- Adicionando a logo -->
+    <div class="logo-container">
+        <img src="../images/logo.png" alt="FoxWire Logo">
+    </div>
+    <a href="https://github.com/luisf18/FoxLink_web_tool" target="_blank">Github FoxLink webtool</a>
+    <a href="https://github.com/luisf18/FXDevices" target="_blank">Github Sensores</a>
+</div>
+
+<div class="devices-container" id="cards">
+    <!-- Caixas serão adicionadas aqui -->
+</div>
+
+<script src="js/foxwire.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/fxdevice.js"></script>
+<script src="js/fxs50.js"></script>
+<script src="js/IR_KEY.js"></script>
+<script src="js/BESC_8p.js"></script>
+
+<script>
+
+    // ===========================================================================
+    // [1] Inicia FoxWire
+    // ===========================================================================
+    const fx = new FoxWire(115200);
+
+    // ===========================================================================
+    // [2] Seleção do tipo de Link
+    // seletor do tipo de placa que ira fazer o link com os sensores e placas
+    // ===========================================================================
+    
+    async function selectLink( link_name ){
+        console.log("Selecionado:", link_name);
+        if( link_name == "Arduino" ){
+            fx.timeout_read = 15;
+            fx.timeout_write = 5;
+            fx.retry = 5;
+        }else{
+            fx.retry = 1;
+            fx.timeout_read = 10;
+            fx.timeout_write = 10;
+        }
+        console.log( "-> timeout read: ", fx.timeout_read );
+        console.log( "-> timeout write: ", fx.timeout_write );
+        console.log( "-> timeout retry: ", fx.retry );
+
+        if( fx.port ){
+            // Cancela o reader e fecha o writer atuais
+            if (fx.reader) {
+                await fx.reader.cancel();
+            }
+            if (fx.writer) {
+                await fx.writer.close();
+            }
+
+            // Cria novos writer e reader
+            fx.writer = fx.port.writable.getWriter();
+            fx.reader = fx.port.readable.getReader();
+        }
+    }
+    
+    const sel_link = document.getElementById("in_link_sel");
+    //sel_link.addEventListener("change", selectLink(this.value));
+    sel_link.addEventListener("change", (event) => selectLink(event.target.value));
+    selectLink(sel_link.value);
+
+
+    // ===========================================================================
+    // [3] "Cards" dos dispositivos
+    // ===========================================================================
+    cards_interval = null;
+    let Cards = []
+    const cards_container = document.getElementById("cards");
+
+    async function addCard( device ) {
+        if( device.ID == 0x01 ){
+            console.log(`[CARD-ADD] FXS50`);
+            const F = new fxs50(device.addr);
+            await F.get_firmware_version();
+            F.html();
+            await F.read(true);
+            Cards.push(F);
+        }else if( device.ID == 0x20 ){
+            console.log(`[CARD-ADD] IR-KEY`);
+            const F = new IrKey(device.addr);
+            await F.get_firmware_version();
+            F.html();
+            await F.read(true);
+            Cards.push(F);
+        }else if( device.ID == 0x200 ){
+            console.log(`[CARD-ADD] ESC brushed duplo 8p`);
+            const F = new besc8p(device.addr);
+            await F.get_firmware_version();
+            F.html();
+            await F.read(true);
+            Cards.push(F);
+        }else{
+            console.log(`[CARD-ADD] Fail, device id unknown ${device.ID}`);
+        }
+    }
+
+    function clearCards() {
+        console.log(`[CARD-CLEAR]`);
+        if( cards_interval ) clearInterval(cards_interval);
+        // Esvazia o array e remove os elementos do DOM
+        Cards = [];
+        //document.getElementById("cards").innerHTML = "";
+        cards_container.innerHTML = "";
+    }
+
+    async function cards_update(){
+        //console.log("update");
+        for (const card of Cards) {
+            await card.update();
+            await delay(30);
+        }
+    }
+
+    // ===========================================================================
+    // [4] utils
+    // ===========================================================================
+
+    // Função para aguardar um tempo específico
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ===========================================================================
+    // [5] Ações da interface
+    // ===========================================================================
+    
+    async function toggleConnection() {
+
+        if(fx.isConnected()){
+            console.log("DESCONECTANDO...");
+            await fx.disconnect();
+        }else{
+            console.log("CONECTANDO...");
+            await fx.connect();
+        }
+
+        // atualiza o botão de conexão
+        const startButton = document.querySelector('.start-btn');
+        if( fx.isConnected() ){
+            console.log("CONECTADO!!");
+            startButton.classList.add('active');
+            startButton.textContent = 'conectado';
+        }else{
+            console.log("DESCONECTADO!!");
+            startButton.classList.remove('active');
+            startButton.textContent = 'desconectado';
+        }
+    }
+
+    // Escaneia a linha buscando dispositivos conectados
+    async function scan() {
+
+        // 1 - verifica se esta conectado
+        if (!fx.isConnected()) {
+            alert("Conecte primeiro a porta serial.");
+            return;
+        }
+
+        // 2 - Ajusta elementos gráficos...
+        document.getElementById("result").textContent = "Escaneando...";
+        document.getElementById("scannedAddresses").innerHTML = "";
+        document.getElementById("progressBar").style.width = "0%";
+        document.getElementById("progressContainer").style.display = "block";
+        const startButton = document.querySelector('.scan-btn');
+        startButton.classList.add('active');
+        startButton.textContent = "scanning...";
+        
+        // 3 - Limpa os cards
+        clearCards();
+
+        // 4 - Verifica os endereços um por um
+        
+        let validAddresses = [];
+        await delay(200);
+        console.log(`SCANNING`);
+        
+        for (let i = 0; i <= 32; i++) {
+            try {
+                const ans = await fx.check(i,true); // Aguarda a resposta antes de continuar
+                if (ans.ok) {
+                    console.log(`ID check:`);
+                    const ID = await fx.getID( i, true );
+                    if( ID.ok ){
+                        validAddresses.push({ addr: i, ID: ID.value });
+                        console.log(`Endereço ${i}: arg ${ID.value}`);
+                        // printa na barra lateral o endereço encontrado
+                        document.getElementById("scannedAddresses").innerHTML += `Endereço ${i}<br>`; //: arg ${ans.arg}<br>`;
+                        //document.getElementById("scannedAddresses").innerHTML += `Endereço ${i} (${ID.value})<br>`; //: arg ${ans.arg}<br>`;
+                    }
+                }
+            }catch (error) {
+                console.error(`Erro ao verificar endereço ${i}:`, error);
+            }
+            // Atualiza progress bar
+            document.getElementById("progressBar").style.width = `${(i / 32) * 100}%`;
+        }
+
+        for (const i of validAddresses) {
+            await addCard(i);
+        }
+
+        // Finaliza scan
+        startButton.classList.remove('active');
+        startButton.textContent = "scan";
+        document.getElementById("progressBar").style.width = "100%";
+        document.getElementById("result").textContent = "ok";
+
+        // Atualização em tempo real dos graficos
+        if( Cards.length ){
+            cards_update = setInterval( cards_update, 400 );
+        }
+    }
+
+    // ================================================
+    // console.log( "READ: ", FX_S50_REG.cmd.READ );
+    //for (let i = 0; i < 32; i++) {
+    //    checksum = fx.checksum(i);
+    //    console.log(`i: ${i} | binário: ${i.toString(2).padStart(8, '0')} | checksum: ${checksum} | ${checksum.toString(2).padStart(8, '0')}`);
+    //}
+
+    //async function begin(){
+    //    await fx.command( 0x05, 0x03 );
+    //}
+
+    //async command( addr, cmd, val = null ) {
+    //        //console.log( `checksum ${cmd} -> ${(this.checksum(cmd)<<5)}` );
+    //        console.log( `[addr ${addr}] command: ${cmd} (${cmd.toString(2)}) val: ${val}` );
+    //        addr = 0xC0|(addr & 0x1F);
+    //        cmd = this.checksum(cmd);
+    //        console.log( `|->[addr ${addr}] command: ${cmd.toString(2)} val: ${val}` );
+    //        if( val ){
+    //            val = val & 0xFF;
+    //            return await this.WRITE( addr, cmd, val );
+    //        }
+    //        return await this.READ( addr, cmd );
+    //    }
+
+</script>
+
+</body>
+</html>
