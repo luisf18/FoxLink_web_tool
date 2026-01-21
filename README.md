@@ -1,4 +1,4 @@
-# FoxLink_webtool V1.0.0
+# FoxLink_webtool V1.0.1
 
 _FoxLink_web_tool_ é uma ferramenta web para configurar as placas e sensores da _Fox Dynamics_ ou outros dispositivos que utilizem o protocolo FoxWire.
 

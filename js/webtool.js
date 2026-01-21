@@ -3,7 +3,7 @@ import { FxdeviceCard } from "./device_card.js";
 
 // Variavies globais da aplicação
 export let app = {
-    version: "1.0.0",
+    version: "1.0.1",
     devMode: false, // set true to test UI (sem FoxWire)
     connected: false,
     fx: null,
