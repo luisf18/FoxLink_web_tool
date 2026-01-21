@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Device Resolver Debug</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+        }
+        select, input {
+            margin: 5px;
+            padding: 4px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            margin-top: 15px;
+            max-height: 500px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+
+<h3>Device Resolver</h3>
+
+<!-- seleção automática -->
+<div>
+    <label>Modelo:</label>
+    <select id="modelSelect"></select>
+
+    <label>Versão:</label>
+    <select id="versionSelect"></select>
+</div>
+
+<!-- entrada manual -->
+<div>
+    <label>ID:</label>
+    <input id="idInput" type="number" min="0">
+
+    <label>Versão:</label>
+    <input id="verInput" type="number" min="0">
+</div>
+
+<pre id="output"></pre>
+
+<script type="module">
+import { deviceRegistry, deviceDefs } from "./js/devices2.js";
+import { resolveDevice } from "./js/device_resolver.js";
+
+const modelSel = document.getElementById("modelSelect");
+const versionSel = document.getElementById("versionSelect");
+const idInput = document.getElementById("idInput");
+const verInput = document.getElementById("verInput");
+const output = document.getElementById("output");
+
+// popula modelos
+for (const id in deviceRegistry) {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = `${deviceRegistry[id].name} (id=${id})`;
+    modelSel.appendChild(opt);
+}
+
+// atualiza versões disponíveis
+function updateVersions(id) {
+    versionSel.innerHTML = "";
+    const name = deviceRegistry[id].name.replace("-", "_");
+    const versions = Object.keys(deviceDefs[name]?.versions || []);
+
+    const base = document.createElement("option");
+    base.value = 0;
+    base.textContent = "base (v0)";
+    versionSel.appendChild(base);
+
+    for (const v of versions) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = `v${v}`;
+        versionSel.appendChild(opt);
+    }
+}
+
+// resolve e mostra
+function updateOutput() {
+    try {
+        const id = Number(idInput.value);
+        const v  = Number(verInput.value);
+
+        const dev = resolveDevice(id, v);
+        output.textContent = JSON.stringify(dev, null, 2);
+    } catch (e) {
+        output.textContent = e.message;
+    }
+}
+
+// eventos
+modelSel.onchange = () => {
+    const id = modelSel.value;
+    idInput.value = id;
+    updateVersions(id);
+    verInput.value = 0;
+    updateOutput();
+};
+
+versionSel.onchange = () => {
+    verInput.value = versionSel.value;
+    updateOutput();
+};
+
+idInput.oninput = updateOutput;
+verInput.oninput = updateOutput;
+
+// init
+modelSel.value = Object.keys(deviceRegistry)[0];
+modelSel.onchange();
+</script>
+
+</body>
+</html>

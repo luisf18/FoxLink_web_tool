@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Scan Demo</title>
+<link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>FoxLink</h2>
+
+    <button class="scan-btn" onclick="scanDevices()">Scan</button>
+
+    <!-- Barra de progresso -->
+    <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Balão de dispositivos -->
+    <div class="scan-results" id="scanResults">
+        <div class="scan-title">Dispositivos encontrados</div>
+        <div class="scan-list" id="scanList"></div>
+    </div>
+</div>
+
+<!-- Área de cards -->
+<div class="devices-container">
+    <!-- Cards fake só pra demo -->
+    <div class="card" data-addr="2">CARD addr 2</div>
+    <div class="card" data-addr="5">CARD addr 5</div>
+    <div class="card" data-addr="8">CARD addr 8</div>
+</div>
+
+<script>
+    let scanTimer = null;
+    let foundAddrs = new Set();
+
+    function scanDevices() {
+        const progressWrap = document.getElementById("progressWrap");
+        const progressBar  = document.getElementById("progressBar");
+        const results      = document.getElementById("scanResults");
+        const list         = document.getElementById("scanList");
+
+        // reset
+        if (scanTimer) clearInterval(scanTimer);
+        foundAddrs.clear();
+
+        list.innerHTML = "";
+        results.style.display = "none";
+        progressWrap.style.display = "block";
+        progressBar.style.width = "0%";
+
+        let progress = 0;
+
+        scanTimer = setInterval(() => {
+            progress += Math.random() * 6 + 2; // avanço irregular
+            if (progress > 100) progress = 100;
+
+            progressBar.style.width = progress + "%";
+
+            // chance de encontrar dispositivo durante o scan
+            if (Math.random() < 0.35) {
+                discoverDevice();
+            }
+
+            if (progress >= 100) {
+                clearInterval(scanTimer);
+                progressWrap.style.display = "none";
+            }
+        }, 180);
+    }
+
+    function discoverDevice() {
+        const list    = document.getElementById("scanList");
+        const results = document.getElementById("scanResults");
+
+        if (foundAddrs.size >= 16) return;
+
+        let addr;
+        do {
+            addr = Math.floor(Math.random() * 16);
+        } while (foundAddrs.has(addr));
+
+        foundAddrs.add(addr);
+
+        const model = Math.floor(Math.random() * 5);
+
+        const div = document.createElement("div");
+        div.className = "scan-item";
+        div.textContent = `Addr ${addr} — FX #{${model}}`;
+        div.onclick = () => blinkCard(addr);
+
+        list.appendChild(div);
+        results.style.display = "block";
+
+        // opcional: scroll automático
+        div.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function blinkCard(addr) {
+        const card = document.querySelector(`.card[data-addr="${addr}"]`);
+        if (!card) return;
+
+        card.classList.remove("blink");
+        void card.offsetWidth; // força reset
+        card.classList.add("blink");
+    }
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR" translate="no">
+<head>
+<meta name="google" content="notranslate">
+<meta charset="UTF-8">
+<title>Cards com Widgets</title>
+
+<link rel="stylesheet" href="css/main2.css">
+<link rel="stylesheet" href="css/sidebar.css">
+<link rel="stylesheet" href="css/widgets.css">
+<link rel="stylesheet" href="css/charts.css">
+<link rel="stylesheet" href="css/cards.css">
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-row">
+                <div class="brand" id="brand">
+                    <!--span class="brand-icon">🔗</span-->
+                    <span class="brand-text">Fox webtool</span>
+                </div>
+                <span class="version">v0.4.2</span>
+            </div>
+            <button class="connect-btn" id="connectBtn">
+                <span class="dot"></span>
+                <span class="text">Disconnected</span>
+            </button>
+        </div>
+
+        <!-- 👇 NOVO BLOCO -->
+        <div class="sidebar-controls">
+            <button class="scan-btn" id="scanBtn" disabled>Scan</button>
+
+            <!-- Barra de progresso -->
+            <div class="progress-wrap" id="progressWrap">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <!-- Balão de dispositivos -->
+            <div class="scan-results" id="scanResults">
+                <div class="scan-title">Dispositivos encontrados</div>
+                <div class="scan-list" id="scanList"></div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <img src="https://luisf18.github.io/FoxLink_web_tool/logo.png" class="footer-logo">
+            <a href="https://github.com/luisf18/FoxLink_web_tool" target="_blank">
+                FoxLink WebTool
+            </a>
+            <a href="https://luisf18.github.io/fox_dynamics_docs/" target="_blank">
+                Documentação Placas
+            </a>
+        </div>
+
+    </div>
+    
+    <div class="cards-container" id="cards">
+        <!--div class="cards-grid" id="cards-scroll"></div-->
+    </div>
+
+<script src="js/utils.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/cards2.js"></script>
+<script type="module">
+    import { sidebarInit } from "./js/sidebar.js";
+    sidebarInit();
+</script>
+
+<script type="module">
+</script>
+
+
+</body>
+</html>
