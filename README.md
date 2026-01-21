@@ -1,13 +1,12 @@
-# FoxLink_web_tool
+# FoxLink_webtool V1.0.0
 
-_FoxLink_web_tool_ é uma ferramenta web para configurar as placas e sensores da _Fox Dynamics_ ou outros dispositivos que utilizem o protocolo FoxWire. A ferramenta foi criada recentemente, então, até o momento, só tem suporte ao sensor [FX-S50](https://github.com/luisf18/FXDevices/tree/main/Sensor_FXS50) e ainda não possui interface para o modo Shell.
+_FoxLink_web_tool_ é uma ferramenta web para configurar as placas e sensores da _Fox Dynamics_ ou outros dispositivos que utilizem o protocolo FoxWire.
 
 🔗 [Acesse a ferramenta aqui](https://luisf18.github.io/FoxLink_web_tool/)
 
 ---
 
-## Exemplo
-![Texto alternativo](images/example.png)
+![alt text](images/exampleV1.png)
 
 ---
 
@@ -58,7 +57,7 @@ A forma mais simples é alterando o parâmetro **led_brilho**, que controla a lu
 ---
 
 ## Versões anteriores
-- Versão [beta 0.2](https://luisf18.github.io/FoxLink_web_tool/index_foxwire_v0_2)
+- Versão [beta v0.4.2](https://luisf18.github.io/FoxLink_web_tool/v0)
 
 ---
 

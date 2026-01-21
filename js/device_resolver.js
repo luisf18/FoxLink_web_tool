@@ -1,11 +1,11 @@
-import { deviceRegistry, deviceDefs } from "./devices2.js";
+import { deviceRegistry, deviceDefs } from "./devices.js";
 
 export function resolveDevice(id, version = 0) {
     const reg = deviceRegistry[id];
-    if (!reg) throw "Unknown device ID";
+    if (!reg) return null;
 
     const def = deviceDefs[reg.name.replace('-', '_')];
-    if (!def) throw "No definition";
+    if (!def) return null;
 
     const result = structuredClone(def.base);
 

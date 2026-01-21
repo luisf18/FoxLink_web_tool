@@ -45,17 +45,20 @@
     <canvas id="grafico2" width="660" height="200"></canvas>
 
     <div class="controls">
-        <button onclick="setFixedScale()">Escala Fixa (0–20)</button>
-        <button onclick="setAutoScale()">Escala Automática</button>
+        <button id="btn-fix">Escala Fixa (0–20)</button>
+        <button id="btn-auto">Escala Automática</button>
     </div>
 </div>
 
-<script src="js/graph.js"></script>
+<script type="module" >
 
-<script>
+    import { MultiLineGraph } from "./js/graph.js";
 
 const canvas = document.getElementById("grafico");
 const canvas2 = document.getElementById("grafico2");
+
+document.getElementById("btn-fix").addEventListener("click", setFixedScale);
+document.getElementById("btn-auto").addEventListener("click", setAutoScale);
 
 const graph = new MultiLineGraph(canvas, {
     points: 60,

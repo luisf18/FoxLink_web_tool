@@ -1,5 +1,4 @@
-
-class MultiLineGraph {
+export class MultiLineGraph {
     constructor(canvas, config = {}) {
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
@@ -41,6 +40,8 @@ class MultiLineGraph {
 
         this.yTicks = 2;
 
+        this.yBarColor =  config.yBarColor || "#ed5300d1";
+
         this.resize();
 
         this.clear();
@@ -59,6 +60,10 @@ class MultiLineGraph {
 
         const rect = this.canvas.getBoundingClientRect();
         const dpr  = window.devicePixelRatio || 1;
+
+        if( this.width == rect.width && this.height == rect.heigh ){
+            return;
+        }
         
         this.width  = rect.width;
         this.height = rect.height;
@@ -227,7 +232,7 @@ class MultiLineGraph {
 
             let rect_w =  (this.font.size+1)*3.2;
 
-            this.ctx.fillStyle = "#0016bad3";
+            this.ctx.fillStyle = this.yBarColor;
             this.ctx.fillRect(
                 this.margin_x, this.topOffset,
                 rect_w,

@@ -3,7 +3,7 @@
 // ================================================
 
 // valores comuns a todos os dispositivos
-const FX_BASE = Object.freeze({
+export const FX_BASE = Object.freeze({
     cmd: {
         DEVICE_ID_L:        0x00,
         DEVICE_ID_H:        0x01,
@@ -32,8 +32,10 @@ const FX_BASE = Object.freeze({
 });
 
 
-class FoxWire {
+export class FoxWire {
     constructor(baudRate = 115200) {
+        
+        // Porta UART
         this.port = null;
         this.reader = null;
         this.writer = null;
@@ -132,12 +134,12 @@ class FoxWire {
         //}
 
         if( this.busy_counter > 10 ){
-            console.error("[ERRO] muitos acessos simultaneos as port. reinicie a página",this.busy_counter);
+            console.error("[ERRO] muitos acessos simultaneos a port. reinicie a página",this.busy_counter);
             return [];
         }
         this.busy_counter++;
         while( this.busy ){
-            console.log('.b');
+            console.log('.uart-busy');
             await new Promise(resolve => setTimeout(resolve, 20));
         }
         this.busy_counter--;
@@ -289,7 +291,7 @@ class FoxWire {
     }
 
     async command_key( addr, cmd, log=false) {
-        const key = await this.command( addr, FX_S50_REG.cmd.REQUEST_WRITE, null, log );
+        const key = await this.command( addr, FX_BASE.cmd.REQUEST_WRITE, null, log );
         //console.log("key",key);
         if( key.value && key.ok ){
             const KEY = 0xff&(255-key.value);
@@ -307,20 +309,39 @@ class FoxWire {
         return await this.command(addr,FX_BASE.cmd.MCU_RESET, null,log);
     }
 
+    // Comando de save
+    async save(addr,log=false) {
+        return await this.command_key(addr,FX_BASE.cmd_write.SAVE,log);
+    }
+
+    // Comando de default keep addr
+    async default(addr,log=false) {
+        return await this.command_key(addr, FX_BASE.cmd_write.RESTORE_KEPP_ADDR, log);
+    }
+
     // get ID
     async getID(addr,log=false) {
-        const ID_L = await fx.command(addr,FX_BASE.cmd.DEVICE_ID_L,null,log);
-        const ID_H = await fx.command(addr,FX_BASE.cmd.DEVICE_ID_H,null,log);
+        const ID_L = await this.command(addr,FX_BASE.cmd.DEVICE_ID_L,null,log);
+        const ID_H = await this.command(addr,FX_BASE.cmd.DEVICE_ID_H,null,log);
         if (ID_L.ok && ID_H.ok) {
             return { ok: true, value: ((ID_H.value<<8)|ID_L.value) };
         }
         return { ok: false, value: 0 };
     }
 
+    // get Firmware Version
+    async getFirmwareVersion(addr,log=false) {
+        const FW_ID = await this.command(addr,FX_BASE.cmd.FIRMWARE_ID,null,log);
+        const FW_VER = await this.command(addr,FX_BASE.cmd.FIRMWARE_VERSION,null,log);
+        if (FW_ID.ok && FW_VER.ok) {
+            return { ok: true, value: (FW_ID*1000 + FW_VER) };
+        }
+        return { ok: false, value: 0 };
+    }
+
     // get ID
     async getLot(addr,log=false) {
-
-        console.log( "reading Lot:" );
+        if(log){ console.log( "[FX] reading Lot:" ); }
         const pipeline = [
             FX_BASE.cmd.LOT_DATE_H,
             FX_BASE.cmd.LOT_DATE_L,
@@ -331,21 +352,57 @@ class FoxWire {
         for(const cmd of pipeline){
             const ans = await fx.command(addr, cmd, null, log);
             if (!ans.ok) {
-                console.error(`Erro ao ler comando 0x${cmd.toString(16)} no endereço ${i}`);
+                console.error(`[FX] Erro ao ler comando 0x${cmd.toString(16)} no endereço ${i}`);
                 return { ok: false, id: 0, date: 0 };
             }
             results.push(ans.value);
         }
 
         const date = (results[0] << 8) | results[1];
-        console.log( "Date:",date );
+        if(log){console.log( "Date:",date );}
         const monthStr = String(date % 12).padStart(2, '0');
         const yearStr = String(Math.floor(date / 12)).padStart(4, '0');  // se o ano for codificado como "25" para 2025
         const date_str = `${monthStr}-${yearStr}`;
         //const date_str = `${ data%12 }-${ int(date/12) }`
-        console.log( "Date_str:",date_str );
+        if(log){console.log( "Date_str:",date_str );}
         const id = (results[2]<<8)|results[3];
         return { ok: true, id: id, date: date_str };
+    }
+
+    
+    // High level Read
+    async readType(deviceAddr, dataAddr, type = 'u8', len = 1, littleEndian = true) {
+        if (len <= 0) return null;
+
+        const validTypes = ['u8','u16','u32','i8','i16','i32','char','str'];
+        if (!validTypes.includes(type)) return null;
+
+        // [1] Determina quantidade de bytes
+        let byteSize = 1;
+        let bits = 8;
+        let isSigned = false;
+
+        if (type !== 'str' && type !== 'char') {
+            bits = parseInt(type.slice(1), 10);
+            byteSize = bits / 8;
+            isSigned = type.startsWith('i');
+        }
+
+        const totalBytes = (type === 'str' || type === 'char') ? len : len * byteSize;
+        const bytes = [];
+
+        // [2] Leitura byte a byte
+        for (let i = 0; i < totalBytes; i++) {
+            const ans = await this.register_read(
+                deviceAddr,
+                dataAddr + i
+            );
+
+            if (!ans?.ok) return null;
+            bytes.push(ans.value & 0xFF);
+        }
+
+        return bytesToTypedValue( bytes, type, littleEndian );
     }
 
 }

@@ -1,15 +1,31 @@
+import { FX_BASE } from "./foxwire.js";
+import { MultiLineGraph } from "./graph.js"
+
 // ====================================================
 // Fox Devices
 // Depende de FoxWire
 // ====================================================
 
-class FxdeviceCard {
-    constructor( id, addr, opts ){
-
+export class FxdeviceCard {
+    constructor( id, addr, opts, app = null ){
+        
         this.id = id;
+
+        this.connected = true;
+        
+        /*
+        app -> variaveis globais
+            por hora só usa fx.
+            Mas vai precisar verificar 
+            a lista de dispositivos em breve.
+        */
+        this.app = app;
+        this.fx = app?.fx ?? null;
 
         // Endereço
         this.addr = addr;
+
+        this.showAddrWidget = opts.showAddrWidget || true;
 
         // Identificação do modelo/versão
         this.image = opts.image;
@@ -23,10 +39,13 @@ class FxdeviceCard {
 
         // Gráfico
         this.graphOptions = opts.graphOptions ?? null;
-        this.grafico      = null;
+        this.graph      = null;
         
         // html etc
         this.render();
+
+        // lê o dispositivo
+        this.read();
     }
 
     /* =================================================
@@ -59,7 +78,7 @@ class FxdeviceCard {
                 ${this.graphOptions ? `
                     <!-- Gráfico -->
                     <div class="chart-container">
-                        <canvas id="grafico"></canvas>
+                        <canvas class="graph-canvas"></canvas>
                         <div class="chart-labels">Leitura em tempo real</div>
                     </div>` : ""
                 }
@@ -76,7 +95,7 @@ class FxdeviceCard {
         `;
 
         // Grafico
-        this.renderGraph();
+        //this.renderGraph();
 
         // Parametros
         this.cardBody = this.el.querySelector(".card-body");
@@ -88,7 +107,7 @@ class FxdeviceCard {
     }
 
     renderGraph() {
-        this.canvas = this.el.querySelector("#grafico");
+        this.canvas = this.el.querySelector(".graph-canvas");
         if (!this.canvas) return;
 
         const dpr = window.devicePixelRatio || 1;
@@ -101,34 +120,56 @@ class FxdeviceCard {
         const ctx = this.canvas.getContext("2d");
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        this.grafico = new MultiLineGraph(
+        this.graph = new MultiLineGraph(
             this.canvas,
             this.graphOptions || {}
         );
+
+        console.log( "->", this.canvas );
+
+        this.graph.update();
     }
 
     renderParams(){
         // Parametros
         this.param = {};
 
+        if( this.showAddrWidget ){
+            const wg = new Widget({
+                name: "Addr", limit: [0,31]
+            });
+            this.param["addr"] = {
+                addr: 0,
+                wg: wg
+            };
+            this.cardBody.appendChild(wg.el);
+        }
+
         for (const name in this.optParam) {
-            if (!this.paramAvailable(name)) continue;
-
             const p = this.optParam[name];
-
+            let p_name = name;
+            //  se o widget de endereço ja estiver
+            // ativo descarta outros. Se não adimite ele
+            // Mas com o nome "addr" pra garantir que vai funcionar
+            if( p.addr == 0 ){
+                if( this.showAddrWidget ) continue;
+                p_name = "addr";
+            }else if( name == 'addr' ){ // impede que exista outro Addr
+                p_name = 'addr2';
+            }
             // constrói o widget a partir da config
             const wg = new Widget(p.wg);
             if (!wg || !wg.el) continue;
-
             // estrutura final normalizada
-            this.param[name] = {
+            this.param[p_name] = {
                 addr: p.addr,
                 wg: wg
             };
-
             //this.widgets[name] = wg;
             this.cardBody.appendChild(wg.el);
         }
+
+        this.param["addr"]?.wg.setSavedValue( this.addr );
 
     }
 
@@ -140,11 +181,11 @@ class FxdeviceCard {
         this.elBtnDefault = this.elFooterButtons.querySelector('#btn_default');
         this.elBtnReset   = this.elFooterButtons.querySelector('#btn_reset');
         
-        this.elBtnRead.onclick = async () => { this.read(); };
-        this.elBtnApply.onclick = async () => { this.apply(); };
-        this.elBtnSave.onclick = async () => { this.save(); };
-        this.elBtnDefault.onclick = async () => { this.default(); };
-        this.elBtnReset.onclick = async () => { this.reset(); };
+        this.elBtnRead.onclick = async () => { await this.read(); };
+        this.elBtnApply.onclick = async () => { await this.apply(); };
+        this.elBtnSave.onclick = async () => { await this.save(); };
+        this.elBtnDefault.onclick = async () => { await this.default(); };
+        this.elBtnReset.onclick = async () => { await this.reset(); };
         
         // Apply all registers (testes)
         //this.elBtnApply.onclick = async () => { 
@@ -153,6 +194,16 @@ class FxdeviceCard {
         //        console.log(`wg-${p}.v = ${wg.currentValue} .output =`, wg.output(), );
         //    }
         //};
+    }
+
+    async graphUpdate(){
+        //console.log("|-- ", this.graph);
+        if( !this.graph ) return;
+        const ans = await this.fx.command(this.addr, FX_BASE.cmd.READ);
+        if( ans.ok ){
+            this.graph.addValue(0, ans.value);
+            this.graph.update();
+        }
     }
 
     /* =================================================
@@ -164,14 +215,17 @@ class FxdeviceCard {
         if( !this.param || !this.fx ) return;
         for( const p in this.param ){
             const addr = this.param[p].addr;
+            const wg = this.param[p].wg;
             if( addr ){ // Addr=0 é o endereço do dispositivo
-                const wg = this.param[p].wg;
-                const ans = await this.fx.register_read( this.addr, addr );
-                if( ans.ok ){
-                    wg.setSavedValue(ans.value);
-                }else{
-                    if(ans.log) console.log( ans.value );
+                const ans = await this.fx.readType(this.addr, addr, wg.outputType, wg.outputLen );
+                console.log( `[Device ${this.addr}] reg ${addr} -> type ${wg.outputType} len ${wg.outputLen}\n  - get: `, ans );
+                if (ans !== null) {
+                    wg.setSavedValue(ans);
+                } else {
+                    console.log(`[Device ${this.addr}] fail reading reg ${addr}`);
                 }
+            }else{
+                wg.setSavedValue(this.addr);
             }
         }
     }
@@ -182,15 +236,20 @@ class FxdeviceCard {
         for( const p in this.param ){
             let addr = this.param[p].addr;
             const wg = this.param[p].wg;
-            if( addr == 0 ){ // endereço do dispositivo na rede FoxWire
-                const ans = await this.fx.register_write( this.addr, 0, wg.value );
+            const bytes = wg.output();
+            console.log( `[Apply][Dev${this.addr}] ${wg.name} reg ${addr} -> `, bytes );
+            if( addr == 0 ){
+                // endereço do dispositivo na rede FoxWire
+                // [todo!] precisa verifica se outro dispositivo esta usando o novo endereço!!
+                const ans = await this.fx.register_write( this.addr, 0, wg.currentValue );
+                console.log( "[Apply de Endereço] -> ", ans );
                 if( ans.ok ){
-                    this.addr = ans.value;
+                    this.addr = wg.currentValue;
                     wg.setValue( this.addr );
                 }
-            }else{ // Outros endereços
-                const bytes = wg.output();
-                fxWriteBytes( addr, bytes );
+            }else{
+                // Outros endereços
+                this.fxWriteBytes( addr, bytes );
             }
         }
     }
@@ -200,10 +259,10 @@ class FxdeviceCard {
         if( !this.fx ) return;
         await this.apply();
         let ans = await this.fx.save(this.addr); // Comando de save
+        console.log( "[BTN-SAVE] return: ", ans );
         if( ans.ok ){
             await delay(20);
             await this.read();
-            //console.log( "[BTN-SAVE] return: ", ans );
             this.elBtnSave.classList.add('ok');
         }
     }
@@ -211,36 +270,29 @@ class FxdeviceCard {
     // Reset
     async reset() {
         if( !this.fx ) return;
-        await fx.reset(this.addr);
+        await this.fx.reset(this.addr,true);
         await delay(20);
         await this.read();
-        if( this.grafico ){
-            this.grafico.clear();
+        if( this.graph ){
+            this.graph.clear();
         }
     }
 
     // Default
     async default() {
         if( !this.fx ) return;
-        //await fx.command_key(this.Addr, this.REG.cmd_write.RESTORE_KEPP_ADDR);
-        //await fx.default(this.addr);
+        const ans = await this.fx.default(this.addr);
+        console.log( "[Default] -> ", ans );
         await delay(20);
         await this.read();
-    }
-
-    /* =================================================
-      Parametros
-    ================================================= */
-    paramAvailable(p) {
-        return true;
     }
 
     /* =================================================
       Funções Foxwire
     ================================================= */
     async getBasicInfo(){
-        const fw = fx.getFirmwareVersion(this.addr);
-        const lot = fx.getLot(this.addr);
+        const fw = this.fx.getFirmwareVersion(this.addr);
+        const lot = this.fx.getLot(this.addr);
         if( fw.ok ) this.firmwareVersion = fw.value;
         if( lot.ok ) this.lot = lot.date;
         //this.foxWireVersion
@@ -248,7 +300,7 @@ class FxdeviceCard {
     async fxWriteBytes( addr, bytes ){
         if( !this.fx ) return false;
         for (let i = 0; i < bytes.length; i++) {
-            const ans = await fx.register_write(
+            const ans = await this.fx.register_write(
                 this.addr,
                 addr + i,
                 bytes[i]
@@ -260,6 +312,50 @@ class FxdeviceCard {
         }
         return true;
     }
-    
 
+    /* =================================================
+      Status de conexão
+    ================================================= */
+    setConnected( connected = true, blink = true ){
+        
+        this.connected = connected;
+
+        if (connected) {
+            this.el.classList.remove("inactive");
+            this.el.classList.add("connected");
+            //card.querySelector(".label").textContent = "Online";
+        } else {
+            this.el.classList.remove("connected");
+            this.el.classList.add("inactive");
+            //card.querySelector(".label").textContent = "Offline";
+        }
+
+        if( blink && connected ){
+            this.blink();
+        }
+    }
+
+    async update(){
+        if( !this.fx ){
+            this.setConnected(false);
+        }
+        let connected = false;
+        for( let i=0; i<2; i++ ){
+            const ans = await this.fx.check(this.addr);
+            if( ans.ok ){
+                connected = true;
+                break;
+            }
+        }
+        if( this.connected != connected ){
+            this.setConnected(connected);
+        }
+        this.graphUpdate();
+    }
+
+    blink(){
+        this.el.classList.remove("blink");
+        void this.el.offsetWidth; // reset da animação
+        this.el.classList.add("blink");
+    }
 }

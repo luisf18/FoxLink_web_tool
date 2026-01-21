@@ -46,6 +46,10 @@ function makeEditable(span, input, onCommit) {
     };
 }
 
+/* ==============================================
+   Manipulação de Bytes
+============================================== */
+
 function stringToBytes(str, len) {
     const bytes = [];
     for (let i = 0; i < len-1; i++) {
@@ -76,6 +80,80 @@ function numberToBytes(value, byteLength, signed, endian) {
 
     return Array.from(new Uint8Array(buffer));
 }
+
+function bytesToTypedValue(bytes, type = 'u8', littleEndian = true) {
+    if (!Array.isArray(bytes) || bytes.length === 0)
+        return null;
+
+    // String
+    if (type === 'str') {
+        let out = '';
+
+        for (const b of bytes) {
+            if (b === 0x00) break;   // string C → termina no 0
+            out += String.fromCharCode(b);
+        }
+
+        return out;
+    }
+
+    // Char (1 byte = 1 char)
+    if (type === 'char') {
+        const chars = bytes.map(b => String.fromCharCode(b));
+        return chars.length === 1 ? chars[0] : chars;
+    }
+
+    // Numéricos
+    const match = type.match(/^([ui])(\d+)$/);
+    if (!match) return null;
+
+    const signed   = match[1] === 'i';
+    const bits     = parseInt(match[2], 10);
+    const typeSize = bits / 8;
+
+    if (![1, 2, 4].includes(typeSize))
+        return null;
+
+    if (bytes.length % typeSize !== 0)
+        return null;
+
+    const values = [];
+    const buffer = new ArrayBuffer(typeSize);
+    const view   = new DataView(buffer);
+
+    for (let i = 0; i < bytes.length; i += typeSize) {
+        
+        for (let j = 0; j < typeSize; j++) {
+            view.setUint8(j, bytes[i + j] & 0xFF);
+        }
+
+        let value;
+        switch (typeSize) {
+            case 1:
+                value = signed
+                    ? view.getInt8(0)
+                    : view.getUint8(0);
+                break;
+
+            case 2:
+                value = signed
+                    ? view.getInt16(0, littleEndian)
+                    : view.getUint16(0, littleEndian);
+                break;
+
+            case 4:
+                value = signed
+                    ? view.getInt32(0, littleEndian)
+                    : view.getUint32(0, littleEndian);
+                break;
+        }
+
+        values.push(value);
+    }
+
+    return values.length === 1 ? values[0] : values;
+}
+
 
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));

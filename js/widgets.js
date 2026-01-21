@@ -1,132 +1,211 @@
-// ================================================
-// CARDS
-// ================================================
 
-class widget{
-    constructor(device_id, name, defaultValue) {
-        //this.addr = addr;
-        this.name = name;
-        this.defaultValue = defaultValue;
-        this.currentValue = defaultValue;
-        this.inputValue = defaultValue;
-        this.type = 'none';
-        this.div = null;
-        //this.value_change = false;
-    }
-    trim(a){
-        //console.log("[*] trim -> ", a.value );
-        //console.log(a);
-        if(a.value<0) a.value = 0;
-        else if(a.value>255) a.value = 255;
-    }
-    html(){
-    }
-    display(){
-        //this.parameters[param].display( container.querySelector(`#param_${param}`) );
-    }
-    value(){
-        return null;
-    }
-}
+// 
+const TypeRules = {
+    u8: {
+        min: 0,
+        max: 255,
+        len: 1
+    },
 
-class widget_int extends widget{
-    constructor(device_id, name, defaultValue, Min, Max ) {
-        super(device_id, name, defaultValue);
-        this.type = "int";
-        this.min = Min;
-        this.max = Max;
-        this.input = null;
-        this.trim_callback = null;
-        this.status = null;
-    }
-    html(){
-        this.div = document.createElement("label");
-        this.div.innerText = `${this.name}: `;
-        this.input = document.createElement("input");
-        this.input.type = "number";
-        this.input.id = `param_${this.name}`;
-        this.input.value = this.currentValue;
-        // Passando apenas o valor do input
-        //input.onblur = () => this.trim(input.value);
-        //input.onblur = () => this.trim(this.div.querySelector("input"));
-        this.input.onblur = () => this.trim(this.input);
-        this.div.appendChild(this.input);
+    i8: {
+        min: -127,
+        max: 128,
+        len: 1
+    },
 
-        //<div class="wg-status"></div>
-        this.status = document.createElement("div");
-        this.status.className = "wg-status";
-        this.div.appendChild(this.status);
+    i16: {
+        min: -32768,
+        max: 32767,
+        len: 2
+    },
 
-        return this.div;
-        //return
-        //`<label>${this.name}: 
-        //    <input type="number" id="param_${this.name}" value="${this.currentValue}" onblur="${this.trim()}(this)">
-        //</label>`;
+    u16: {
+        min: 0,
+        max: 65535,
+        len: 1
+    },
+
+    str: {
+        len: 16 // default
     }
-    value(){
-        return this.input.value;
-    }
-    trim(){
-        this.input.value = this.trim_num(this.input.value);
-        if( this.trim_callback ){
-            this.trim_callback(this);
+};
+
+class Widget {
+    constructor(opts) {
+        
+        this.name = opts.name || 'name';
+        this.type = opts.type || 'int';
+
+        // Output Formato de saida
+        this.outputType = this.type == 'string' ? 'str' : (opts.outputType || 'u8'); // u8, i16, string...
+        this.endian = (opts?.endian === 'big') ? 'big' : 'little';
+
+        // Comprimento da variavel
+        this.outputLen = TypeRules[this.outputType].len;
+        if( this.outputType == 'str' && opts.outputLen )
+            this.outputLen = opts.outputLen;
+        
+        //this.value = opts.value ?? 0;
+        this.checkOptions = opts.checkOptions || ["bit0"];
+        this.selOptions   = opts.selOptions || {"sel0":0};
+
+        // Propriedade do tipo
+        this.real = TypeRules[this.outputType]; // min/max naturais
+
+        // Valor abstrato
+        // Exemplo: valor de um canal varia de 1000 a 2000 mas é u8 -> 0, 255
+        this.abstract = null;
+        if (opts.abstract) {
+            this.abstract = {
+                min: opts.abstract[0],
+                max: opts.abstract[1],
+            };
         }
-    }
-    trim_num(x) {
-        x = parseInt(x) || this.min; // Converte para inteiro e evita NaN
-        if (x < this.min) x = this.min;
-        else if (x > this.max) x = this.max;
-        return x;
-    }
-    display(x){
-        this.input.value = this.trim_num(x);
-    }
-}
 
-class widget_string extends widget{
-    constructor(device_id, name, defaultValue, len ) {
-        super(device_id, name, defaultValue);
-        this.type = "string";
-        this.len = len;
-    }
-    trim(a){}
-    html(){
-        const label = document.createElement("label");
-        label.innerText = `${this.name}: `;
-        const input = document.createElement("input");
-        input.type = "text";
-        input.id = `param_${this.name}`;
-        input.value = this.currentValue;
-        input.maxLength=this.len;
-        // Passando apenas o valor do input
-        //input.onblur = () => this.trim(input.value);
-        //input.onblur = () => this.trim(label.querySelector("input"));
-        label.appendChild(input);
-        return label;
-    }
-    display(x){}
+        // Limites válidos (subconjunto do real ou do abstrato)
+        // Para casos em que valores possiveis não fazem sentido
+        // Ex: Endereço, só pode de 0 a 31
+        this.realLimit = {
+            min: this.real.min,
+            max: this.real.max,
+        };
+        
+        if (opts.limit) {
+            this.realLimit.min = Math.max(
+                this.realLimit.min,
+                opts.limit[0]
+            );
+            this.realLimit.max = Math.min(
+                this.realLimit.max,
+                opts.limit[1]
+            );
+        }else if (opts.abstractLimit && this.abstract) {
+            this.realLimit.min = Math.max(
+                this.realLimit.min,
+                this.realFromAbstract(opts.abstractLimit[0])
+            );
+            this.realLimit.max = Math.min(
+                this.realLimit.max,
+                this.realFromAbstract(opts.abstractLimit[1])
+            );
+        }
+        
+        this.defaultValue = opts.defaultValue ?? 0;
+        this.savedValue   = opts.savedValue ?? 0;
+        this.currentValue = this.savedValue;
+        this.dirty        = false;
 
-    value(){
-        return this.input.value;
+        this.el = document.createElement('div');
+        this.el.className = 'widget';
+
+
+        //console.log(
+        //    `Wg-${this.name} | ` +
+        //    `real=${this.currentValue} ` +
+        //    `[type:${this.real.min}..${this.real.max}] ` +
+        //    `[limit:${this.realLimit.min}..${this.realLimit.max}] ` +
+        //    (this.abstract
+        //        ? `[abstract:${this.abstract.min}..${this.abstract.max}]`
+        //        : `[abstract:none]`)
+        //);
+
+        this.render();
+
+        this.setValue( this.currentValue );
     }
-}
 
-class widget_select extends widget {
-    constructor(device_id, name, defaultValue, options) {
-        super(device_id, name, defaultValue);
-        this.type = "select";
-        this.options = options;
-        this.select = null;
+    /* =================================================
+      RENDER
+    ================================================= */
+    render() {
+        this.el.innerHTML = `
+            <div class="widget-row">
+                <span class="widget-name">${this.name}</span>
+                <div class="widget-main"></div>
+                <div class="widget-right">
+                    <span class="return-btn" title="Retornar salvo">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            width="16" height="14"
+                            fill="currentColor"
+                            class="return-icon"
+                            viewBox="0 0 16 14">
+                            <path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/>
+                        </svg>
+                    </span>
+                    <span class="home-btn" title="Restaurar padrão">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            width="16" height="16"
+                            fill="currentColor"
+                            class="home-icon"
+                            viewBox="0 0 16 16">
+                            <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L8 2.207l6.646 6.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293z"/>
+                            <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293z"/>
+                        </svg>
+                    </span>
+                    <span class="status" title="Salvo?"></span>
+                </div>
+            </div>
+        `;
+
+        this.elRow    = this.el.querySelector('.widget-row');
+        this.elMain   = this.el.querySelector('.widget-main');
+        this.elHome   = this.elRow.querySelector('.home-btn');
+        this.elReturn = this.elRow.querySelector('.return-btn');
+
+        // Home button
+        this.elHome.onclick = () => {
+            this.setValue(this.defaultValue);
+        };
+        
+        // Return button
+        this.elReturn.onclick = () => {
+            this.setValue(this.savedValue);
+        };
+
+        // Caixa a direita com o Valor Real e Status
+        if( this.outputType != 'str' ){
+            const right = this.el.querySelector('.widget-right');
+            right.insertAdjacentHTML('afterbegin', `
+                <span class="real-value editable" title="register value">[${this.savedValue}]</span>
+                <input class="real-input"
+                    type="number"
+                    min="${this.real.min}"
+                    max="${this.real.max}">
+            `);
+            this.elRealSpan = this.el.querySelector('.real-value:not(.abs)');
+            this.elRealInp  = this.el.querySelector('.real-input');
+            makeEditable(this.elRealSpan, this.elRealInp, v => this.setValue(v));
+        }
+        this.elStatus   = this.el.querySelector('.status');
+
+        // renderiza o restante em função do tipo
+        if( this.type == 'int' ) this.renderInt();
+        else if( this.type == 'slide' ) this.renderSlide();
+        else if( this.type == 'check' ) this.renderCheck();
+        else if( this.type == 'string' ) this.renderString();
+        else if( this.type == 'select' ) this.renderSelect();
+
+        if( this.type != 'slide' && this.type != 'check' ){
+            this.elAbsInp   = this.el.querySelector('.abs-input');
+            this.elAbsInp.onchange = () => {
+                //console.log(`set: ${this.elAbsInp.value}`);
+                this.setFromAbstract(this.elAbsInp.value);
+            };
+        }
+
     }
 
-    html() {
-        this.div = document.createElement("label");
-        this.div.innerText = `${this.name}: `;
+    renderInt() {
+        this.elMain.innerHTML = `
+            <input class="abs-input int" type="number">
+        `;
+    }
 
+    renderSelect() {
         this.select = document.createElement("select");
-        this.select.id = `param_${this.name}`;
-
-        for( const option in this.options ){
+        this.select.className = "abs-input select";
+        
+        for( const option in this.selOptions ){
             const opt = document.createElement("option");
             opt.value = option;
             opt.innerText = option;
@@ -135,114 +214,213 @@ class widget_select extends widget {
             }
             this.select.appendChild(opt);
         }
+        
+        //this.select.onchange = () => {
+        //    console.log(`select: ${this.select.value}`);
+        //    this.setValue( this.select.value );
+        //};
 
-        this.select.onchange = () => {
-            this.currentValue = this.select.value;
-            console.log(this.value());
+        this.elMain.appendChild(this.select);
+    }
+    renderString() {
+        this.elMain.innerHTML = `
+            <input class="abs-input string" type="text" value="${this.currentValue}" maxlength="${this.outputLen-1}">
+        `;
+    }
+    renderSlide() {
+        //<span class="real-value abs editable"></span>
+        this.elMain.innerHTML = `
+            <span class="hide-span slide">${this.currentValue}</span>
+            <input class="hide-input slide" type="number">
+            <input class="abs-input slide" type="range"
+            min="${this.real.min}"
+            max="${this.real.max}">
+        `;
+        this.elHideAbsInp   = this.el.querySelector('.hide-input');
+        this.elHideAbsSpan   = this.el.querySelector('.hide-span');
+        makeEditable(this.elHideAbsSpan, this.elHideAbsInp, v => this.setFromAbstract(v));
+        this.elRealInp2   = this.el.querySelector('.abs-input');
+        this.elRealInp2.onchange = () => {
+            this.setValue(this.elRealInp2.value);
         };
-
-        this.div.appendChild(this.select);
-
-        this.status = document.createElement("div");
-        this.status.className = "wg-status";
-        this.div.appendChild(this.status);
+    }
+    renderCheck() {
+        this.elCheck = document.createElement('div');
+        this.elCheck.className = "checkbox-group-vertical";
         
-        return this.div;
+        this.checkOptions.forEach((opt, i) => {
+            const label = document.createElement('label');
+            const chk   = document.createElement('input');
+            chk.type = 'checkbox';
+
+            chk.onchange = () => this.updateFromChecks();
+
+            label.append(chk, ' ', opt);
+            this.elCheck.appendChild(label);
+        });
+        this.el.appendChild(this.elCheck);
     }
 
-    value() {
-        return this.options[this.select.value];
+    /* =================================================
+      Tratamento dos Valores e status
+    ================================================= */
+    clamp(v) {
+        if( this.type == 'string' ){
+            return v.toString();
+        }else{
+            return Math.min(this.realLimit.max, Math.max(this.realLimit.min, v));
+        }
     }
 
-    display(x) {
-        for( const option in this.options ){
-            if( this.options[option] == x ) {
-                console.log("option:",option);
-                this.select.value = option;
-                this.currentValue = x;
-                return;
+    setFromAbstract(a){
+        this.setValue( this.realFromAbstract(a) )
+    }
+
+    abstractFromReal(v) {
+        if( this.type == 'select' ){
+            for( const option in this.selOptions ){
+                const opt = document.createElement("option");
+                if( this.selOptions[option] === v )
+                    return option;
             }
+            return v;
+        }else if( this.abstract ){
+            return intResizeClamp(
+                v,
+                this.real.min,
+                this.real.max,
+                this.abstract.min,
+                this.abstract.max
+            );
         }
-        this.select.value = x;
+        return v;
     }
-}
 
-
-class devices_card {
-    constructor( Addr ) {
-        this.Addr = Addr;
-        this.deviceId = null;
-        this.foxWireVersion = null;
-        this.firmwareVersion = null;
-        this.lote = null;
+    realFromAbstract(a) {
+        if( this.type == 'select' ){
+            return this.selOptions[a];
+        }else if( this.abstract ){
+            return intResizeClamp(
+                a,
+                this.abstract.min,
+                this.abstract.max,
+                this.real.min,
+                this.real.max
+            );
+        }
+        return a;
     }
-}
 
-
-
-class widget_int2 extends widget{
-    constructor(device_id, name, defaultValue, Min, Max ) {
-        super(device_id, name, defaultValue);
-        this.type = "int2";
-        this.min = Min;
-        this.max = Max;
-        this.input = null;
-        this.trim_callback = null;
-        this.status = null;
+    setValue(v) {
+        v = this.clamp(v);
+        this.currentValue = v;
+        this.dirty = (v !== this.savedValue);
+        this.updateUIValue();
     }
-    html(){
-        this.div = document.createElement("label");
-        this.div.innerText = `${this.name}: `;
+
+    setSavedValue(v) {
+        v = this.clamp(v);
+        this.savedValue   = v;
+        this.currentValue = v;
+        this.dirty        = false;
+        this.updateUIValue();
+    }
+
+    updateFromChecks() {
+        let v = 0;
+        [...this.elCheck.querySelectorAll('input')].forEach((chk, i) => {
+            if (chk.checked) v |= (1 << i);
+        });
+        this.setValue(v);
+    }
+
+    updateUIValue(){
+
+        //console.log(
+        //    `Wg-${this.name} | ` +
+        //    `real=${this.currentValue} ` +
+        //    `sel=${ this.elAbsInp?.value || 0 } `
+        //);
+
+        if (this.elHome) {
+            this.elHome.classList.toggle(
+                'active',
+                this.currentValue == this.defaultValue
+            );
+        }
+
+        if (this.elReturn) {
+            this.elReturn.classList.toggle(
+                'active',
+                this.currentValue == this.savedValue
+            );
+        }
+
+        // set Abstract value
+        const abstract = this.abstractFromReal( this.currentValue );
+        [
+            this.elHideAbsInp,
+            this.elAbsInp,
+        ].forEach(el => {
+            if (!el) return;   // se não existe, ignora
+            el.value = abstract;
+        });
+
+        // set Real value
+        [
+            this.elRealInp,
+            this.elRealInp2,
+        ].forEach(el => {
+            if (!el) return;   // se não existe, ignora
+            el.value = this.currentValue;
+        });
+
+        if( this.elCheck ){
+            [...this.elCheck.querySelectorAll('input')].forEach((chk, i) => {
+                chk.checked = (this.currentValue >> i) & 1;
+            });
+        }
         
-        this.input = document.createElement("input");
-        this.input.type = "number";
-        this.input.id = `param_${this.name}`;
-        this.input.value = this.currentValue;
-        // Passando apenas o valor do input
-        //input.onblur = () => this.trim(input.value);
-        //input.onblur = () => this.trim(this.div.querySelector("input"));
-        this.input.onblur = () => this.trim(this.input);
-        this.div.appendChild(this.input);
-
-        this.input2 = document.createElement("input");
-        this.input2.type = "number";
-        this.input2.id = `param_${this.name}_2`;
-        this.input2.value = this.currentValue;
-        this.input2.onblur = () => this.trim(this.input2);
-
-        this.div.appendChild(this.input2);
-
-        //<div class="wg-status"></div>
-        this.status = document.createElement("div");
-        this.status.className = "wg-status";
-        this.div.appendChild(this.status);
-
-        return this.div;
-        //return
-        //`<label>${this.name}: 
-        //    <input type="number" id="param_${this.name}" value="${this.currentValue}" onblur="${this.trim()}(this)">
-        //</label>`;
+        if (this.elHideAbsSpan)
+            this.elHideAbsSpan.textContent = `${abstract}`;
+        if (this.elRealSpan)
+            this.elRealSpan.textContent = `[${this.currentValue}]`;
+        if (this.elStatus)
+            this.elStatus.classList.toggle('ok', !this.dirty);
     }
-    value(){
-        return this.input.value;
-    }
-    trim(){
-        this.input.value = this.trim_num(this.input.value);
-        if( this.trim_callback ){
-            this.trim_callback(this);
+
+    /* =================================================
+      Data out. Gera o array de dados de escrita
+    ================================================= */
+    output() {
+        let bytes = [];
+
+        // caso especial: string
+        if (this.outputType === 'str') {
+            const str = String(this.currentValue);
+            bytes = stringToBytes(str, this.outputLen);
+        } else {
+            // tipos numéricos: u8, i8, u16, i16, ...
+            const type = this.outputType;
+
+            const signed = type.startsWith('i');          // i = signed
+            const bits   = parseInt(type.slice(1), 10);   // 8, 16, ...
+            const size   = bits / 8;                       // bytes
+
+            if (![1, 2, 4].includes(size)) {
+                throw new Error(`Tamanho inválido: ${type}`);
+            }
+
+            const v = Number(this.currentValue);
+            bytes = numberToBytes(v, size, signed, this.endian);
         }
+
+        // converte para HEX
+        return bytes;
+        //.map(b =>
+        //    b.toString(16).padStart(2, '0').toUpperCase()
+        //);
     }
-    trim_num(x) {
-        x = parseInt(x) || this.min; // Converte para inteiro e evita NaN
-        if (x < this.min) x = this.min;
-        else if (x > this.max) x = this.max;
-        return x;
-    }
-    display(x){
-        this.input.value = this.trim_num(x);
-    }
+
+
 }
-
-
-
-

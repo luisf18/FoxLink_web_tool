@@ -5,33 +5,24 @@
 <meta charset="UTF-8">
 <title>Cards com Widgets</title>
 
-
 <link rel="stylesheet" href="css/main.css">
-<style>
-    body {
-        margin: 0;
-        padding: 20px;
-        background: #f2f2f2;
-        font-family: Arial, Helvetica, sans-serif;
-    }
-</style>
-<!--link rel="stylesheet" href="css/sidebar.css"-->
-<link rel="stylesheet" href="css/cards.css">
+<link rel="stylesheet" href="css/sidebar.css">
 <link rel="stylesheet" href="css/widgets.css">
 <link rel="stylesheet" href="css/charts.css">
+<link rel="stylesheet" href="css/cards.css">
 </head>
 
 <body>
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="brand-row">
-                <div class="brand" onclick="openRepo()">
+                <div class="brand" id="brand">
                     <!--span class="brand-icon">🔗</span-->
-                    <span class="brand-text">FoxLink</span>
+                    <span class="brand-text">Fox webtool</span>
                 </div>
                 <span class="version">v0.4.2</span>
             </div>
-            <button class="connect-btn" id="connectBtn" onclick="toggleConnection()">
+            <button class="connect-btn" id="connectBtn">
                 <span class="dot"></span>
                 <span class="text">Disconnected</span>
             </button>
@@ -39,7 +30,7 @@
 
         <!-- 👇 NOVO BLOCO -->
         <div class="sidebar-controls">
-            <button class="scan-btn" onclick="scanDevices()" disabled>Scan</button>
+            <button class="scan-btn" id="scanBtn" disabled>Scan</button>
 
             <!-- Barra de progresso -->
             <div class="progress-wrap" id="progressWrap">
@@ -53,36 +44,40 @@
             </div>
         </div>
 
-        <!--div class="sidebar-footer">
+        <div class="sidebar-footer">
             <img src="https://luisf18.github.io/FoxLink_web_tool/logo.png" class="footer-logo">
             <a href="https://github.com/luisf18/FoxLink_web_tool" target="_blank">
                 FoxLink WebTool
             </a>
-            <a href="https://github.com/luisf18/FXDevices/wiki" target="_blank">
-                Wiki das Placas
+            <a href="https://luisf18.github.io/fox_dynamics_docs/" target="_blank">
+                Documentação Placas
             </a>
-        </div-->
+        </div>
 
     </div>
     
-    <div class="devices-container" id="cards">
-        <!--div class="card-grid" translate="no"></div-->
+    <div class="cards-container" id="cards">
+        <!--div class="cards-grid" id="cards-scroll"></div-->
     </div>
 
 <script src="js/utils.js"></script>
 <script src="js/widgets.js"></script>
-<script src="js/graph.js"></script>
-<script src="js/cards2.js"></script>
-
+<!--script src="js/device_card.js"></script-->
 <script type="module">
-    import { deviceRegistry, deviceDefs } from "./js/devices2.js";
+    import { FxdeviceCard } from "./js/device_card.js";
     import { resolveDevice } from "./js/device_resolver.js";
+    const card = new FxdeviceCard( 0, 0, resolveDevice(1,0) );
+    //card.setConnected( false );
+    document.querySelector('#cards').appendChild( card.el );
+    card.renderGraph();
 
-    const cg = document.querySelector('#cards');
-    cg.appendChild(
-        new FxdeviceCard( 0, 0, resolveDevice(1,2) ).el
-    )
-    
+    // Simulação de dados
+    setInterval(() => {
+        //console.log( "..." );
+        card.graph.addValue(0,Math.sin(Math.random() * 20));
+        card.graph.update();
+    }, 200);
+
 </script>
 
 
