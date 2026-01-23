@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Hex Editor – Webtool</title>
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #ff974d;
+    color: #fff;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: monospace;
+}
+
+.toolbar input { width: 45px; }
+
+.toggle input { display: none; }
+
+.slider {
+    width: 42px;
+    height: 22px;
+    background: #ccc;
+    border-radius: 22px;
+    position: relative;
+    cursor: pointer;
+}
+
+.slider::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: .2s;
+}
+
+input:checked + .slider {
+    background: #ff974d;
+}
+input:checked + .slider::before {
+    transform: translateX(20px);
+}
+
+table {
+    border-collapse: collapse;
+    background: #fff;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 4px 6px;
+    text-align: center;
+}
+
+.addr {
+    background: #f0f0f0;
+    font-weight: bold;
+}
+
+.hex {
+    min-width: 34px;
+}
+
+.hex.selected {
+    outline: 2px solid #ff974d;
+    outline-offset: -2px;
+}
+
+.hex.modified {
+    background: #ffd6a0;
+}
+
+.hex input {
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+    font-family: monospace;
+    text-align: center;
+}
+
+.ascii {
+    background: #fafafa;
+    padding-left: 8px;
+    min-width: 160px;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+
+<h2>Hex Editor</h2>
+
+<div class="toolbar">
+    <button onclick="fill()">Gerar memória</button>
+    <button onclick="apply()">Apply</button>
+
+    <label class="toggle">
+        HEX
+        <input type="checkbox" id="mode" onchange="toggleMode()">
+        <span class="slider"></span>
+        DEC
+    </label>
+    
+    <input type="file" id="fileInput" hidden onchange="importFile(this.files[0])">
+
+    <button onclick="document.getElementById('fileInput').click()">Import</button>
+    <button onclick="exportFile()">Export</button>
+
+    <label>
+        Memória:
+        <input type="number" id="memSizeInput" value="256" min="1" onchange="resizeMemory(this.valueAsNumber)">
+    </label>
+
+    <label>
+        Bytes por Página:
+        <input type="number" value="256" min="16" step="16"
+            onchange="setPageSize(this.valueAsNumber)">
+    </label>
+
+    <button onclick="prevPage()">◀</button>
+    <button onclick="nextPage()">▶</button>
+
+    <span id="pageInfo">1 / 1</span>
+    <label>
+        Ir p/ página:
+        <input type="number" min="1" id="gotoPage" style="width:60px"
+            onchange="goToPage(this.valueAsNumber)">
+    </label>
+
+</div>
+
+<table id="hexTable">
+<thead>
+<tr>
+    <th>Addr</th>
+    <th colspan="16">Data</th>
+    <th>ASCII</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<div style="display:flex; gap:6px; align-items:center">
+    <input id="addrInput" placeholder="ex: 0x1A3 ou 419"
+           onkeydown="if(event.key==='Enter') jumpToAddress()">
+    <button onclick="jumpToAddress()">🔍</button>
+</div>
+
+<script>
+const COLS = 16;
+
+let memorySize = 256;
+let memory = new Uint8Array(memorySize);
+let original = new Uint8Array(memorySize);
+
+const state = {
+    selected: 0,
+    editing: false,
+    mode: "hex",
+    page: 0,
+    pageSize: 256
+};
+
+function clampSelected() {
+    state.selected = Math.max(0, Math.min(memorySize - 1, state.selected));
+}
+
+function fill() {
+    for (let i = 0; i < memorySize; i++) {
+        memory[i] = Math.random() * 256;
+        original[i] = memory[i];
+    }
+
+    state.selected = 0;
+    state.page = 0;
+
+    build();
+    updatePageInfo();
+    select(0);
+}
+
+function build() {
+    const tbody = document.querySelector("#hexTable tbody");
+    tbody.innerHTML = "";
+
+    const start = state.page * state.pageSize;
+    const end = Math.min(start + state.pageSize, memorySize);
+    for (let base = start; base < end; base += COLS) {
+    //for (let base = 0; base < size; base += COLS) {
+        const tr = document.createElement("tr");
+
+        const addr = document.createElement("td");
+        addr.textContent = base.toString(16).padStart(4, "0");
+        addr.className = "addr";
+        tr.appendChild(addr);
+
+        let ascii = "";
+
+        for (let i = 0; i < COLS; i++) {
+            const idx = base + i;
+            const td = document.createElement("td");
+            td.className = "hex";
+            td.dataset.i = idx;
+
+            if (idx < memorySize) {
+                td.textContent = format(memory[idx]);
+                if (memory[idx] !== original[idx]) td.classList.add("modified");
+
+                ascii += memory[idx] >= 32 && memory[idx] <= 126
+                    ? String.fromCharCode(memory[idx])
+                    : ".";
+            }
+
+            tr.appendChild(td);
+        }
+
+        const asc = document.createElement("td");
+        asc.textContent = ascii;
+        asc.className = "ascii";
+        tr.appendChild(asc);
+
+        tbody.appendChild(tr);
+    }
+}
+
+function format(v) {
+    return state.mode === "hex"
+        ? v.toString(16).padStart(2, "0").toUpperCase()
+        : v.toString(10);
+}
+
+function select(i) {
+    state.selected = i;
+    clampSelected();
+    i = state.selected;
+
+    //i = Math.max(0, Math.min(size - 1, i));
+    //state.selected = i;
+    //document.querySelectorAll(".hex").forEach(td => {
+    //    td.classList.toggle("selected", Number(td.dataset.i) === i);
+    //});
+
+    const pageStart = state.page * state.pageSize;
+    const pageEnd = pageStart + state.pageSize - 1;
+
+    if (i < pageStart) {
+        state.page = Math.floor(i / state.pageSize);
+        build();
+    }
+
+    if (i > pageEnd) {
+        state.page = Math.floor(i / state.pageSize);
+        build();
+    }
+
+    state.selected = i;
+
+    document.querySelectorAll(".hex").forEach(td => {
+        td.classList.toggle("selected", Number(td.dataset.i) === i);
+    });
+}
+
+
+function toggleMode() {
+    state.mode = document.getElementById("mode").checked ? "dec" : "hex";
+    build();
+    select(state.selected);
+}
+
+function finishEdit(input, old) {
+    let v = input.value.trim();
+    let num;
+    if (state.mode === "hex") {
+        if (!/^[0-9A-Fa-f]{1,2}$/.test(v)) {
+            cancelEdit();
+            return;
+        }
+        num = parseInt(v, 16);
+    } else {
+        num = Number(v);
+        if (isNaN(num) || num < 0 || num > 255) {
+            cancelEdit();
+            return;
+        }
+    }
+
+    if (num !== old) {
+        memory[state.selected] = num;
+    }
+
+    state.editing = false;
+    input.blur();
+
+    setTimeout(() => {
+        build();
+        select(state.selected);
+    }, 0);
+}
+
+
+function startEdit() {
+    if (state.editing) return;
+    state.editing = true;
+
+    const td = document.querySelector(`.hex[data-i="${state.selected}"]`);
+    const old = memory[state.selected];
+
+    const input = document.createElement("input");
+    input.value = format(old);
+
+    td.textContent = "";
+    td.appendChild(input);
+    input.focus();
+    input.select();
+
+    input.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            finishEdit(input, old);
+        }
+        if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            cancelEdit();
+        }
+    });
+}
+
+function cancelEdit() {
+    state.editing = false;
+
+    setTimeout(() => {
+        build();
+        select(state.selected);
+    }, 0);
+}
+
+
+function apply() {
+    let n = 0;
+    for (let i = 0; i < memorySize; i++) {
+        if (memory[i] !== original[i]) {
+            console.log("WRITE", i, memory[i]);
+            original[i] = memory[i];
+            n++;
+        }
+    }
+    alert(`${n} byte(s) enviados`);
+    build();
+    select(state.selected);
+}
+
+
+function jumpToAddress() {
+    const v = document.getElementById("addrInput").value.trim();
+    if (!v) return;
+
+    let addr;
+    if (v.startsWith("0x") || /^[0-9A-Fa-f]+$/.test(v)) {
+        addr = parseInt(v.replace("0x",""), 16);
+    } else {
+        addr = Number(v);
+    }
+
+    if (isNaN(addr) || addr < 0 || addr >= memorySize) return;
+
+    state.page = Math.floor(addr / state.pageSize);
+    build();
+    updatePageInfo();
+    select(addr);
+}
+
+
+function setPageSize(n) {
+    state.pageSize = Math.max(COLS, n);
+    state.page = Math.floor(state.selected / state.pageSize);
+    build();
+    updatePageInfo();
+    select(state.selected);
+}
+
+function prevPage() {
+    if (state.page > 0) {
+        state.page--;
+        build();
+        select(state.page * state.pageSize);
+    }
+}
+
+function goToPage(p) {
+    if (!p) return;
+
+    p = Math.max(1, Math.min(totalPages(), p));
+    state.page = p - 1;
+
+    build();
+    updatePageInfo();
+    select(state.page * state.pageSize);
+}
+
+function nextPage() {
+    if (state.page < totalPages() - 1) {
+        state.page++;
+        build();
+        updatePageInfo();
+        select(state.page * state.pageSize);
+    }
+}
+
+function totalPages() {
+    return Math.max(1, Math.ceil(memorySize / state.pageSize));
+}
+
+function updatePageInfo() {
+    document.getElementById("pageInfo").textContent =
+        `${state.page + 1} / ${totalPages()}`;
+}
+
+function resizeMemory(newSize) {
+    newSize = Math.max(1, newSize);
+
+    const newMem = new Uint8Array(newSize);
+    const newOrig = new Uint8Array(newSize);
+
+    const len = Math.min(memorySize, newSize);
+    for (let i = 0; i < len; i++) {
+        newMem[i] = memory[i];
+        newOrig[i] = original[i];
+    }
+
+    memory = newMem;
+    original = newOrig;
+    memorySize = newSize;
+
+    state.page = 0;
+    state.selected = Math.min(state.selected, memorySize - 1);
+
+    clampSelected();
+    state.page = Math.floor(state.selected / state.pageSize);
+
+    build();
+    updatePageInfo();
+    select(state.selected);
+}
+
+function importFile(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = e => {
+        const data = new Uint8Array(e.target.result);
+
+        memorySize = data.length;
+        document.getElementById("memSizeInput").value = memorySize;
+        memory = new Uint8Array(memorySize);
+        original = new Uint8Array(memorySize);
+
+        memory.set(data);
+        original.set(data);
+
+        state.page = 0;
+        state.selected = 0;
+
+        updatePageInfo();
+        build();
+        select(0);
+
+        document.getElementById("fileInput").value = "";
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+function exportFile() {
+    const blob = new Blob([memory], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "memory.bin";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+}
+
+
+fill();
+
+document.getElementById("hexTable").addEventListener("click", e => {
+    const td = e.target.closest(".hex");
+    if (!td || td.dataset.i === undefined) return;
+
+    select(Number(td.dataset.i));
+});
+
+document.addEventListener("keydown", e => {
+    if (state.editing) return;
+
+    switch (e.key) {
+        case "ArrowRight":
+            e.preventDefault();
+            select(state.selected + 1);
+            break;
+
+        case "ArrowLeft":
+            e.preventDefault();
+            select(state.selected - 1);
+            break;
+
+        case "ArrowDown":
+            e.preventDefault();
+            select(state.selected + COLS);
+            break;
+
+        case "ArrowUp":
+            e.preventDefault();
+            select(state.selected - COLS);
+            break;
+
+        case "Enter":
+            e.preventDefault();
+            startEdit();
+            break;
+        case "Delete":
+            e.preventDefault();
+            memory[state.selected] = 0;
+            build();
+            select(state.selected);
+            break;
+    }
+});
+document.getElementById("hexTable").addEventListener("dblclick", e => {
+    const td = e.target.closest(".hex");
+    if (!td) return;
+
+    select(Number(td.dataset.i));
+    startEdit();
+});
+</script>
+
+</body>
+</html>

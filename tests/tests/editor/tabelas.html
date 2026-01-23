@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>AG Grid – Hex Editor</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
+
+<style>
+body {
+  margin: 0;
+  padding: 10px;
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #ff974d;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+button:hover {
+  background: #ff7f26;
+}
+
+.ag-theme-alpine {
+  height: 420px;
+  width: 100%;
+  --ag-row-height: 26px;
+  --ag-header-height: 28px;
+  font-size: 12px;
+}
+
+.ag-cell {
+  padding: 2px 6px;
+}
+
+.ag-theme-alpine {
+  font-size: 12px;
+}
+
+.ag-cell {
+  font-size: 12px;
+}
+
+.cell-changed {
+  background: #ffe1c4 !important;
+}
+
+.ag-cell {
+  padding: 0 4px !important;
+  line-height: 22px;
+}
+
+#grid {
+  width: 100%;
+  max-width: 100%;
+}
+
+.ag-theme-alpine {
+  font-size: 11px;
+  --ag-row-height: 24px;
+}
+
+.ag-cell {
+  padding: 0 4px !important;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="toolbar">
+  <button onclick="toggleEdit()">Toggle Edit</button>
+  <button onclick="loadData()">Reload</button>
+</div>
+
+<div id="grid" class="ag-theme-alpine"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+<script>
+/* ===============================
+   ESTADO
+================================ */
+let editable = true;
+let gridApi;
+let originalData = [];
+
+/* ===============================
+   HELPERS
+================================ */
+function intParser(p) {
+  const v = parseInt(p.newValue, 10);
+  return isNaN(v) ? p.oldValue : Math.max(0, Math.min(255, v));
+}
+
+function cellClassRules() {
+  return {
+    'cell-changed': p => {
+      const row = originalData[p.node.rowIndex];
+      return row && row[p.colDef.field] !== p.value;
+    }
+  };
+}
+
+/* ===============================
+   COLUNAS
+================================ */
+const columnDefs = [
+  { headerName: "Addr", field: "addr", width: 80, editable: false },
+  ...Array.from({ length: 16 }, (_, i) => ({
+    headerName: i.toString(16).toUpperCase(),
+    field: "c" + i,
+    editable: () => editable,
+    valueParser: intParser,
+    cellClassRules: cellClassRules(),
+    width: 56
+  }))
+];
+
+/* ===============================
+   GRID OPTIONS
+================================ */
+const gridOptions = {
+  theme: "legacy", // 🔥 IMPORTANTE
+  columnDefs,
+  defaultColDef: {
+    sortable: false,
+    resizable: true
+  },
+  suppressHorizontalScroll: true,
+  stopEditingWhenCellsLoseFocus: true,
+  defaultColDef: {
+    resizable: false,
+    sortable: false,
+    flex: 0   // 👈 ISSO é o pulo do gato
+  },
+  onGridReady: e => gridApi = e.api
+};
+
+/* ===============================
+   AÇÕES
+================================ */
+function toggleEdit() {
+  editable = !editable;
+  gridApi.refreshCells({ force: true });
+}
+
+function loadData() {
+  const data = [];
+  originalData = [];
+
+  for (let r = 0; r < 32; r++) {
+    const row = { addr: "0x" + (r * 16).toString(16).padStart(4, "0") };
+    const original = {};
+
+    for (let c = 0; c < 16; c++) {
+      const v = Math.floor(Math.random() * 256);
+      row["c" + c] = v;
+      original["c" + c] = v;
+    }
+
+    data.push(row);
+    originalData.push(original);
+  }
+
+  // ✅ API NOVA
+  gridApi.setGridOption("rowData", data);
+}
+
+/* ===============================
+   INIT
+================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  const gridDiv = document.getElementById("grid");
+  gridApi = agGrid.createGrid(gridDiv, gridOptions);
+  loadData();
+});
+</script>
+
+</body>
+</html>

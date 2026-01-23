@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Hex Editor - AG Grid</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+}
+
+.toolbar {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #ff974d;
+    color: #fff;
+}
+
+#grid {
+    height: 500px;
+    width: 100%;
+}
+
+  .ag-theme-alpine {
+    --ag-row-height: 28px;
+    --ag-header-height: 32px;
+    font-size: 12px;
+  }
+
+  .ag-cell {
+    padding: 2px 6px;
+  }
+</style>
+</head>
+<body>
+
+<h2>Hex Editor (AG Grid)</h2>
+
+<div class="toolbar">
+    <button onclick="fill()">Gerar memória</button>
+    <button onclick="exportFile()">Export</button>
+    <input type="file" onchange="importFile(this.files[0])">
+</div>
+
+<div id="grid" class="ag-theme-alpine"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.noStyle.js"></script>
+
+<script>
+const COLS = 16;
+let memory = new Uint8Array(256);
+let gridApi;
+
+/* ======================
+   DADOS → TABELA
+====================== */
+function buildRows() {
+    const rows = [];
+    for (let i = 0; i < memory.length; i += COLS) {
+        const row = { addr: i.toString(16).padStart(4, "0") };
+        for (let c = 0; c < COLS; c++) {
+            row["b" + c] = memory[i + c] ?? "";
+        }
+        rows.push(row);
+    }
+    return rows;
+}
+
+/* ======================
+   COLUNAS
+====================== */
+function buildColumns() {
+    const cols = [
+        { field: "addr", headerName: "Addr", width: 90, editable: false }
+    ];
+
+    for (let c = 0; c < COLS; c++) {
+        cols.push({
+            field: "b" + c,
+            headerName: c.toString(16).toUpperCase(),
+            width: 65,
+            editable: true,
+
+            valueFormatter: p =>
+                p.value === "" ? "" :
+                Number(p.value).toString(16).padStart(2, "0").toUpperCase(),
+
+            valueParser: p => {
+                const v = parseInt(p.newValue, 16);
+                return isNaN(v) ? p.oldValue : Math.max(0, Math.min(255, v));
+            }
+        });
+    }
+    return cols;
+}
+
+/* ======================
+   GRID
+====================== */
+const gridOptions = {
+    columnDefs: buildColumns(),
+    rowData: buildRows(),
+
+    singleClickEdit: true,
+    stopEditingWhenCellsLoseFocus: true,
+
+    undoRedoCellEditing: true,
+    undoRedoCellEditingLimit: 100,
+
+    //suppressHorizontalScroll: true,
+    //defaultColDef: {
+    //    flex: 1,               // 👈 ocupa a largura disponível
+    //    minWidth: 70,
+    //    resizable: true,
+    //    sortable: false        // 👈 já resolve o “kk ordenar”
+    //},
+
+    onCellValueChanged: p => {
+        const row = p.node.rowIndex;
+        const col = Number(p.colDef.field.slice(1));
+        const addr = row * COLS + col;
+        if (addr < memory.length) {
+            memory[addr] = p.newValue;
+        }
+    }
+};
+
+gridApi = agGrid.createGrid(
+    document.getElementById("grid"),
+    gridOptions
+);
+
+/* ======================
+   AÇÕES
+====================== */
+function fill() {
+    for (let i = 0; i < memory.length; i++) {
+        memory[i] = Math.floor(Math.random() * 256);
+    }
+    gridApi.setGridOption("rowData", buildRows());
+}
+
+function importFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        memory = new Uint8Array(e.target.result);
+        gridApi.setGridOption("rowData", buildRows());
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function exportFile() {
+    const blob = new Blob([memory], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "memory.bin";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* init */
+fill();
+</script>
+
+</body>
+</html>

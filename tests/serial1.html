@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Serial Monitor Web</title>
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.left-buttons, .right-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #ccc;
+    color: #fff;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+}
+
+button.connected { background: #2ecc71; }
+button.active { background: #ff974d; }
+button.inactive { background: #666; }
+
+button.active { background: #ff974d; }      /* laranja ativado */
+button.connected { background: #2ecc71; }   /* verde */
+button.disconnect { background: #e74c3c; }  /* vermelho */
+button.reset-ready { background: #3498db; } /* azul */
+button.clear-ready { background: #e74c3c; } /* vermelho */
+button.clear-empty { background: #555; }    /* cinza escuro */
+
+#log {
+    background: #000;
+    color: #0f0;
+    font-family: monospace;
+    padding: 10px;
+    height: 320px;
+    overflow-y: auto;
+    border-radius: 6px;
+    white-space: pre-wrap;
+}
+
+.input-area {
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+    gap: 6px;
+}
+
+#cmd {
+    flex: 1;
+    padding: 8px;
+    font-family: monospace;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.input-area select {
+    /* seu estilo aqui */
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    font-family: monospace;
+}
+
+.presets {
+    margin-top: 6px;
+    display: flex;
+    gap: 6px;
+}
+
+</style>
+</head>
+<body>
+
+<h2>Serial Monitor Web</h2>
+
+<div class="toolbar">
+    <div class="left-buttons">
+        <button id="connectBtn">Conectar</button>
+        <button id="saveBtn" onclick="downloadLog()" title="Save log">💾</button>
+    </div>
+    <div class="right-buttons">
+        <button id="rstBtn" onclick="dtrReset()" title="DTR Reset">RST</button>
+        <button id="txBtn" onclick="toggleTx()" title="Show TX mensages on log">TX</button>
+        <button id="scrollBtn" onclick="toggleScroll()" title="Auto scroll">⬇</button>
+        <button id="timeBtn" onclick="toggleTime()" title="Show timestamp">⏱</button>
+        <button id="clearBtn" onclick="clearLog()" title="Clear log">X</button>
+    </div>
+</div>
+
+<div id="log"></div>
+
+<div class="input-area">
+    <input id="cmd" placeholder="Digite comando e pressione Enter">
+    <select id="lineEnding">
+        <option value="" >none</option>
+        <option value="NL" selected>\n</option>
+        <option value="CR">\r</option>
+        <option value="CRNL">\n\r</option>
+    </select>
+    <select id="baudRate" title="Baudrate">
+        <option value="300">300 baud</option>
+        <option value="600">600 baud</option>
+        <option value="750">750 baud</option>
+        <option value="1200">1200 baud</option>
+        <option value="2400">2400 baud</option>
+        <option value="4800">4800 baud</option>
+        <option value="9600">9600 baud</option>
+        <option value="14400">14400 baud</option>
+        <option value="19200">19200 baud</option>
+        <option value="31250">31250 baud</option>
+        <option value="38400">38400 baud</option>
+        <option value="57600">57600 baud</option>
+        <option value="74880">74880 baud</option>
+        <option value="115200" selected>115200 baud</option>
+        <option value="230400">230400 baud</option>
+        <option value="250000">250000 baud</option>
+        <option value="460800">460800 baud</option>
+        <option value="500000">500000 baud</option>
+        <option value="921600">921600 baud</option>
+        <option value="1000000">1000000 baud</option>
+        <option value="2000000">2000000 baud</option>
+    </select>
+</div>
+
+<div class="presets">
+    <button onclick="send('reset')" title="reset" >🔄</button>
+    <button onclick="send('FOX-SHELL\n\r',false)">🦊 FOX-SHELL</button>
+</div>
+
+<script>
+
+let port, reader, writer;
+let connected = false;
+let autoScroll = true;
+let showTime = false;
+let showTx = true;
+const logDiv = document.getElementById("log");
+
+// Buttons
+const connectBtn = document.getElementById("connectBtn");
+const rstBtn     = document.getElementById("rstBtn");
+const scrollBtn  = document.getElementById("scrollBtn");
+const timeBtn    = document.getElementById("timeBtn");
+const clearBtn   = document.getElementById("clearBtn");
+const saveBtn    = document.getElementById("saveBtn");
+const txBtn      = document.getElementById("txBtn");
+let rxBuffer = "";
+
+const endMap = new Map([
+    ["CR", "\r"],       // Carriage Return
+    ["NL", "\n"],       // New Line / Line Feed
+    ["NLCR", "\n\r"]    // Carriage Return + Line Feed
+]);
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function timestamp() { return new Date().toLocaleTimeString("pt-BR"); }
+
+function appendLine(text, outgoing=false) {
+    const lastSpan = logDiv.lastChild;
+    if (lastSpan && lastSpan instanceof HTMLSpanElement) {
+        if (!lastSpan.textContent.endsWith("\n")) lastSpan.textContent += "\n";
+    }
+    const span = document.createElement("span");
+    let line = "";
+    if (showTime) line += `[${timestamp()}] `;
+    if (outgoing) line += "> ";
+    line += text;
+    span.textContent = line;
+    logDiv.appendChild(span);
+    if (autoScroll) logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+async function connect() {
+    if (connected) {
+        // Desconectar
+        await disconnect();
+        return;
+    }
+    
+    port = await navigator.serial.requestPort(); // escolher COM
+    const baud = parseInt(document.getElementById("baudRate").value) || 115200;
+    await port.open({ baudRate: baud });
+
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+    connected = true;
+
+    connectBtn.className = "connected";
+    connectBtn.textContent = `COM ${port.getInfo().usbProductId || ""}`;
+    
+    rstBtn.className    = "reset-ready";
+    timeBtn.className   = showTime ? "active" : "inactive";
+    scrollBtn.className = autoScroll ? "active" : "inactive";
+    txBtn.className     = showTx ? "active" : "inactive";
+    clearBtn.className = "clear-empty";
+    saveBtn.className  = "";
+
+    readLoop();
+}
+
+async function disconnect() {
+    connected = false;
+
+    try {
+        if (reader) { await reader.cancel(); reader.releaseLock(); }
+        if (writer) writer.releaseLock();
+        if (port) await port.close();
+    } catch(e) { console.error(e); }
+
+    connectBtn.className = "disconnect";
+    connectBtn.textContent = "Conectar";
+    
+    rstBtn.className = "inactive";
+    timeBtn.className = "inactive";
+    scrollBtn.className = "inactive";
+    txBtn.className = "inactive";
+    clearBtn.className = "clear-empty";
+    saveBtn.className = "";
+}
+
+async function changeBaud(newBaud) {
+    if (!connected || !port) return;
+    
+    // marca como desconectado temporariamente
+    connected = false;
+    connectBtn.className = "disconnect";
+    connectBtn.textContent = "Reabrindo...";
+
+    // fecha reader/writer
+    if (reader) { await reader.cancel(); reader.releaseLock(); reader = null; }
+    if (writer) { writer.releaseLock(); writer = null; }
+
+    await port.close(); // fecha a porta
+
+    // abre novamente com novo baudrate
+    await port.open({ baudRate: newBaud });
+
+    // recria writer e reader
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+
+    connected = true;
+    connectBtn.className = "connected";
+    connectBtn.textContent = `Conectado (${port.getInfo().usbVendorId || "COM"})`;
+
+    readLoop(); // retoma leitura
+}
+
+
+async function readLoop() {
+    const decoder = new TextDecoder();
+    while (connected) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        rxBuffer += decoder.decode(value);
+        //console.log("receive:",value);
+        //console.log("str:",rxBuffer);
+        let idx;
+        while ((idx = rxBuffer.indexOf("\n")) >= 0) {
+            const line = rxBuffer.slice(0, idx + 1);
+            rxBuffer = rxBuffer.slice(idx + 1);
+            appendLine(line);
+            //console.log("rx-line:",line);
+            clearBtn.className = "disconnect";
+            saveBtn.className   = "active";
+        }
+    }
+}
+
+async function send(text, setEnd = true) {
+    if (!connected) return;
+    clearBtn.className = "disconnect";
+    saveBtn.className   = "active";
+    let ending = "";
+    if( setEnd ){
+        endValue = document.getElementById("lineEnding").value;
+        if( endMap.has( endValue ) ){
+            ending = endMap.get(endValue);
+        }
+    }
+    const fullText = text + ending;
+    const bytes = new TextEncoder().encode(fullText);
+    //console.log( `send:`,bytes);
+    await writer.write(bytes);
+    if( showTx ){
+        appendLine(fullText, true);
+    }
+}
+
+function sendPreset(t) { send(t); }
+
+async function dtrReset() {
+    rstBtn.className = "inactive";
+    if (!port) return;
+    await port.setSignals({ dataTerminalReady: false });
+    await sleep(100);
+    await port.setSignals({ dataTerminalReady: true });
+    rstBtn.className = "reset-ready";
+}
+
+function clearLog() {
+    logDiv.innerHTML = "";
+    clearBtn.className = "clear-empty";
+    saveBtn.className  = "";
+}
+
+function downloadLog() {
+    const text = logDiv.innerText;
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "serial_log.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function toggleTx() {
+    showTx = !showTx;
+    const btn = document.getElementById("txBtn");
+    btn.classList.toggle("active", showTx);
+    btn.classList.toggle("inactive", !showTx);
+}
+
+function toggleScroll() {
+    autoScroll = !autoScroll;
+    const btn = document.getElementById("scrollBtn");
+    btn.classList.toggle("active", autoScroll);
+    btn.classList.toggle("inactive", !autoScroll);
+}
+
+function toggleTime() {
+    showTime = !showTime;
+    const btn = document.getElementById("timeBtn");
+    btn.classList.toggle("active", showTime);
+    btn.classList.toggle("inactive", !showTime);
+}
+
+let history = [];
+let historyIndex = -1;
+
+const cmd = document.getElementById("cmd");
+cmd.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+        const t = cmd.value;
+        if (!t.trim()) return;
+        send(t);
+        history.push(t);
+        historyIndex = history.length;
+        cmd.value = "";
+    }
+    else if (e.key === "ArrowUp") {
+        if (history.length === 0) return;
+        historyIndex = Math.max(0, historyIndex - 1);
+        cmd.value = history[historyIndex] || "";
+    }
+    else if (e.key === "ArrowDown") {
+        if (history.length === 0) return;
+        historyIndex = Math.min(history.length, historyIndex + 1);
+        if (historyIndex === history.length) cmd.value = "";
+        else cmd.value = history[historyIndex];
+    }
+});
+
+document.getElementById("baudRate").addEventListener("change", async (e) => {
+    const newBaud = parseInt(e.target.value);
+    await connect(newBaud);
+});
+
+connectBtn.onclick = connect;
+</script>
+
+</body>
+</html>
