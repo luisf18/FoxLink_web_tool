@@ -51,6 +51,13 @@
     transition: background 0.15s, color 0.15s;
 }
 
+.sidebar-footer a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
 .sidebar-footer a:hover {
     background: #ffefe2;
     color: #d85c00;
