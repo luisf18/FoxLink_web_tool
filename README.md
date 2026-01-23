@@ -3,13 +3,13 @@
 _FoxLink_web_tool_ é uma ferramenta web para configurar modulos, ESCs e sensores da _Fox Dynamics_ ou outros dispositivos que utilizem o protocolo `FoxWire`. A ferramenta também possui um `Serial monitor` similar ao do Arduino IDE com alguns recursos extras.
 
 🔗 [FoxLink webtool](https://luisf18.github.io/FoxLink_web_tool/)  
-💻 [Serial Monitor](https://luisf18.github.io/FoxLink_web_tool/)
+💻 [Serial Monitor](https://luisf18.github.io/FoxLink_web_tool/serial.html)
 
 ## [FoxLink Webtool](https://luisf18.github.io/FoxLink_web_tool/)
 
 ![alt text](images/exampleV1.png)
 
-## [Serial Monitor Web](https://luisf18.github.io/FoxLink_web_tool/)
+## [Serial Monitor Web](https://luisf18.github.io/FoxLink_web_tool/serial.html)
 
 ![alt text](images/serialMonitor.png)
 
