@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Tool Dock Styles</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet"
+ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<style>
+body {
+    background: #ffffff;
+    font-family: system-ui, sans-serif;
+    padding: 20px;
+}
+
+h3 {
+    margin: 20px 0 6px;
+    font-weight: 500;
+    color: #ff8b39;
+}
+
+/* ===== BASE ===== */
+
+.tool-dock {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 8px;
+    width: max-content;
+    border-radius: 12px;
+}
+
+.tool-dock a {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text-decoration: none;
+    transition: background .15s, color .15s, border .15s;
+}
+
+.tool-dock i {
+    font-size: 16px;
+}
+
+/* tooltip */
+.tool-dock a::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s;
+}
+.tool-dock a:hover::after { opacity: 1; }
+
+/* ===== ESTILO 1 – SOLID ===== */
+
+.style-solid {
+    border: 2px solid #ff8b39;
+}
+
+.style-solid a {
+    background: #ff8b39;
+    color: #ffffff;
+}
+
+.style-solid a:hover {
+    background: #ffe6d3;
+    color: #e0671f;
+}
+
+/* ===== ESTILO 2 – OUTLINE ===== */
+
+.style-outline {
+    border: 2px solid #ff8b39;
+}
+
+.style-outline a {
+    border: 1px solid #ff8b39;
+    color: #ff8b39;
+    background: transparent;
+}
+
+.style-outline a:hover {
+    background: #ff8b3922;
+    color: #e0671f;
+}
+
+/* ===== ESTILO 3 – MINIMAL ===== */
+
+.style-minimal {
+    border: 2px dashed #ff8b3966;
+}
+
+.style-minimal a {
+    color: #ff8b39;
+}
+
+.style-minimal a:hover {
+    background: #ff8b3922;
+}
+
+/* ===== ESTILO 4 – DARK HOVER ===== */
+
+.style-dark-hover {
+    border: 2px solid #ff8b39;
+}
+
+.style-dark-hover a {
+    color: #ff8b39;
+}
+
+.style-dark-hover a:hover {
+    background: #ff8b39;
+    color: #ffffff;
+}
+</style>
+</head>
+
+<body>
+
+<h3>Solid (referência)</h3>
+<div class="tool-dock style-solid" id="dock1"></div>
+
+<h3>Outline</h3>
+<div class="tool-dock style-outline" id="dock2"></div>
+
+<h3>Minimal</h3>
+<div class="tool-dock style-minimal" id="dock3"></div>
+
+<h3>Dark Hover</h3>
+<div class="tool-dock style-dark-hover" id="dock4"></div>
+
+<script>
+const tools = [
+    { label: "GitHub", icon: "bi-github", link: "#" },
+    { label: "Documentação", icon: "bi-file-earmark-text", link: "#" },
+    { label: "Serial Monitor", icon: "bi-terminal", link: "#" },
+    { label: "Uploader", icon: "bi-cloud-arrow-up", link: "#" },
+    { label: "Ferramentas", icon: "bi-tools", link: "#" },
+    { label: "Byte Converter", icon: "bi-arrow-left-right", link: "#" },
+    { label: "Devices JSON", icon: "bi-diagram-3", link: "#" }
+];
+
+document.querySelectorAll(".tool-dock").forEach(dock => {
+    tools.forEach(t => {
+        const a = document.createElement("a");
+        a.href = t.link;
+        a.target = "_blank";
+        a.dataset.label = t.label;
+
+        const i = document.createElement("i");
+        i.className = `bi ${t.icon}`;
+
+        a.appendChild(i);
+        dock.appendChild(a);
+    });
+});
+</script>
+
+</body>
+</html>

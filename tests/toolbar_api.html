@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Fox Toolbar – Demo</title>
+
+<!-- Bootstrap Icons -->
+<link rel="stylesheet"
+ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<!-- Toolbar styles -->
+<link rel="stylesheet" href="css/toolbar.css">
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #fff;
+    padding: 20px;
+}
+
+h1 {
+    color: #ff8b39;
+    font-size: 18px;
+}
+
+h2 {
+    margin-top: 24px;
+    font-size: 14px;
+    color: #666;
+}
+
+.demo-box {
+    padding: 10px;
+    border: 1px dashed #ddd;
+    margin-bottom: 20px;
+}
+
+.tool-label-local {
+    display: inline-block;      /* faz a div ficar do tamanho do conteúdo */
+    padding: 2px 8px;           /* respiro lateral */
+    
+    background: #ff8b39;
+    color: #fff;
+
+    font-size: 11px;
+    font-weight: 500;
+
+    text-align: center;
+    border-radius: 6px 6px 0 0; /* só topo arredondado */
+}
+
+
+
+
+</style>
+</head>
+
+<body>
+
+<h1>Fox Toolbar – API Demo</h1>
+
+<div class="demo-box">
+    <h2>Outline – 5 colunas</h2>
+    <div class="tool-label"> tools </div>
+    <div id="tb1"></div>
+</div>
+
+<div class="demo-box">
+    <h2>Solid – 4 colunas</h2>
+    <div id="tb2"></div>
+</div>
+
+<div class="demo-box">
+    <h2>Minimal – 6 colunas</h2>
+    <div id="tb3"></div>
+</div>
+
+<div class="demo-box">
+    <h2>Dark Hover – Vertical</h2>
+    <div id="tb4"></div>
+</div>
+
+<script type="module">
+import { createToolbar } from "./js/toolbar.js";
+
+const tools = [
+    { icon: "bi-github", label: "GitHub", link: "https://github.com" },
+    { icon: "bi-file-earmark-text", label: "Documentação", link: "#" },
+    { icon: "bi-terminal", label: "Serial Monitor", link: "serial.html" },
+    { icon: "bi-cloud-arrow-up", label: "Uploader", link: "uploader/" },
+    { icon: "bi-tools", label: "Ferramentas", link: "#" },
+    { icon: "bi-cpu", label: "Devices", link: "#" },
+    { icon: "bi-braces", label: "JSON", link: "#" },
+    { icon: "bi-arrow-repeat", label: "Converter", link: "#" }
+];
+
+document.getElementById("tb1").appendChild(
+    createToolbar( {
+        label: "name",
+        style: "outline",
+        columns: 5,
+        tools
+    })
+);
+
+document.getElementById("tb2").appendChild(
+    createToolbar( {
+        label: "tools and links",
+        style: "solid",
+        columns: 4,
+        tools
+    })
+);
+
+document.getElementById("tb3").appendChild(
+    createToolbar( {
+        style: "minimal",
+        columns: 6,
+        tools
+    })
+);
+
+document.getElementById("tb4").appendChild(
+    createToolbar( {
+        label: "tools",
+        labelFull: true,
+        style: "dark-hover",
+        direction: "column",
+        tools
+    })
+);
+
+</script>
+
+</body>
+</html>

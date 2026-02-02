@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Toolbar – Dark Hover</title>
+
+<!-- Bootstrap Icons -->
+<link rel="stylesheet"
+ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<style>
+/* ===== BASE ===== */
+body {
+    font-family: system-ui, sans-serif;
+    background: #fff;
+    padding: 40px;
+}
+
+/* ===== CONTROLS ===== */
+.controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #f3f3f3;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #e9e9e9;
+}
+
+/* ===== TOOLBAR ===== */
+.tool-dock {
+    --icon-scale: 1;
+
+    display: inline-flex;
+    flex-direction: column;
+
+    border-radius: 12px;
+    background: #ff8c39e7;
+    border: 1px solid #ff8b3966;
+}
+
+/* label */
+.tool-label {
+    display: inline-block;
+    padding: 3px 8px;
+    color: #fff;
+
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+
+    border-radius: 6px 6px 0 0;
+}
+
+/* grid */
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+
+    background: #fff;
+    padding: 6px;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+/* item */
+.tool-grid a {
+    position: relative;
+
+    width: 2.2rem;
+    height: 2.2rem;
+
+    border-radius: 7px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #ff8b39;
+    text-decoration: none;
+
+    transition: background .15s, color .15s;
+}
+
+.tool-grid a:hover {
+    background: #ff8b39;
+    color: #fff;
+}
+
+/* ícone proporcional */
+.tool-grid i {
+    font-size: calc(0.9em * var(--icon-scale));
+}
+
+/* tooltip */
+.tool-grid a::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: #333;
+    color: #fff;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+
+    opacity: 0;
+    pointer-events: none;
+}
+.tool-grid a:hover::after {
+    opacity: 1;
+}
+
+/* ===== TOOLBAR 2 (modo alternativo) ===== */
+.tool-dock.toolbar-alt {
+    background: none;
+}
+
+.tool-dock.toolbar-alt .tool-label {
+    padding: 7px 0 0 9px;
+    color: #ff8c39e7;
+}
+
+.tool-dock.toolbar-alt .tool-grid {
+    gap: 1px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="controls">
+    <button id="toggleStyle">Alternar estilo</button>
+
+    <label>
+        Ícone:
+        <input id="iconSize" type="range" min="0.6" max="1.6" step="0.1" value="1">
+    </label>
+</div>
+
+<div class="tool-dock" id="toolbar">
+    <div class="tool-label">tools</div>
+
+    <div class="tool-grid">
+        <a href="#" data-label="GitHub"><i class="bi bi-github"></i></a>
+        <a href="#" data-label="Docs"><i class="bi bi-file-earmark-text"></i></a>
+        <a href="#" data-label="Serial"><i class="bi bi-terminal"></i></a>
+        <a href="#" data-label="Uploader"><i class="bi bi-cloud-arrow-up"></i></a>
+        <a href="#" data-label="Tools"><i class="bi bi-tools"></i></a>
+        <a href="#" data-label="CPU"><i class="bi bi-cpu"></i></a>
+        <a href="#" data-label="JSON"><i class="bi bi-braces"></i></a>
+        <a href="#" data-label="Sync"><i class="bi bi-arrow-repeat"></i></a>
+    </div>
+</div>
+
+<script>
+
+
+
+const toolbar = document.getElementById("toolbar");
+const toggleBtn = document.getElementById("toggleStyle");
+const slider = document.getElementById("iconSize");
+
+toggleBtn.onclick = () => {
+    toolbar.classList.toggle("toolbar-alt");
+};
+
+slider.oninput = e => {
+    toolbar.style.setProperty("--icon-scale", e.target.value);
+};
+</script>
+
+</body>
+</html>

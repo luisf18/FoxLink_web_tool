@@ -1,0 +1,168 @@
+/* toolbar.css */
+.tool-grid {
+    display: grid;
+    gap: 6px;
+    padding: 8px;
+    width: max-content;
+    border-radius: 12px;
+}
+
+/* item */
+.tool-grid a {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text-decoration: none;
+    transition: background .15s, color .15s, border .15s;
+}
+
+.tool-grid i {
+    font-size: 16px;
+}
+
+/* tooltip */
+.tool-grid a::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+}
+.tool-grid a:hover::after { opacity: 1; }
+
+/* ===== STYLES ===== */
+
+.style-solid {
+    border: 2px solid #ff8b39;
+}
+.style-solid a {
+    background: #ff8b39;
+    color: #fff;
+}
+.style-solid a:hover {
+    background: #ffe6d3;
+    color: #e0671f;
+}
+
+.style-outline {
+    border: 2px solid #ff8b39;
+}
+.style-outline a {
+    border: 1px solid #ff8b39;
+    color: #ff8b39;
+}
+.style-outline a:hover {
+    background: #ff8b3922;
+    color: #e0671f;
+}
+
+.style-minimal {
+    border: 2px dashed #ff8b3966;
+}
+.style-minimal a {
+    color: #ff8b39;
+}
+.style-minimal a:hover {
+    background: #ff8b3922;
+}
+
+.style-dark-hover {
+    border: 2px solid #ff8b39;
+}
+.style-dark-hover a {
+    color: #ff8b39;
+}
+.style-dark-hover a:hover {
+    background: #ff8b39;
+    color: #fff;
+}
+
+/* NEW */
+
+.tool-label {
+    display: inline-block;      /* faz a div ficar do tamanho do conteúdo */
+    padding: 2px 8px;           /* respiro lateral */
+    
+    background: #ff8b39;
+    color: #fff;
+
+    font-size: 11px;
+    font-weight: 500;
+
+    text-align: center;
+    border-radius: 6px 6px 0 0; /* só topo arredondado */
+}
+
+/*
+.tool-grid {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 6px;
+
+    padding: 10px;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.tool-grid {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(5, 1fr);
+}
+*/
+
+.tool-grid a {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text-decoration: none;
+    transition: background .15s, color .15s;
+}
+
+.tool-grid i {
+    font-size: 15px;
+}
+
+
+.style-dark-hover {
+    border: 1.5px solid #ff8b3966;
+}
+
+
+.style-dark-hover a {
+    color: #ff8b39;
+}
+
+.style-dark-hover a:hover {
+    background: #ff8b39;
+    color: #fff;
+}
+
+
+.tool-grid {
+    display: grid;
+    gap: 6px;
+
+    padding: 10px;
+    border-radius: 12px;
+    width: fit-content;
+}

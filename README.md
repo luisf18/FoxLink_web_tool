@@ -1,9 +1,11 @@
-# FoxLink_webtool V1.0.1
+# FoxLink_webtool V1.0.2
 
-_FoxLink_web_tool_ é uma ferramenta web para configurar modulos, ESCs e sensores da _Fox Dynamics_ ou outros dispositivos que utilizem o protocolo `FoxWire`. A ferramenta também possui um `Serial monitor` similar ao do Arduino IDE com alguns recursos extras.
+_FoxLink_web_tool_ é um conjunto de ferramentas web para configurar módulos, ESCs e sensores da `Fox Dynamics` ou outros dispositivos que utilizem o protocolo `FoxWire`. A ferramenta também possui um `Serial monitor` similar ao do Arduino IDE com alguns recursos extras e também um `Arduino Uploader` que permite carregar codigos binarios ja compilados para Arduino.
 
 🔗 [FoxLink webtool](https://luisf18.github.io/FoxLink_web_tool/)  
-💻 [Serial Monitor](https://luisf18.github.io/FoxLink_web_tool/serial.html)
+💻 [Serial Monitor](https://luisf18.github.io/FoxLink_web_tool/serial.html)  
+📥 [Arduino Uploader](https://luisf18.github.io/FoxLink_web_tool/uploader)  
+📝 [Binary viewer](https://luisf18.github.io/FoxLink_web_tool/binaryViewer.html)
 
 ## [FoxLink Webtool](https://luisf18.github.io/FoxLink_web_tool/)
 
@@ -12,6 +14,14 @@ _FoxLink_web_tool_ é uma ferramenta web para configurar modulos, ESCs e sensore
 ## [Serial Monitor Web](https://luisf18.github.io/FoxLink_web_tool/serial.html)
 
 ![alt text](images/serialMonitor.png)
+
+## [Arduino Uploader](https://luisf18.github.io/FoxLink_web_tool/uploader)
+
+![alt text](images/uploader.png)
+
+## [Binary viewer](https://luisf18.github.io/FoxLink_web_tool/binaryViewer.html)
+
+![alt text](images/binaryViewer.png)
 
 ---
 
@@ -38,7 +48,7 @@ Atualmente, os seguintes dispositivos são suportados:
 
 ## Como configurar?
 
-![Texto alternativo](images/exempleDevice.png)
+![Texto alternativo](images/exampleDevice.png)
 
 ### Descrição de cada parte
 1. **Identificação do dispositivo:** Foto, Nome, Modelo e Lote.
@@ -123,6 +133,12 @@ int main() {
   }
 }
 ```
+
+### Use o Arduino Uploader
+
+O webtool disponibiliza um [`Arduino uploader`](https://luisf18.github.io/FoxLink_web_tool/uploader) que permite fazer upload de binarios ja compilados para Arduino. Para carregar o código do `Arduino Foxlink` acesse o [`Arduino uploader`](https://luisf18.github.io/FoxLink_web_tool/uploader), escolha e conecte a placa, depois selecione o exemplo `Arduino Foxlink` e clique em `Carregar exemplo`. O codigo será instalado e a placa ja estará pronta para uso com o [`FoxLink webtool`](https://luisf18.github.io/FoxLink_web_tool)
+
+![Texto alternativo](images/uploader_foxlink.png)
 
 ![Texto alternativo](images/foxlink_arduino_asm.png)
 

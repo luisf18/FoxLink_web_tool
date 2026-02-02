@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Toolbar – Dark Hover</title>
+
+<!-- Bootstrap Icons -->
+<link rel="stylesheet"
+ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<link rel="stylesheet" href="css/toolbar2.css">
+
+</head>
+
+<style>
+    .toolbar{
+        margin: 10px;
+    }
+</style>
+
+<body>
+
+<div class="controls" style="padding: 10px 10px; gap: 90px;">
+    <button id="toggleStyle">Alternar estilo</button>
+    <label>
+        Ícone:
+        <input id="iconSize" type="range" min="0.6" max="1.6" step="0.1" value="1">
+    </label>
+</div>
+
+<div class="toolbar" style="--icon-scale: 1.1">
+    <div class="toolbar-label">tools</div>
+
+    <div class="toolbar-grid">
+        <a href="#" data-label="GitHub"><i class="bi bi-github"></i></a>
+        <a href="#" data-label="Documentação"><i class="bi bi-file-earmark-text"></i></a>
+        <a href="#" data-label="Serial"><i class="bi bi-terminal"></i></a>
+        <a href="#" data-label="Uploader"><i class="bi bi-cloud-arrow-up"></i></a>
+        <a href="#" data-label="Tools"><i class="bi bi-tools"></i></a>
+        <a href="#" data-label="CPU"><i class="bi bi-cpu"></i></a>
+        <a href="#" data-label="JSON"><i class="bi bi-braces"></i></a>
+        <a href="#" data-label="Converter"><i class="bi bi-arrow-repeat"></i></a>
+    </div>
+</div>
+
+
+<script>
+
+
+function createToolbar(options = {}) {
+    const {
+        label = null,
+        labelAlign = "left", // "left" | "center" | "right"
+        style = "",              // ex: "clean"
+        columns = 5,
+        direction = "row",
+        tools = []
+    } = options;
+
+    /* container */
+    const toolbar = document.createElement("div");
+    toolbar.className = "toolbar";
+
+    if (style) {
+        toolbar.dataset.style = style; // ex: data-style="clean"
+    }
+
+    /* label opcional */
+    if (label) {
+        const labelEl = document.createElement("div");
+        labelEl.className = "toolbar-label";
+        labelEl.textContent = label;
+
+        // alinhamento do texto
+        labelEl.style.textAlign = labelAlign;
+
+        toolbar.appendChild(labelEl);
+    }
+
+    /* grid */
+    const grid = document.createElement("div");
+    grid.className = "toolbar-grid";
+
+    /*/
+    if (direction === "row") {
+        grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+        grid.style.gridAutoFlow = "row";
+    } else {
+        grid.style.gridTemplateColumns = "1fr";
+        grid.style.gridAutoFlow = "column";
+    }
+    /*/
+
+    /* tools */
+    tools.forEach(t => {
+        const a = document.createElement("a");
+        a.href = t.link || "#";
+        a.target = t.target || "_blank";
+        a.dataset.label = t.label || "";
+
+        const i = document.createElement("i");
+        i.className = `bi ${t.icon}`;
+
+        a.appendChild(i);
+        grid.appendChild(a);
+    });
+
+    toolbar.appendChild(grid);
+    return toolbar;
+}
+
+
+const tools = [
+        { icon: "bi-github", label: "GitHub", link: "https://github.com" },
+        { icon: "bi-file-earmark-text", label: "Documentação", link: "#" },
+        { icon: "bi-terminal", label: "Serial Monitor", link: "serial.html" },
+        { icon: "bi-cloud-arrow-up", label: "Uploader", link: "uploader/" },
+        { icon: "bi-tools", label: "Ferramentas", link: "#" },
+        { icon: "bi-cpu", label: "Devices", link: "#" },
+        { icon: "bi-braces", label: "JSON", link: "#" },
+        { icon: "bi-arrow-repeat", label: "Converter", link: "#" }
+    ];
+
+document.body.appendChild(
+    createToolbar({
+        label: "tools",
+        labelAlign: "center",
+        style: "clean",
+        columns: 5,
+        tools: tools
+    })
+);
+
+
+document.body.appendChild(
+    createToolbar({
+        label: "tools",
+        labelAlign: "center",
+        style: "",
+        columns: 5,
+        tools: tools
+    })
+);
+
+document.body.appendChild(
+    createToolbar({
+        label: "tools",
+        labelAlign: "left",
+        style: "",
+        direction: "colum",
+        //columns: 5,
+        tools: tools
+    })
+);
+
+document.body.appendChild(
+    createToolbar({
+        style: "",
+        columns: 5,
+        tools: tools
+    })
+);
+
+document.body.appendChild(
+    createToolbar({
+        label: "clean menu",
+        style: "clean",
+        columns: 5,
+        tools: tools
+    })
+);
+
+
+const toolbar = document.querySelector(".toolbar");
+const toggleBtn = document.getElementById("toggleStyle");
+const slider = document.getElementById("iconSize");
+
+console.log( "toolbar:", toolbar );
+
+toggleBtn.onclick = () => {
+    toolbar.dataset.style = toolbar.dataset.style === "clean" ? "" : "clean";
+};
+
+slider.oninput = e => {
+    toolbar.style.setProperty("--icon-scale", e.target.value);
+};
+</script>
+
+</body>
+</html>

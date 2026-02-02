@@ -1,0 +1,121 @@
+/* ===== TOOLBAR ===== */
+.toolbar {
+    font-family: system-ui, sans-serif;
+    
+    --icon-scale: 1.4;
+    --radius: 12px;
+    
+    /* cores base */
+    --color-accent: #ff8534e5;
+    --color-accent-soft: var(--color-accent);
+    --color-accent-bg: var(--color-accent);
+
+    --bg-toolbar: var(--color-accent-bg);
+    --bg-grid: #ffffff;
+    --color-text: #ffffff;
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+
+    border-radius: var(--radius);
+    background: var(--bg-toolbar);
+    border: 1px solid var(--color-accent-soft);
+}
+
+/* label */
+.toolbar-label {
+    display: inline-block;
+    padding: 3px 8px;
+    color: var(--color-text);
+
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* grid */
+.toolbar-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+
+    align-items: center;
+    justify-items: center;
+
+    background: var(--bg-grid);
+    padding: 6px;
+    border-radius: var(--radius);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* item */
+.toolbar-grid a {
+    position: relative;
+
+    width: 2.2rem;
+    height: 2.2rem;
+
+    border-radius: 7px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: var(--color-accent);
+    text-decoration: none;
+
+    transition: background .15s, color .15s;
+}
+
+.toolbar-grid a:hover {
+    background: var(--color-accent);
+    color: #fff;
+}
+
+/* ícone proporcional */
+.toolbar-grid i {
+    font-size: calc(0.9em * var(--icon-scale));
+}
+
+/* tooltip */
+.toolbar-grid a::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: #333;
+    color: #fff;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+
+    opacity: 0;
+    pointer-events: none;
+}
+
+.toolbar-grid a:hover::after {
+    opacity: 1;
+}
+
+/* modo clean */
+.toolbar[data-style="clean"] {
+    background: none;
+}
+
+.toolbar[data-style="clean"] .toolbar-label {
+    padding: 7px 9px 0 9px;
+    color: var(--color-accent-bg);
+}
+
+.toolbar[data-style="clean"] .toolbar-grid {
+    gap: 1px;
+}

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Fox Toolbar – Demo</title>
+
+<!-- Bootstrap Icons -->
+<link rel="stylesheet"
+ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #fff;
+    padding: 20px;
+}
+
+h2 {
+    margin-top: 30px;
+    font-size: 16px;
+    color: #ff8b39;
+}
+
+/* ===== TOOLBAR BASE ===== */
+
+.tool-dock {
+    display: grid;
+    gap: 6px;
+    padding: 8px;
+    width: fit-content;
+    border-radius: 14px;
+    margin-bottom: 12px;
+}
+
+.tool-dock a {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s, color .15s, border .15s;
+}
+
+.tool-dock i {
+    font-size: 15px;
+}
+
+/* tooltip */
+.tool-dock a::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s;
+}
+.tool-dock a:hover::after {
+    opacity: 1;
+}
+
+/* ===== STYLES ===== */
+
+.style-outline {
+    border: 2px solid #ff8b39;
+}
+.style-outline a {
+    border: 1px solid #ff8b39;
+    color: #ff8b39;
+}
+.style-outline a:hover {
+    background: #ff8b39;
+    color: #fff;
+}
+
+.style-minimal {
+    border: 2px dashed #ff8b3966;
+}
+.style-minimal a {
+    color: #ff8b39;
+}
+.style-minimal a:hover {
+    background: #ff8b3922;
+}
+
+.style-solid {
+    border: 2px solid #ff8b39;
+}
+.style-solid a {
+    background: #ff8b39;
+    color: #fff;
+}
+.style-solid a:hover {
+    background: #ffe0cc;
+    color: #e0671f;
+}
+
+.style-dark-hover {
+    border: 2px solid #ff8b39;
+}
+.style-dark-hover a {
+    color: #ff8b39;
+}
+.style-dark-hover a:hover {
+    background: #ff8b39;
+    color: #fff;
+}
+
+.demo-box {
+    padding: 10px;
+    border: 1px dashed #ddd;
+    margin-bottom: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Fox Toolbar – API Demo</h1>
+
+<div class="demo-box">
+    <h2>Outline – 5 colunas (row)</h2>
+    <div id="tb1"></div>
+</div>
+
+<div class="demo-box">
+    <h2>Solid – 4 colunas</h2>
+    <div id="tb2"></div>
+</div>
+
+<div class="demo-box">
+    <h2>Minimal – 6 colunas</h2>
+    <div id="tb3"></div>
+</div>
+
+<div class="demo-box">
+    <h2>Dark Hover – vertical</h2>
+    <div id="tb4"></div>
+</div>
+
+<script type="module">
+/* ===== TOOLBAR MODULE ===== */
+function createToolbar(target, options = {}) {
+    const {
+        style = "outline",
+        columns = 5,
+        direction = "row",
+        tools = []
+    } = options;
+
+    const root = typeof target === "string"
+        ? document.querySelector(target)
+        : target;
+
+    if (!root) return;
+
+    const dock = document.createElement("div");
+    dock.className = `tool-dock style-${style}`;
+
+    dock.style.gridTemplateColumns =
+        direction === "row"
+            ? `repeat(${columns}, 1fr)`
+            : `1fr`;
+
+    tools.forEach(t => {
+        const a = document.createElement("a");
+        a.href = t.link || "#";
+        a.target = t.target || "_blank";
+        a.dataset.label = t.label || "";
+
+        const i = document.createElement("i");
+        i.className = `bi ${t.icon}`;
+
+        a.appendChild(i);
+        dock.appendChild(a);
+    });
+
+    root.appendChild(dock);
+}
+
+/* ===== TOOLS LIST ===== */
+const tools = [
+    { icon: "bi-github", label: "GitHub", link: "https://github.com" },
+    { icon: "bi-file-earmark-text", label: "Documentação", link: "#" },
+    { icon: "bi-terminal", label: "Serial Monitor", link: "#" },
+    { icon: "bi-cloud-arrow-up", label: "Uploader", link: "#" },
+    { icon: "bi-tools", label: "Ferramentas", link: "#" },
+    { icon: "bi-cpu", label: "Devices", link: "#" },
+    { icon: "bi-braces", label: "JSON", link: "#" },
+    { icon: "bi-arrow-repeat", label: "Converter", link: "#" }
+];
+
+/* ===== DEMOS ===== */
+createToolbar("#tb1", {
+    style: "outline",
+    columns: 5,
+    tools
+});
+
+createToolbar("#tb2", {
+    style: "solid",
+    columns: 4,
+    tools
+});
+
+createToolbar("#tb3", {
+    style: "minimal",
+    columns: 6,
+    tools
+});
+
+createToolbar("#tb4", {
+    style: "dark-hover",
+    direction: "column",
+    tools
+});
+</script>
+
+</body>
+</html>

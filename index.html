@@ -15,9 +15,18 @@
     <link rel="stylesheet" href="css/widgets.css">
     <link rel="stylesheet" href="css/charts.css">
     <link rel="stylesheet" href="css/cards.css">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <!-- Toolbar styles -->
+    <link rel="stylesheet" href="tests/css/toolbar2.css">
+
 </head>
 
 <body>
+    
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="brand-row">
@@ -49,9 +58,14 @@
         </div>
 
         <div class="sidebar-footer">
+
+            <div id="links"></div>
+
+            <!--
             <a href="https://github.com/luisf18/FoxLink_web_tool" target="_blank">
                 FoxLink WebTool GitHub
             </a>
+            
             <a href="serial.html" target="_blank">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" 
                     class="bi bi-terminal" viewBox="0 0 16 16">
@@ -60,10 +74,13 @@
                 </svg>
                 Serial Monitor!
             </a>
+            <a href="uploader/" target="_blank">
+                Arduino uploader
+            </a>
             <a href="https://luisf18.github.io/fox_dynamics_docs/" target="_blank">
                 Documentação Placas
             </a>
-            <!--a href="https://luisf18.github.io/FoxLink_web_tool/v0/index.html" target="_blank"-->
+
             <a href="v0" target="_blank">
                 Versão anterior v0.4.2
             </a>
@@ -73,6 +90,8 @@
             <a href="deviceResolver.html" target="_blank">
                 devicesJson
             </a>
+            -->
+
             <img src="images/logo.png" class="footer-logo">
         </div>
 
@@ -87,7 +106,92 @@
 <!--script src="js/device_card.js"></script-->
 <script type="module">
     import { webtoolInit } from "./js/webtool.js";
+    //import { createToolbar } from "./tests/js/toolbar.js";
     webtoolInit();
+
+    function createToolbar(options = {}) {
+        const {
+            label = null,
+            labelAlign = "left", // "left" | "center" | "right"
+            style = "",              // ex: "clean"
+            columns = 5,
+            direction = "row",
+            tools = []
+        } = options;
+
+        /* container */
+        const toolbar = document.createElement("div");
+        toolbar.className = "toolbar";
+
+        if (style) {
+            toolbar.dataset.style = style; // ex: data-style="clean"
+        }
+
+        /* label opcional */
+        if (label) {
+            const labelEl = document.createElement("div");
+            labelEl.className = "toolbar-label";
+            labelEl.textContent = label;
+
+            // alinhamento do texto
+            labelEl.style.textAlign = labelAlign;
+
+            toolbar.appendChild(labelEl);
+        }
+
+        /* grid */
+        const grid = document.createElement("div");
+        grid.className = "toolbar-grid";
+
+        /*/
+        if (direction === "row") {
+            grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            grid.style.gridAutoFlow = "row";
+        } else {
+            grid.style.gridTemplateColumns = "1fr";
+            grid.style.gridAutoFlow = "column";
+        }
+        /*/
+
+        /* tools */
+        tools.forEach(t => {
+            const a = document.createElement("a");
+            a.href = t.link || "#";
+            a.target = t.target || "_blank";
+            a.dataset.label = t.label || "";
+
+            const i = document.createElement("i");
+            i.className = `bi ${t.icon}`;
+
+            a.appendChild(i);
+            grid.appendChild(a);
+        });
+
+        toolbar.appendChild(grid);
+        return toolbar;
+    }
+
+    const tools = [
+        { icon: "bi-github", label: "Repositório", link: "https://github.com/luisf18/FoxLink_web_tool" },
+        { icon: "bi-file-earmark-text", label: "Documentação", link: "https://luisf18.github.io/fox_dynamics_docs/" },
+        { icon: "bi-terminal", label: "Serial Monitor", link: "serial.html" },
+        { icon: "bi-cloud-arrow-up", label: "Uploader", link: "uploader/" },
+        { icon: "bi-tools", label: "Binary Viewer", link: "binaryViewer.html" },
+        //{ icon: "bi-cpu", label: "Devices", link: "#" },
+        { icon: "bi-braces", label: "devices Json", link: "deviceResolver.html" },
+        { icon: "bi-arrow-repeat", label: "Converter", link: "byteConverter.html" },
+        { icon: "bi-badge-vo", label: "Ver. 0.4.2", link: "v0" }
+    ];
+
+    document.getElementById("links").appendChild(
+        createToolbar( {
+            //label: "tools and links",
+            style: "clean",
+            columns: 5,
+            tools
+        })
+    );
+
 </script>
 
 <script type="module">

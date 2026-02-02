@@ -5,7 +5,15 @@
 <head>
   <meta charset="UTF-8">
   <title>Serial Monitor Web</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2216%22>🦊</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,
+    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>
+    <text x='8' y='14'
+            text-anchor='middle'
+            font-size='14'>
+        🦊
+    </text>
+    </svg>">
+  <!--link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2216%22>🦊</text></svg>"-->
 
   <style>
 
@@ -106,6 +114,17 @@ button.clear-empty { background: #555; }
     padding-left: 8px;
 }
 
+.preset-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.preset-link:hover .preset-title {
+    color: #ff8b39;       /* ou um tom um pouco mais claro */
+    opacity: 0.85;
+    cursor: pointer;
+}
+
 .footer {
     margin-top: 20px;
     padding-top: 8px;
@@ -190,6 +209,10 @@ button.clear-empty { background: #555; }
     <button onclick="send('dump')" title="foxshell dump" >dump</button>
 </div>
 
+<a href="uploader" class="preset-link" target="_blank" rel="noopener">
+    <h3 class="preset-title">Arduino Uploader!</h3>
+</a>
+
 <footer class="footer">
     <span>Powered by</span>
     <strong>Fox Dynamics</strong>
@@ -223,19 +246,69 @@ const endMap = new Map([
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function timestamp() { return new Date().toLocaleTimeString("pt-BR"); }
 
-function appendLine(text, outgoing=false) {
-    const lastSpan = logDiv.lastChild;
-    if (lastSpan && lastSpan instanceof HTMLSpanElement) {
-        if (!lastSpan.textContent.endsWith("\n")) lastSpan.textContent += "\n";
+function logAdd(text, outgoing=false) {
+
+
+    let idx;
+    let last_line_complete = true;
+
+    // verifica se a ultima linha foi concluida com \n
+    let lastLine = logDiv.lastChild;
+    if (lastLine && lastLine instanceof HTMLSpanElement) {
+        if( lastLine.textContent.endsWith("\n") ){
+            last_line_complete = true;
+        }else{
+            last_line_complete = false;
+        }
     }
-    const span = document.createElement("span");
-    let line = "";
-    if (showTime) line += `[${timestamp()}] `;
-    if (outgoing) line += "> ";
-    line += text;
-    span.textContent = line;
-    logDiv.appendChild(span);
-    if (autoScroll) logDiv.scrollTop = logDiv.scrollHeight;
+
+    console.log( `add[${last_line_complete}] ${text}` );
+
+    let line_complete;
+    let line;
+
+    while( text.length > 0 ) {
+
+        if( (idx = text.indexOf("\n")) >= 0 ){
+            line = text.slice(0, idx + 1);
+            text = text.slice(idx + 1);
+            line_complete = true;
+        }else{
+            line = text;
+            text = "";
+            line_complete = false;
+        }
+
+        console.log( ` chunk[${line_complete}][${lastLine==null}] ${line}` );
+
+        if( last_line_complete || lastLine == null ){
+            lastLine = document.createElement("span");
+            let final_line = "";
+            if (showTime){
+                final_line += `[${timestamp()}]`;
+                if( showTx ){
+                    final_line += outgoing ? "[TX]" : "[RX]";
+                }
+                final_line+=' ';
+            }else if( outgoing && showTx ){
+                final_line += "[TX] "
+            }
+            final_line += line;
+            lastLine.textContent = final_line;
+            logDiv.appendChild(lastLine);
+        }else{
+            lastLine.textContent += line;
+        }
+
+        last_line_complete = line_complete;
+
+        if (autoScroll) logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    //console.log("rx-line:",line);
+    clearBtn.className = "disconnect";
+    saveBtn.className   = "active";
+
 }
 
 
@@ -310,20 +383,42 @@ async function disconnect() {
 
 async function readLoop() {
     const decoder = new TextDecoder();
+
+    let rxBuffer = "";
+    let startTime = 0;
+
+    const TIMEOUT_STREAM = 20;   // tempo mínimo sem receber nada (ms)
+    const TIMEOUT_MAX    = 100;  // tempo máximo acumulando (ms)
+
+    let timeout_max = 0;
+    let timeout_stream = 0;
+
     while (connected) {
         const { value, done } = await reader.read();
         if (done) break;
+
         rxBuffer += decoder.decode(value);
-        //console.log("receive:",value);
-        //console.log("str:",rxBuffer);
-        let idx;
-        while ((idx = rxBuffer.indexOf("\n")) >= 0) {
-            const line = rxBuffer.slice(0, idx + 1);
-            rxBuffer = rxBuffer.slice(idx + 1);
-            appendLine(line);
-            //console.log("rx-line:",line);
-            clearBtn.className = "disconnect";
-            saveBtn.className   = "active";
+
+        if( rxBuffer.endsWith('\n') || rxBuffer.length > 10 ){
+            logAdd( rxBuffer );
+            rxBuffer = "";
+            startTime = null;
+        }else{
+            // início de um novo bloco
+            if (!startTime) {
+                startTime = performance.now();
+                timeout_max = startTime + TIMEOUT_MAX; // variar de acordo com o baudrate
+                timeout_stream = startTime + TIMEOUT_STREAM;
+            }else{
+                const time = performance.now();
+                if( time >= timeout_stream || time >= timeout_max ){
+                    logAdd( rxBuffer );
+                    rxBuffer = "";
+                    startTime = null;
+                }else{
+                    timeout_stream = time + TIMEOUT_STREAM;
+                }
+            }
         }
     }
 }
@@ -344,7 +439,7 @@ async function send(text, setEnd = true) {
     //console.log( `send:`,bytes);
     await writer.write(bytes);
     if( showTx ){
-        appendLine(fullText, true);
+        logAdd(fullText, true);
     }
 }
 

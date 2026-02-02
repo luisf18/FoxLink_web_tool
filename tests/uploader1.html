@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Uploader Intel HEX</title>
+<style>
+
+body {
+    font-family: system-ui, sans-serif;
+    padding:20px;
+    background:#f5f5f5;
+}
+
+h2 {
+    color:hsl(25, 100%, 61%);
+}
+
+button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #ccc;
+    color: #fff;
+    font-weight: bold;
+    min-width: 40px;
+    text-align: center;
+}
+
+/*uploader*/
+
+.uploader-box {
+    margin-top: 10px;
+    padding: 10px;
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 13px;
+}
+
+.uploader-row {
+
+    justify-content: space-between;
+    margin-bottom: 10px;
+
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.uploader-row select {
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-family: monospace;
+}
+
+.file-btn {
+    background: #ff8b39;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.file-btn input {
+    display: none;
+}
+
+.uploader-size{
+    font-family: monospace;
+    color: #666;
+    min-width: 70px;
+    text-align: right;
+}
+
+.boot-log {
+    margin-top: 8px;
+    background: #111;
+    color: #0f0;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 6px;
+    border-radius: 6px;
+    height: 90px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+#clearLogBtn {
+    background: #e74c3c;
+}
+
+.active {
+    background: #2ecc71;
+}
+
+#connectBtn{
+    background: #e74c3c;
+}
+
+#connectBtn.active{
+    background: #2ecc71;
+}
+
+
+/*
+.red { background: #2ecc71; }
+.uploader-box { padding:10px; background:#fafafa; border:1px solid #ddd; border-radius:10px; font-size:13px; }
+.uploader-row { display:flex; gap:6px; align-items:center; }
+.uploader-row select, .uploader-row input[type=file], .uploader-row button { padding:6px; border-radius:6px; border:1px solid #ccc; font-family:monospace; cursor:pointer; }
+.file-btn { background:#ff8b39; color:#fff; border:none; position:relative; overflow:hidden; font-weight:bold; }
+.file-btn input { position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.fw-size { font-family:monospace; min-width:70px; text-align:right; }
+.flash-warning { color:red; font-weight:bold; }
+.advanced-panel { display:flex; flex-direction:column; margin-top:6px; gap:4px; font-size:12px; }
+.bin-item { padding:4px 6px; border-radius:6px; background:#eee; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+.bin-item.default { background:#2ecc71; color:#fff; }
+.bin-item button { background:#397bff; color:#fff; border:none; padding:2px 6px; border-radius:4px; cursor:pointer; }
+.upload-btn { margin-top:10px; width:100%; background:#2ecc71; color:#fff; padding:8px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none; }
+.upload-btn.active { opacity:1; pointer-events:auto; }
+#logBox { margin-top:10px; padding:6px; background:#111; color:#0f0; font-family:monospace; font-size:12px; height:120px; overflow-y:auto; border-radius:6px; }
+
+.file-btn, #getSignBtn { background:#ff8b39; color:#fff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold; }
+.upload-btn { background:#2ecc71; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none; }
+.upload-btn.active { opacity:1; pointer-events:auto; }
+#clearLogBtn { color:#fff; padding:4px 6px; border-radius:4px; cursor:pointer; font-weight:bold; border:none; }
+
+*/
+
+</style>
+</head>
+<body>
+
+<h2>Uploader Intel HEX</h2>
+
+<div class="uploader-box">
+
+  <div class="uploader-row">
+    
+    <div class="uploader-row-left">
+        <button id="connectBtn">Conectar</button>
+        <select id="boardSelect">
+            <option value="">Selecione a placa</option>
+            <option value="uno">Arduino UNO/Nano</option>
+            <option value="mega">Arduino Mega</option>
+        </select>
+        <button class="upload-btn" id="uploadBtn">Upload</button>
+        <button id="getSignBtn">Get Sign</button>
+        <label class="file-btn">
+            Importar firmware
+            <input type="file" id="fwFile" accept=".hex,.bin">
+        </label>
+        <span class="uploader-size">0 B</span>
+    </div>
+
+    <div class="uploader-row-right">
+        <button id="clearLogBtn">X</button>
+    </div>
+
+  </div>
+
+  <div class="advanced-panel" id="advancedPanel">
+    <div id="binsList"></div>
+  </div>
+
+  <div class="boot-log" id="bootLog"></div>
+
+</div>
+
+<script>
+const boardSizes = { uno: 32*1024, nano: 32*1024, mega: 256*1024 };
+let bins = [];
+let selectedBinIndex = 0;
+let connected = false;
+let port, reader, writer;
+
+const fwFile = document.getElementById("fwFile");
+const fwSize = document.getElementById("fwSize");
+const boardSelect = document.getElementById("boardSelect");
+const binsList = document.getElementById("binsList");
+const uploadBtn = document.getElementById("uploadBtn");
+const getSignBtn = document.getElementById("getSignBtn");
+
+const connectBtn = document.getElementById("connectBtn");
+const logBox = document.getElementById("bootLog"); // já existia
+
+
+// ================== CLEAR LOG ==================
+const clearLogBtn = document.getElementById("clearLogBtn");
+clearLogBtn.onclick = ()=>{ logBox.innerHTML=""; };
+
+// ================== DOWNLOAD BIN ==================
+function downloadBin(i) {
+    const b = bins[i];
+    const blob = new Blob([new Uint8Array(b.data)], {type:"application/octet-stream"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = b.name + ".bin";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}
+
+
+// ================== UTIL ==================
+function log(msg) {
+    logBox.textContent += msg + "\n";
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+function enableUpload() {
+    const board = boardSelect.value;
+    if(!bins.length || !board) { uploadBtn.classList.remove("active"); return; }
+    const maxSize = boardSizes[board] || 0;
+    const lastBin = bins[bins.length-1];
+    if(maxSize && lastBin.addr+lastBin.len > maxSize) {
+        uploadBtn.classList.remove("active");
+        return;
+    }
+    uploadBtn.classList.add("active");
+}
+
+// ================== HEX ==================
+function parseIntelHex(text) {
+    const lines = text.split(/\r?\n/).filter(l=>l.trim());
+    let extended = 0;
+    let bins = [];
+    let current = null;
+    lines.forEach((line, idx) => {
+        if(!line.startsWith(":")) throw "Linha inválida " + (idx+1);
+        const byteCount = parseInt(line.slice(1,3),16);
+        const rawAddr = parseInt(line.slice(3,7),16);
+        const recType = parseInt(line.slice(7,9),16);
+        const dataField = line.slice(9,9+byteCount*2);
+        const data = [];
+        for(let i=0;i<dataField.length;i+=2) data.push(parseInt(dataField.slice(i,i+2),16));
+        if(recType===4){ extended = (data[0]<<8)|data[1]; return; }
+        if(recType===1) return;
+        const fullAddr = (extended<<16)|rawAddr;
+        if(current===null) current={addr:fullAddr,data:[...data]};
+        else {
+            const lastAddr = current.addr + current.data.length;
+            if(fullAddr===lastAddr) current.data.push(...data);
+            else { current.len=current.data.length; bins.push(current); current={addr:fullAddr,data:[...data]}; }
+        }
+    });
+    if(current){ current.len=current.data.length; bins.push(current);}
+    bins.forEach((b,i)=>b.name=`bin${i+1}_${fwFile.files[0].name.replace(/\.hex$/,"")}.bin`);
+    return bins;
+}
+
+function renderBins() {
+    binsList.innerHTML = "";
+    bins.forEach((b,i)=>{
+        const div = document.createElement("div");
+        div.className = "bin-item" + (i===0?" default":"");
+        div.innerHTML = `<span>${b.name} - Addr 0x${b.addr.toString(16)} - ${b.len} bytes</span>
+                         <button onclick="downloadBin(${i})">Download</button>`;
+        div.onclick = ()=>{ selectBin(i); };
+        binsList.appendChild(div);
+    });
+    enableUpload();
+}
+
+function selectBin(i) {
+    selectedBinIndex = i;
+    document.querySelectorAll(".bin-item").forEach((el,j)=>{
+        el.classList.toggle("default", i===j);
+    });
+}
+
+/*/ ================== DOWNLOAD BIN ==================
+function downloadBin(i) {
+    const b = bins[i];
+    const blob = new Blob([new Uint8Array(b.data)], {type:"application/octet-stream"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = b.name+".bin";
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+/*/
+
+// ================== EVENTS ==================
+fwFile.addEventListener("change", async () => {
+    const file = fwFile.files[0];
+    if (!file) return;
+    fwSize.textContent = file.size + " B";
+    const text = await file.text();
+    try {
+        bins = parseIntelHex(text);
+        renderBins();
+    } catch(e) {
+        alert("Erro ao ler HEX: " + e);
+        bins = [];
+        binsList.innerHTML = "";
+    }
+});
+
+boardSelect.addEventListener("change", enableUpload);
+
+// ================== UPLOAD ==================
+uploadBtn.addEventListener("click", async ()=>{
+    if(!bins.length || !uploadBtn.classList.contains("active")) return;
+    const bin = bins[selectedBinIndex];
+    log(`Upload iniciado: ${bin.name} - ${bin.len} bytes - Addr 0x${bin.addr.toString(16)}`);
+    // STK500 upload real aqui
+});
+
+// ================== CONNECT ==================
+connectBtn.onclick = async ()=>{
+    if(connected){
+        try{ if(reader) { await reader.cancel(); reader.releaseLock(); reader=null; } 
+              if(writer){ writer.releaseLock(); writer=null; }
+              if(port) await port.close();
+        }catch(e){console.error(e);}
+        connected = false;
+        connectBtn.textContent="Conectar";
+        log("Desconectado");
+        connectBtn.classList.remove("active");
+    }else{
+        port = await navigator.serial.requestPort();
+        await port.open({baudRate:115200});
+        writer = port.writable.getWriter();
+        reader = port.readable.getReader();
+        connected = true;
+        connectBtn.textContent="Conectado";
+        log("Conectado");
+        //connectBtn.className = "active";
+        connectBtn.classList.add("active");
+    }
+};
+
+// ================== GET SIGN ==================
+getSignBtn.onclick = async ()=>{
+    if(!connected){ log("Conecte primeiro"); return; }
+    log("Solicitando assinatura...");
+    // Exemplo de envio
+    await writer.write(new Uint8Array([0x30,0x20]));
+    const {value,done} = await reader.read();
+    if(value) log("Sign: "+[...value].map(b=>b.toString(16)).join(" "));
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Arduino STK500 Test</title>
+<style>
+  body { font-family: monospace; padding: 20px; }
+  button { padding: 10px; font-size: 16px; }
+  #log { white-space: pre; background: #111; color: #0f0; padding: 10px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<button id="btn">SYNC</button>
+<pre id="log"></pre>
+
+<script>
+const log = m => document.getElementById("log").textContent += m + "\n";
+
+document.getElementById("btn").onclick = async () => {
+  const STK_GET_SYNC = 0x30;
+  const STK_CRC_EOP  = 0x20;
+
+  const port = await navigator.serial.requestPort();
+  await port.open({
+    baudRate: 115200,
+    dataBits: 8,
+    stopBits: 1,
+    parity: "none",
+    flowControl: "none"
+  });
+
+  const writer = port.writable.getWriter();
+  const reader = port.readable.getReader();
+
+  log("Reset via DTR + RTS");
+
+  // ⚠️ Igual ao Python
+  await port.setSignals({
+    dataTerminalReady: false,
+    requestToSend: false
+  });
+
+  await new Promise(r => setTimeout(r, 100));
+
+  await port.setSignals({
+    dataTerminalReady: true,
+    requestToSend: true
+  });
+
+  // ⚠️ TEMPO CRÍTICO — IGUAL AO PYTHON
+  await new Promise(r => setTimeout(r, 500));
+
+  log("TX: 30 20");
+  await writer.write(new Uint8Array([STK_GET_SYNC, STK_CRC_EOP]));
+
+  log("Esperando resposta...");
+
+  const buffer = [];
+  const start = Date.now();
+
+  while (buffer.length < 2 && Date.now() - start < 1000) {
+    const { value } = await reader.read();
+    if (value) buffer.push(...value);
+  }
+
+  if (buffer.length === 2) {
+    log("RX: " + buffer.map(b => b.toString(16).padStart(2,"0")).join(" "));
+  } else {
+    log("❌ Timeout / sem resposta");
+  }
+
+  reader.releaseLock();
+  writer.releaseLock();
+  await port.close();
+};
+</script>
+
+</body>
+</html>
