@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Web AVR Uploader</title>
+
+<style>
+:root {
+    --orange: #ff7a00;
+    --orange-dark: #e06600;
+    --green: #2ecc71;
+    --red: #e74c3c;
+}
+
+body {
+    font-family: monospace;
+    background: #fff;
+    color: #000;
+    margin: 20px;
+}
+
+h2 {
+    color: var(--orange);
+}
+
+button, select, input {
+    font-family: monospace;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--orange);
+}
+
+button {
+    cursor: pointer;
+    color: #fff;
+    font-weight: bold;
+}
+
+#connectBtn {
+    background: var(--red);
+}
+
+#connectBtn.connected {
+    background: var(--green);
+}
+
+#uploadBtn {
+    background: var(--orange);
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+progress {
+    width: 100%;
+    height: 16px;
+    margin-top: 10px;
+    appearance: none;
+}
+
+progress::-webkit-progress-bar {
+    background: #eee;
+    border-radius: 6px;
+}
+
+progress::-webkit-progress-value {
+    background: var(--orange);
+    border-radius: 6px;
+}
+
+#log {
+    margin-top: 15px;
+    background: #000;
+    color: #00ff00;
+    padding: 10px;
+    height: 260px;
+    overflow-y: auto;
+    white-space: pre;
+    border-radius: 4px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Arduino Uploader</h2>
+
+<input type="file" id="fwFile" accept=".hex,.bin"><br><br>
+
+<label>Placa:</label>
+<select id="board">
+    <option value="uno">Arduino Uno / Nano (ATmega328)</option>
+</select><br><br>
+
+<button id="connectBtn">Desconectado</button>
+<button id="uploadBtn">Upload</button>
+<button id="resetBtn">Reset</button>
+
+<progress id="progress" value="0" max="100"></progress>
+
+<div id="log"></div>
+
+<script>
+
+/* ================= STK ================= */
+STK_OK        = 0x10
+STK_INSYNC   = 0x14
+CRC_EOP      = 0x20
+
+STK_GET_SYNC = 0x30
+STK_GET_SIGN_ON = 0x31
+STK_GET_PARAMETER = 0x41
+STK_SET_DEVICE = 0x42
+STK_SET_DEVICE_EXT = 0x45
+STK_ENTER_PROGMODE = 0x50
+STK_LEAVE_PROGMODE = 0x51
+STK_LOAD_ADDRESS = 0x55
+STK_PROG_PAGE = 0x64
+STK_READ_PAGE = 0x74
+STK_READ_SIGN = 0x75
+
+/* ================= BOARDS ================= */
+
+const BOARDS = {
+    m328p:     { name: "Arduino Uno/Nano (ATmega328P)", baud: 115200, flash: 32*1024, page: 128 },
+    m328p_old:{ name: "Arduino Nano old bootloader (ATmega328P)", baud: 57600,  flash: 32*1024, page: 128 }
+};
+
+const board = document.getElementById("board");
+
+board.innerHTML = "";
+
+// gera uma option pra cada placa
+Object.entries(BOARDS).forEach(([key, cfg]) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = cfg.name;
+    board.appendChild(opt);
+});
+
+
+/* ================= STATE ================= */
+
+let port, reader, writer;
+let bin = null;
+let connected = false;
+
+/* ================= LOG ================= */
+
+function log(msg) {
+    const el = document.getElementById("log");
+    el.textContent += msg + "\n";
+    el.scrollTop = el.scrollHeight;
+}
+
+/* ================= INTEL HEX ================= */
+
+function parseIntelHex(text) {
+    let mem = {}, base = 0;
+
+    for (const line of text.split(/\r?\n/)) {
+        if (!line.startsWith(":")) continue;
+
+        const len = parseInt(line.substr(1,2),16);
+        const addr = parseInt(line.substr(3,4),16);
+        const type = parseInt(line.substr(7,2),16);
+        const data = line.substr(9,len*2);
+
+        if (type === 0x00)
+            for (let i=0;i<len;i++)
+                mem[base+addr+i] = parseInt(data.substr(i*2,2),16);
+
+        else if (type === 0x04)
+            base = parseInt(data,16)<<16;
+    }
+
+    const addrs = Object.keys(mem).map(Number).sort((a,b)=>a-b);
+    let blocks=[], start=null, buf=[];
+
+    for (let i=0;i<addrs.length;i++) {
+        const a=addrs[i];
+        if (start===null || a!==addrs[i-1]+1) {
+            if (buf.length) blocks.push({addr:start,data:[...buf],len:buf.length});
+            start=a; buf=[];
+        }
+        buf.push(mem[a]);
+    }
+    if (buf.length) blocks.push({addr:start,data:[...buf],len:buf.length});
+
+    return blocks;
+}
+
+/* ================= FILE LOAD ================= */
+
+let uploadBin = null;   // BIN global usado no upload
+
+fwFile.onchange = async () => {
+    bins = [];
+    uploadBin = null;
+
+    const file = fwFile.files[0];
+    if (!file) return;
+
+    log(`Arquivo carregado: ${file.name}`);
+
+    if (file.name.endsWith(".hex")) {
+        bins = parseIntelHex(await file.text());
+        if( bins.length > 1 ){
+            log(`${bins.length} blocos binarios`);
+        }
+    } else {
+        const buf = await file.arrayBuffer();
+        bins = [{
+            addr: 0x0000,
+            data: [...new Uint8Array(buf)],
+            len: buf.byteLength
+        }];
+    }
+
+    // log detalhado de todos os bins (DEBUG)
+    bins.forEach((b, i) => {
+        console.log(`BIN ${i}: addr=0x${b.addr.toString(16).padStart(4,"0")} size=${b.len}`);
+        if (b.addr === 0x0000 && !uploadBin)
+            uploadBin = b;
+    });
+
+    if (!uploadBin) {
+        log("ERRO: nenhum BIN com endereço 0x0000 encontrado");
+        uploadBtn.classList.remove("active");
+        return;
+    }
+
+    log(`BIN selecionado para upload: addr=0x0000 (${uploadBin.len} bytes)`);
+    uploadBtn.classList.add("active");
+};
+
+
+/* ================= SERIAL ================= */
+
+async function connect() {
+    port = await navigator.serial.requestPort();
+    await port.open({baudRate:BOARDS[board.value].baud});
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+    connected = true;
+    connectBtn.textContent="Conectado";
+    log("Conectado");
+    connectBtn.classList.add("connected");
+}
+
+async function disconnect() {
+    reader.releaseLock();
+    writer.releaseLock();
+    await port.close();
+    connected=false;
+    connectBtn.textContent="Desconectado";
+    connectBtn.classList.remove("connected");
+    log("Serial desconectada");
+}
+
+async function setBaudrate(newBaud) {
+    if (!port) throw new Error("Porta não aberta");
+
+    if (activeBaud === newBaud) return;
+
+    log(`Alterando baudrate para ${newBaud}...`);
+
+    // snapshot da porta atual
+    const info = port.getInfo();
+
+    // fecha silenciosamente
+    try {
+        if (reader) { await reader.cancel(); reader.releaseLock(); }
+        if (writer) writer.releaseLock();
+        await port.close();
+    } catch {}
+
+    // reabre a MESMA porta
+    port = await navigator.serial.requestPort({ filters: [] });
+    await port.open({ baudRate: newBaud });
+
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+
+    activeBaud = newBaud;
+}
+
+connectBtn.onclick=async()=>{
+    connected ? await disconnect() : await connect();
+};
+
+/* ================= utils ================= */
+
+function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+}
+
+/* ================= STK500 UPLOAD ================= */
+
+async function read(n, timeout = 300) {
+    let buf = [];
+    const start = performance.now();
+
+    while (buf.length < n) {
+        if (performance.now() - start > timeout)
+            throw new Error("stk read Timeout");
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) {
+            buf.push(...value);
+        }
+    }
+
+    const data = new Uint8Array(buf.slice(0, n));
+    //serialLog += `in ${[...data].map(b=>b.toString(16).padStart(2,"0")).join(" ")}\n`;
+
+    if (data.length !== n)
+        throw new Error("stk read error");
+
+    return data;
+}
+
+async function cmd(data, resp_len = 2) {
+    const out = data instanceof Uint8Array ? data : new Uint8Array(data);
+
+    await writer.write(out);
+    //serialLog += `out ${[...out].map(b=>b.toString(16).padStart(2,"0")).join(" ")}\n`;
+
+    const resp = await read(resp_len);
+
+    if (resp[0] === 0x14 && resp[resp.length - 1] === 0x10) {
+            return resp.slice(1, resp.length - 1);
+    }
+
+    throw new Error(
+        "Erro STK: " +
+        [...resp].map(b=>b.toString(16).padStart(2,"0")).join(" ")
+    );
+}
+
+async function reset() {
+    if (!connected || !port) return;
+    await port.setSignals({ dataTerminalReady: false });
+    await sleep(10);
+    await port.setSignals({ dataTerminalReady: true });
+    await sleep(400);
+
+    // mata buffers completamente
+    try {
+        if (reader) {
+            await reader.cancel();
+            reader.releaseLock();
+            reader = null;
+        }
+        if (writer) {
+            writer.releaseLock();
+            writer = null;
+        }
+    } catch {}
+
+    // recria streams
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+}
+
+async function stk1_readSignature() {
+    return cmd([STK_READ_SIGN,CRC_EOP],5);
+}
+
+async function stk1_sync() {
+    if (!connected || !port) throw new Error("Não conectado");
+
+    // snapshot da placa no momento do sync
+    activeBoard = board.value;
+    activeBaud  = BOARDS[activeBoard].baud;
+
+    log(`SYNC com placa '${activeBoard}' @ ${activeBaud} baud`);
+
+    await setBaudrate(activeBaud);
+    await reset();
+
+    log("GET_SYNC...");
+    await cmd([STK_GET_SYNC, CRC_EOP]);
+
+    log("signature...");
+    const sig = await stk1_readSignature();
+    log(`Signature: 0x${sig}`);
+
+    const expected = BOARDS[activeBoard].signature;
+    if (expected && sig !== expected) {
+        log("Error: device signature mismatch!");
+        return false;
+    }
+
+    log("SYNC OK");
+    return true;
+}
+
+
+async function stk1_upload(bin) {
+    if (!connected || !port) return;
+
+    if( !bin ){
+        log("No file to upload!");
+        return;
+    }
+
+    const pageSize = BOARDS[board.value].page;
+    const total = bin.len;
+    const startTime = performance.now();
+    progress.value = 0;
+
+    log(`Upload iniciado: ${bin.len} bytes, pages = ${pageSize} bytes`);
+
+    // Mostra porcentagem de flash usada
+    const flashSize = BOARDS[board.value].flash;
+    log(`Flash total: ${flashSize} bytes (${((total/flashSize)*100).toFixed(1)}%)`);
+
+    // Sincroniza com a placa
+    const synced = await stk1_sync();
+    if (!synced) {
+        log("Erro no sync. Upload abortado.");
+        return;
+    }
+
+    // Entra em modo de programação
+    await cmd([STK_ENTER_PROGMODE, CRC_EOP]);
+
+    let addr = bin.addr;
+
+    for (let i = 0; i < total; i += pageSize) {
+        // cria página preenchendo com 0xFF se menor que pageSize
+        let page = bin.data.slice(i, i + pageSize);
+        if (page.length < pageSize) {
+            page = page.concat(Array(pageSize - page.length).fill(0xFF));
+        }
+
+        // Load address (word)
+        const wordAddr = addr >> 1;
+        await cmd([STK_LOAD_ADDRESS, wordAddr & 0xFF, (wordAddr >> 8) & 0xFF, CRC_EOP]);
+
+        // Program page ('F' = flash)
+        const pkt = [0x64, 0x00, pageSize, 'F'.charCodeAt(0), ...page, CRC_EOP];
+        await cmd(pkt);
+
+        addr += pageSize;
+
+        // Atualiza barra de progresso
+        progress.value = Math.floor((i + page.length) / total * 100);
+        await new Promise(r => setTimeout(r, 3));
+
+        // Log debug por página
+        console.log(`Página ${Math.floor(i/pageSize)}: addr=0x${(bin.addr + i).toString(16)}, size=${page.length}`);
+    }
+
+    // Sai do modo de programação
+    await cmd([STK_LEAVE_PROGMODE, CRC_EOP]);
+
+    const t = ((performance.now() - startTime) / 1000).toFixed(2);
+    progress.value = 100;
+    log(`Upload finalizado em ${t}s`);
+}
+
+
+uploadBtn.onclick=async()=>{
+    if(!connected) return alert("Conecte primeiro");
+    await stk1_upload(uploadBin);
+};
+document.getElementById("resetBtn").onclick=async()=>{
+    if(!connected) return alert("Conecte primeiro");
+    log( "Arduino reset" );
+    await reset();
+};
+</script>
+
+</body>
+</html>

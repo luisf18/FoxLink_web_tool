@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+    <title>Arduino Uploader</title>
+    <link rel="icon" href="data:image/svg+xml,
+    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>
+    <text x='8' y='14'
+            text-anchor='middle'
+            font-size='14'>
+        🦊
+    </text>
+    </svg>">
+
+<style>
+
+
+:root {
+    --orange: #ff7a00;
+    --orange-dark: #e06600;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --blue: #3c75e7;
+    --gray: #aaa;
+}
+
+body {
+    font-family: monospace;
+    background: #fff;
+    color: #000;
+    margin: 20px;
+}
+
+h2 {
+    color: var(--orange);
+}
+
+select, input {
+    font-family: monospace;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--orange);
+}
+
+/* ===== Base ===== */
+button {
+    font-family: monospace;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--orange);
+    font-weight: bold;
+    cursor: pointer;
+    color: #fff;
+}
+
+/* ===== Estado padrão: DESATIVADO ===== */
+button:disabled {
+    background: var(--gray);
+    border-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ===== Connect (sempre ativo) ===== */
+#connectBtn {
+    background: var(--red);
+}
+
+#connectBtn.connected {
+    background: var(--green);
+}
+
+/* ===== Botões quando ATIVOS ===== */
+button.enabled#uploadBtn {
+    background: var(--orange);
+}
+
+button.enabled#resetBtn {
+    background: var(--blue);
+}
+
+/* outros botões futuros */
+button.enabled {
+    background: var(--orange);
+}
+
+/* hover só quando ativo */
+button:not(:disabled):hover {
+    opacity: 0.9;
+}
+
+progress {
+    width: 100%;
+    height: 16px;
+    margin-top: 10px;
+    appearance: none;
+}
+
+progress::-webkit-progress-bar {
+    background: #eee;
+    border-radius: 6px;
+}
+
+progress::-webkit-progress-value {
+    /*/background: #5aff5a;/*/
+    background: #ff8614;
+    border-radius: 6px;
+}
+
+#log {
+    margin-top: 15px;
+    background: #000;
+    color: #00ff00;
+    padding: 10px;
+    height: 260px;
+    overflow-y: auto;
+    white-space: pre;
+    border-radius: 4px;
+}
+
+.footer {
+    margin-top: 20px;
+    padding-top: 8px;
+    font-size: 12px;
+    text-align: center;
+    color: #999;
+    border-top: 1px solid #ddd;
+}
+
+.footer strong {
+    color: #ff8b39;
+    font-weight: 700;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Arduino Uploader</h2>
+
+<label>Placa:</label>
+<select id="board">
+    <option value="uno">Arduino Uno / Nano (ATmega328)</option>
+</select><br><br>
+
+<label>Exemplos:</label>
+<select id="examples">
+    <option value="">-- selecionar --</option>
+</select>
+<button id="loadExampleBtn">Carregar exemplo</button>
+<br><br>
+
+<button id="connectBtn">Desconectado</button>
+<button id="resetBtn">Reset</button>
+<input type="file" id="fwFile" accept=".hex,.bin">
+<button id="uploadBtn">Upload</button>
+
+<progress id="progress" value="0" max="100"></progress>
+
+<div id="log"></div>
+
+<footer class="footer">
+    <span>Powered by</span>
+    <strong>Fox Dynamics</strong>
+</footer>
+
+<script src="intelHex.js"></script>
+<script type="module">
+    import { STK500V1 } from "./stk500.js";
+
+ 
+/* =================
+    Globals
+ ================= */
+
+let port = null;
+let reader = null;
+let writer = null;
+let uploadBin = null;   // BIN global usado no upload
+let connected = false;
+
+const stk = new STK500V1( {logFn: log} );
+
+/* =================
+    UI elements
+ ================= */
+const fwFile     = document.getElementById("fwFile");
+const connectBtn = document.getElementById("connectBtn");
+const uploadBtn  = document.getElementById("uploadBtn");
+const resetBtn   = document.getElementById("resetBtn");
+const progress   = document.getElementById("progress");
+const logEl      = document.getElementById("log");
+const board      = document.getElementById("board");
+const loadExampleBtn  = document.getElementById("loadExampleBtn");
+const examplesSel = document.getElementById("examples");
+
+
+function update_buttons(){
+    if( connected ){        
+        loadExampleBtn.disabled = false;
+        uploadBtn.disabled = false;
+        resetBtn.disabled  = false;
+        uploadBtn.classList.add("enabled");
+        resetBtn.classList.add("enabled");
+        loadExampleBtn.classList.add("enabled");
+    }else{
+        loadExampleBtn.disabled = true;
+        uploadBtn.disabled = true;
+        resetBtn.disabled  = true;
+        uploadBtn.classList.remove("enabled");
+        resetBtn.classList.remove("enabled");
+        loadExampleBtn.classList.remove("enabled");
+    }
+}
+
+update_buttons();
+
+/* =================
+    LOG
+ ================= */
+
+function log(msg) {
+    logEl.textContent += msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* =================
+    Serial
+ ================= */
+
+async function connect() {
+    port = await navigator.serial.requestPort();
+    await port.open({baudRate:stk.boards[board.value].baud});
+    connected = true;
+    connectBtn.textContent="Conectado";
+    log("Serial Conectado");
+    connectBtn.classList.add("connected");
+    update_buttons();
+}
+
+async function disconnect() {
+    await port.close();
+    connected=false;
+    connectBtn.textContent="Desconectado";
+    connectBtn.classList.remove("connected");
+    log("Serial desconectada");
+    update_buttons();
+}
+
+/* =================
+    File load
+ ================= */
+
+ async function loadfile(input) {
+    if (!input) return null;
+
+    let bin = null;
+    let name = "";
+
+    // --- CASO 1: File (input type="file") ---
+    if (input instanceof File) {
+        name = input.name;
+
+        if (name.endsWith(".hex")) {
+            const bins = intelHexToBins(await input.text());
+            bins.forEach((b, i) => {
+                console.log(`BIN ${i}: addr=0x${b.addr.toString(16).padStart(4,"0")} size=${b.len}`);
+                if (b.addr === 0x0000 && !bin)
+                    bin = b.data;
+            });
+        } else {
+            const buf = await input.arrayBuffer();
+            bin = [...new Uint8Array(buf)];
+        }
+    }
+
+    // --- CASO 2: string (exemplo via fetch) ---
+    else if (typeof input === "string") {
+        name = input;
+        const resp = await fetch(input);
+        if (!resp.ok) throw new Error("Erro ao carregar exemplo");
+
+        if (name.endsWith(".hex")) {
+            const bins = intelHexToBins(await resp.text());
+            bins.forEach((b, i) => {
+                console.log(`BIN ${i}: addr=0x${b.addr.toString(16).padStart(4,"0")} size=${b.len}`);
+                if (b.addr === 0x0000 && !bin)
+                    bin = b.data;
+            });
+        } else {
+            const buf = await resp.arrayBuffer();
+            bin = [...new Uint8Array(buf)];
+        }
+    }
+
+    // --- CASO 3: já é binário ---
+    else if (input instanceof Uint8Array) {
+        bin = [...input];
+    } else if (Array.isArray(input)) {
+        bin = input;
+    }
+
+    if (!bin) {
+        console.warn("Nenhum BIN válido encontrado");
+        return null;
+    }
+
+    console.log(`BIN final: ${bin.length} bytes`);
+    return bin;
+}
+
+
+fwFile.onchange = async () => {
+
+    const file = fwFile.files[0];
+    
+    uploadBin = await loadfile( file );
+
+    log(`\n===========================================`);
+    log(`Arquivo carregado: ${file.name}`);
+    if (uploadBin) {
+        log(`filesize: ${uploadBin.length} bytes`);
+        log(uploadBin);
+        uploadBtn.classList.add("active");
+    }else{
+        log("ERRO: arquivo incompativel");
+        uploadBtn.classList.remove("active");
+        return;
+    }
+    log(`===========================================\n`);
+};
+
+/* =================
+    Main
+ ================= */
+
+// boards
+board.innerHTML = "";
+// gera uma option pra cada placa
+Object.entries(stk.boards).forEach(([key, cfg]) => {
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = cfg.name;
+    board.appendChild(opt);
+});
+
+
+// Exemplos
+const EXAMPLES = [
+    { name: "Blink LED 13 slow", file: "examples/blink.hex" },
+    { name: "Blink LED 13 fast",  file: "examples/blink_fast.bin" },
+    { name: "Arduino FoxLink",  file: "examples/foxlink_arduino.hex" }
+];
+
+// popula o select
+EXAMPLES.forEach(ex => {
+    const opt = document.createElement("option");
+    opt.value = ex.file;
+    opt.textContent = ex.name;
+    examplesSel.appendChild(opt);
+});
+
+// buttons
+connectBtn.onclick=async()=>{
+    connected ? await disconnect() : await connect();
+};
+
+uploadBtn.onclick = async () => {
+    if (!connected) {
+        alert("Conecte primeiro");
+        return;
+    }
+    await stk.upload(uploadBin, port, board.value, progress);
+    // reabre somente se o STK fechou a porta
+    if (!port.readable && !port.writable) {
+        await port.open({ baudRate: stk.boards[board.value].baud });
+    }
+};
+
+document.getElementById("resetBtn").onclick=async()=>{
+    if(!connected && !port) return alert("Conecte primeiro");
+    log( "Arduino reset..." );
+    await port.setSignals({ dataTerminalReady: false });
+    await new Promise(r => setTimeout(r, 10));
+    await port.setSignals({ dataTerminalReady: true });
+    await new Promise(r => setTimeout(r, 400));
+};
+
+loadExampleBtn.onclick = async () => {
+    const example = examplesSel.value;
+    if (!example) {
+        alert("Selecione um exemplo");
+        return;
+    }
+    const bin = await loadfile( example );
+
+    if (!connected) {
+        alert("Conecte primeiro");
+        return;
+    }
+    if( bin ){
+        await stk.upload(bin, port, board.value, progress);
+    }
+    // reabre somente se o STK fechou a porta
+    if (!port.readable && !port.writable) {
+        await port.open({ baudRate: stk.boards[board.value].baud });
+    }
+};
+
+</script>
+
+</body>
+</html>
