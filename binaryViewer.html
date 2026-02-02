@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Binary Viewer</title>
+
+<link rel="icon" href="data:image/svg+xml,
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>
+  <text x='8' y='14' text-anchor='middle' font-size='14' fill='white'>🦊</text>
+</svg>">
+
+<style>
+
+body {
+    font-family: system-ui, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+}
+
+h2, h3 {
+    color: #ff8b39;
+    margin-bottom: 10px;
+}
+
+/*----- buttons default? ------*/
+
+/* ===== Base comum ===== */
+.controls button,
+.controls .file-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 30px;
+    padding: 0 12px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    border: none;
+    border-radius: 6px;
+
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+
+    background: #777;
+    color: #fff;
+}
+
+.button:hover {
+    opacity: 0.5;
+}
+
+/* ===== Estados ===== */
+.controls button.active,
+#btnLine,
+#btnDownload.ready {
+    background: #ff8b39;
+}
+
+#btnDownload.ready {
+    background: #3992ff;
+}
+
+.controls button:disabled {
+    background: #bbb;
+    cursor: default;
+    opacity: 0.7;
+}
+
+.controls button:hover {
+    opacity: 0.8;
+}
+
+/* ===== Específicos ===== */
+#btnDownload {
+    background: #999;
+}
+
+
+/*----- TABS ok ------*/
+
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;        /* Firefox */
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;               /* Chrome / Edge / Safari */
+}
+
+.tabs::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 6px;
+}
+
+.tab {
+    font-size: 11px;
+    padding: 6px 10px;
+    background: #ddd;
+    border-radius: 6px 6px 0 0;
+    white-space: nowrap;
+}
+
+.tab.active {
+    background: #ffb078;
+    color: #272727;
+}
+
+/* botão fechar */
+.tab-close {
+    width: 14px;
+    height: 14px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    background: #ccc;
+    color: #555;
+
+    margin-left: 4px;
+
+    cursor: pointer;
+}
+
+.tab-close:hover {
+    background: #ff5a5a;
+    color: #fff;
+}
+
+.tab-close svg {
+    pointer-events: none;
+}
+
+/*----- painel ok ------*/
+.panel {
+    background: #ffd8b8;
+    border-radius: 0 8px 8px 8px;
+    padding: 8px;
+    margin-top: -1px;
+}
+
+.hexdump {
+    font-family: monospace;
+    font-size: 12px;
+    background: #111;
+    color: #7CFC00;
+    padding: 10px;
+    border-radius: 6px;
+    white-space: pre;
+    max-height: 420px;
+    overflow: auto;
+}
+
+/*----- merge ok ------*/
+.merge {
+    margin-top: 20px;
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+/*----- footer ok ------*/
+.footer {
+    margin-top: 20px;
+    padding-top: 8px;
+    font-size: 12px;
+    text-align: center;
+    color: #999;
+    border-top: 1px solid #ddd;
+}
+
+.footer strong {
+    color: #ff8b39;
+}
+
+
+/* mudança botões e upload */
+
+/* ===== Área de controles ===== */
+.controls {
+    display: flex;
+    align-items: center;   /* centraliza verticalmente */
+    gap: 8px;
+    margin: 12px 0;
+}
+
+/* ===== Botão escolher arquivos ===== */
+.file-btn {
+    display: inline-block;
+    background: #ff8c39af;
+    color: #fff;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.file-btn:hover {
+    background: #ff9d57b3;
+}
+
+.file-btn input {
+    display: none;
+}
+
+
+/* =================== JOIN ===================== */
+
+.join-row.error {
+    background: #ffd0d0;
+    border-left: 4px solid #ff5a5a;
+}
+
+.join-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+}
+
+.join-row.error {
+    background: #ffd0d0;
+    border-color: #ff5a5a;
+}
+
+.join-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.join-row .addr {
+    width: 80px;
+    padding: 2px 4px;
+    font-family: monospace;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#joinFill {
+    margin-top: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-size: 12px;
+}
+
+#joinText {
+    width: 100%;
+    height: 40px;
+    margin-top: 6px;
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    resize: vertical;
+}
+
+#joinName {
+    width: 100%;
+    padding: 4px 6px;
+    font-size: 12px;
+    margin-top: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+#btnJoin {
+    margin-top: 8px;
+    background: #ff8b39;
+    color: #fff;
+    border-radius: 6px;
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+#btnJoin:hover {
+    opacity: 0.85;
+}
+
+
+
+</style>
+</head>
+
+<body>
+
+<h2>Binary Viewer</h2>
+
+<div class="controls" id="controls">
+    <label class="file-btn">
+        📂 Upload files
+        <input type="file" id="fileInput" multiple accept=".bin,.hex">
+    </label>
+    <button id="btnDec">DEC</button>
+    <button id="btnLine">16 / linha</button>
+    <button id="btnDownload">⬇</button>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="panel">
+    <div id="hexdump" class="hexdump"></div>
+</div>
+
+<!--div class="merge" id="joinPanel">
+  <h3>Join Binary</h3>
+
+  <div id="joinMode">
+    <label>
+      <input type="radio" name="joinMode" value="sequential" checked>
+      Sequencial
+    </label>
+    <label style="margin-left:10px">
+      <input type="radio" name="joinMode" value="address">
+      Por endereço
+    </label>
+  </div>
+
+  <div id="joinList">
+    <div class="join-row">
+      <select class="file-select">
+        <option value="">-- selecione um arquivo --</option>
+      </select>
+      <input class="addr" placeholder="0x0000" disabled>
+    </div>
+    <div class="join-row">
+      <select class="file-select">
+        <option value="">-- selecione um arquivo --</option>
+      </select>
+      <input class="addr" placeholder="0x0000" disabled>
+    </div>
+    <div class="join-row">
+      <select class="file-select">
+        <option value="">-- selecione um arquivo --</option>
+      </select>
+      <input class="addr" placeholder="0x0000" disabled>
+    </div>
+  </div>
+
+  <select id="joinFill">
+    <option value="FF">Preencher com 0xFF</option>
+    <option value="00">Preencher com 0x00</option>
+  </select>
+
+  <textarea id="joinText" placeholder="Texto para injetar (opcional)"></textarea>
+
+  <input id="joinName" placeholder="nome_do_arquivo.bin">
+
+  <button id="btnJoin">Join</button>
+</div-->
+
+
+<footer class="footer">
+    <span>Powered by</span>
+    <strong>Fox Dynamics</strong>
+</footer>
+
+<script src="uploader/intelHex.js"></script>
+<script>
+/* =========================
+   Estado
+========================= */
+const tabsEl   = document.getElementById("tabs");
+const dumpEl   = document.getElementById("hexdump");
+const controls   = document.getElementById("controls");
+const files    = [];
+
+let activeTab = -1;
+let showDec   = false;
+let perLine   = 16;
+
+/* =========================
+   Botões
+========================= */
+
+const btnLink = document.createElement("button");
+btnLink.textContent = "Link";
+btnLink.title = "Adicionar arquivo via link";
+controls.appendChild(btnLink);
+
+tabsEl.addEventListener("wheel", e => {
+    if (e.deltaY === 0) return;
+
+    e.preventDefault();
+    tabsEl.scrollLeft += e.deltaY;
+}, { passive: false });
+
+btnDec.onclick = () => {
+    showDec = !showDec;
+    btnDec.classList.toggle("active", showDec);
+    draw();
+};
+
+btnLine.onclick = () => {
+    perLine = perLine === 16 ? 8 : 16;
+    btnLine.textContent = perLine + " / linha";
+    draw();
+};
+
+btnDownload.onclick = () => {
+    if (activeTab < 0) return;
+    downloadBin(files[activeTab]);
+};
+
+function updateButtons() {
+    btnDownload.classList.toggle("ready", activeTab >= 0);
+    btnDownload.disabled = activeTab < 0;
+}
+
+tabsEl.addEventListener("click", e => {
+    const closeBtn = e.target.closest(".tab-close");
+    if (!closeBtn) return;
+
+    e.stopPropagation(); // não ativa a aba
+
+    const tab = closeBtn.closest(".tab");
+    const id = tab.dataset.id;
+
+    closeTab(id);
+});
+
+/* =========================
+   Arquivos
+========================= */
+fileInput.onchange = async e => {
+    for (const f of e.target.files)
+        await loadFile(f);
+
+    renderTabs();
+    if (activeTab < 0 && files.length > 0)
+        selectTab(0);
+
+    fileInput.value = "";
+};
+
+async function loadFile(file) {
+    if (file.name.endsWith(".hex")) {
+        const bins = intelHexToBins(await file.text());
+        bins.forEach(b => {
+            const baseName = `${file.name} @0x${b.addr.toString(16)}`;
+            const uniqueName = getUniqueName(baseName);
+
+            files.push({
+                name: uniqueName,
+                data: b.data
+            });
+        });
+    } else {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const uniqueName = getUniqueName(file.name);
+        files.push({ name: uniqueName, data: [...buf] });
+    }
+}
+
+function getUniqueName(name) {
+    const dot = name.lastIndexOf(".");
+    const base = dot >= 0 ? name.slice(0, dot) : name;
+    const ext  = dot >= 0 ? name.slice(dot) : "";
+
+    let max = -1;
+
+    for (const f of files) {
+        const m = f.name.match(new RegExp(
+            "^" + base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + 
+            "(?: \\((\\d+)\\))?" + 
+            ext.replace(".", "\\.") + "$"
+        ));
+        if (m) {
+            const n = m[1] ? parseInt(m[1]) : 0;
+            max = Math.max(max, n);
+        }
+    }
+
+    return max < 0 ? name : `${base} (${max + 1})${ext}`;
+}
+
+/* =========================
+   Abas
+========================= */
+function renderTabs() {
+    tabsEl.innerHTML = "";
+    files.forEach((f, i) => {
+        const t = document.createElement("div");
+        t.className = "tab";
+        t.textContent = f.name;
+        t.dataset.id = i;
+        t.onclick = () => selectTab(i);
+        const x = document.createElement("span");
+        x.className = "tab-close";
+        x.innerHTML = `
+        <svg viewBox="0 0 12 12" width="8" height="8">
+            <line x1="2.5" y1="2.5" x2="9.5" y2="9.5"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="9.5" y1="2.5" x2="2.5" y2="9.5"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>`;
+        t.appendChild(x);
+        tabsEl.appendChild(t);
+    });
+    updateButtons();
+    if (typeof renderJoinList === "function") {
+        renderJoinList();
+    }
+}
+
+function selectTab(i) {
+    activeTab = i;
+    [...tabsEl.children].forEach((t, idx) =>
+        t.classList.toggle("active", idx === i)
+    );
+    updateButtons();
+    draw();
+}
+
+function closeTab(id) {
+    id = Number(id);
+
+    files.splice(id, 1);
+
+    // caso 1: fechei a aba ativa
+    if (activeTab === id) {
+        if (files.length === 0) {
+            activeTab = -1;
+        } else if (id >= files.length) {
+            activeTab = files.length - 1; // vai pra anterior
+        } else {
+            activeTab = id; // fica na próxima
+        }
+    }
+    // caso 2: fechei uma aba antes da ativa
+    else if (id < activeTab) {
+        activeTab--;
+    }
+
+    renderTabs();
+
+    if (activeTab >= 0)
+        selectTab(activeTab);
+    else
+        draw();
+}
+
+/* =========================
+   Hexdump
+========================= */
+function draw() {
+    if (activeTab < 0) {
+        dumpEl.textContent = "";
+        return;
+    }
+
+    const f = files[activeTab];
+    let out = "";
+
+    for (let i = 0; i < f.data.length; i += perLine) {
+        let hex = "";
+        let ascii = "";
+
+        for (let j = 0; j < perLine; j++) {
+            if (i + j < f.data.length) {
+                const v = f.data[i + j];
+
+                hex += showDec
+                    ? v.toString(10).padStart(3, " ") + " "
+                    : v.toString(16).padStart(2, "0") + " ";
+
+                ascii += (v >= 0x20 && v <= 0x7E)
+                    ? String.fromCharCode(v)
+                    : ".";
+            } else {
+                // alinhamento quando a linha é curta
+                hex += showDec ? "    " : "   ";
+                ascii += " ";
+            }
+        }
+
+        out +=
+            i.toString(16).padStart(6, "0") +
+            ": " +
+            hex +
+            "  " +
+            ascii +
+            "\n";
+    }
+
+    dumpEl.textContent = out;
+}
+
+/* =========================
+   Download
+========================= */
+function downloadBin(f) {
+    const blob = new Blob([Uint8Array.from(f.data)], { type: "application/octet-stream" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = f.name.replace(/\s+/g, "_") + ".bin";
+    a.click();
+}
+
+
+
+/* =========================
+   Join binaries
+========================= */
+
+/*
+
+const joinState = {
+    selected: new Set(),        // índices selecionados (máx 3)
+    mode: "sequential",         // "sequential" | "address"
+    fill: 0xFF,                 // 0xFF | 0x00
+    addresses: {},              // { index: address }
+    textInject: "",
+    outputName: "joined.bin"
+};
+
+const joinPanel = document.getElementById("joinPanel");
+const joinList  = document.getElementById("joinList");
+const joinFill  = document.getElementById("joinFill");
+const joinText  = document.getElementById("joinText");
+const joinName  = document.getElementById("joinName");
+const btnJoin   = document.getElementById("btnJoin");
+
+document.querySelectorAll('input[name="joinMode"]').forEach(r => {
+    r.onchange = () => {
+        joinState.mode = r.value;
+        updateAddrInputs();
+        validateOverlap();
+    };
+});
+
+function renderJoinList() {
+    const selects = document.querySelectorAll(".file-select");
+    selects.forEach(select => {
+        // limpa opções anteriores
+        select.innerHTML = `<option value="">-- selecione um arquivo --</option>`;
+
+        files.forEach((f, idx) => {
+            const opt = document.createElement("option");
+            opt.value = idx;
+            opt.textContent = f.name;
+            select.appendChild(opt);
+        });
+    });
+
+    updateAddrInputs();
+}
+
+// habilita/desabilita input de endereço
+function updateAddrInputs() {
+    const modeAddress = joinState.mode === "address";
+
+    document.querySelectorAll(".join-row").forEach(row => {
+        const select = row.querySelector(".file-select");
+        const addr = row.querySelector(".addr");
+        addr.disabled = !modeAddress || !select.value;
+        addr.style.background = addr.disabled ? "#eee" : "#fff";
+    });
+}
+
+
+
+// ---------- UI base ----------
+
+function renderJoinUI() {
+    joinPanel.innerHTML = `<h3>Join Binary</h3>`;
+
+    // modo
+    const modeBox = document.createElement("div");
+    modeBox.innerHTML = `
+        <label><input type="radio" name="joinMode" value="sequential" checked> Sequencial</label>
+        <label style="margin-left:10px">
+            <input type="radio" name="joinMode" value="address"> Por endereço
+        </label>
+    `;
+    joinPanel.appendChild(modeBox);
+
+    modeBox.onchange = e => {
+        joinState.mode = e.target.value;
+        updateAddrInputs();
+        validateOverlap();
+    };
+
+    // lista de arquivos
+    renderJoinList();
+
+    // preenchimento
+    const fillBox = document.createElement("select");
+    fillBox.innerHTML = `
+        <option value="FF">Preencher com 0xFF</option>
+        <option value="00">Preencher com 0x00</option>
+    `;
+    fillBox.onchange = () =>
+        joinState.fill = parseInt(fillBox.value, 16);
+    joinPanel.appendChild(fillBox);
+
+    // texto injetado
+    const textBox = document.createElement("textarea");
+    textBox.placeholder = "Texto para injetar (opcional)";
+    textBox.style.display = "block";
+    textBox.style.marginTop = "6px";
+    textBox.oninput = () => joinState.textInject = textBox.value;
+    joinPanel.appendChild(textBox);
+
+    // nome do arquivo
+    const nameInput = document.createElement("input");
+    nameInput.placeholder = "nome_do_arquivo.bin";
+    nameInput.style.display = "block";
+    nameInput.style.marginTop = "6px";
+    nameInput.oninput = () =>
+        joinState.outputName = nameInput.value || "joined.bin";
+    joinPanel.appendChild(nameInput);
+
+    // botão join
+    const btnJoin = document.createElement("button");
+    btnJoin.textContent = "Join";
+    btnJoin.style.marginTop = "8px";
+    btnJoin.onclick = joinBinary;
+    joinPanel.appendChild(btnJoin);
+}
+
+joinFill.onchange = () =>
+    joinState.fill = parseInt(joinFill.value, 16);
+
+joinText.oninput = () =>
+    joinState.textInject = joinText.value;
+
+joinName.oninput = () =>
+    joinState.outputName = joinName.value || "joined.bin";
+
+btnJoin.onclick = joinBinary;
+
+// ---------- helpers ----------
+
+function validateOverlap() {
+    document.querySelectorAll(".join-row")
+        .forEach(r => r.classList.remove("error"));
+
+    if (joinState.mode !== "address") return;
+
+    const ranges = [];
+
+    joinState.selected.forEach(i => {
+        const addr = joinState.addresses[i];
+        if (Number.isFinite(addr)) {
+            ranges.push({
+                i,
+                start: addr,
+                end: addr + files[i].data.length
+            });
+        }
+    });
+
+    for (let a = 0; a < ranges.length; a++) {
+        for (let b = a + 1; b < ranges.length; b++) {
+            if (ranges[a].end > ranges[b].start &&
+                ranges[a].start < ranges[b].end) {
+
+                markError(ranges[a].i);
+                markError(ranges[b].i);
+            }
+        }
+    }
+}
+
+function markError(i) {
+    document.querySelector(`.join-row input[data-id="${i}"]`)
+        ?.closest(".join-row")
+        ?.classList.add("error");
+}
+
+// ---------- JOIN ----------
+
+function joinBinary() {
+    const selectedFiles = [];
+
+    document.querySelectorAll(".join-row").forEach(row => {
+        const select = row.querySelector(".file-select");
+        const addrInput = row.querySelector(".addr");
+        const idx = parseInt(select.value);
+
+        if (!isNaN(idx)) {
+            selectedFiles.push({
+                index: idx,
+                address: joinState.mode === "address"
+                    ? parseInt(addrInput.value || "0", addrInput.value.startsWith("0x") ? 16 : 10)
+                    : null
+            });
+        }
+    });
+
+    if (selectedFiles.length === 0)
+        return alert("Selecione pelo menos um arquivo.");
+
+    const textData = joinState.textInject
+        ? new TextEncoder().encode(joinState.textInject)
+        : null;
+
+    let maxSize = 0;
+
+    if (joinState.mode === "address") {
+        selectedFiles.forEach(f => {
+            const addr = f.address ?? 0;
+            maxSize = Math.max(maxSize, addr + files[f.index].data.length);
+        });
+        if (textData) maxSize += textData.length;
+    } else {
+        selectedFiles.forEach(f => {
+            maxSize += files[f.index].data.length;
+        });
+        if (textData) maxSize += textData.length;
+    }
+
+    const out = new Uint8Array(maxSize).fill(joinState.fill);
+    let offset = 0;
+
+    selectedFiles.forEach(f => {
+        const data = files[f.index].data;
+        const addr = joinState.mode === "address" ? f.address ?? 0 : offset;
+
+        out.set(data, addr);
+        if (joinState.mode === "sequential") offset += data.length;
+    });
+
+    if (textData) out.set(textData, offset);
+
+    files.push({
+        name: joinState.outputName,
+        data: [...out]
+    });
+
+    renderTabs();
+    selectTab(files.length - 1);
+}
+
+*/
+
+
+</script>
+
+</body>
+</html>
