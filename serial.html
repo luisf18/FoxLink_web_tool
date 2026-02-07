@@ -158,6 +158,7 @@ button.clear-empty { background: #555; }
         <button id="saveBtn" onclick="downloadLog()" title="Save log">💾</button>
     </div>
     <div class="right-buttons">
+        <button id="hexBtn" onclick="toggleHex()" title="Hex dump mode">HEX</button>
         <button id="rstBtn" onclick="dtrReset()" title="DTR Reset">RST</button>
         <button id="txBtn" onclick="toggleTx()" title="Show TX mensages on log">TX</button>
         <button id="scrollBtn" onclick="toggleScroll()" title="Auto scroll">⬇</button>
@@ -174,7 +175,7 @@ button.clear-empty { background: #555; }
         <option value="" >none</option>
         <option value="NL" selected>\n</option>
         <option value="CR">\r</option>
-        <option value="CRNL">\n\r</option>
+        <option value="NLCR">\n\r</option>
     </select>
     <select id="baudRate" title="Baudrate">
         <option value="300">300 baud</option>
@@ -199,6 +200,7 @@ button.clear-empty { background: #555; }
         <option value="1000000">1000000 baud</option>
         <option value="2000000">2000000 baud</option>
     </select>
+    <button id="binBtn" onclick="toggleBin()" title="Send byte values split by space" >BIN</button>
 </div>
 
 <h3 class="preset-title">Preset Mensagens</h3>
@@ -225,6 +227,9 @@ let connected = false;
 let autoScroll = true;
 let showTime = false;
 let showTx = true;
+let showHex = false;
+let binMode = false;
+const hexCols = 8;
 const logDiv = document.getElementById("log");
 
 // Buttons
@@ -235,27 +240,45 @@ const timeBtn    = document.getElementById("timeBtn");
 const clearBtn   = document.getElementById("clearBtn");
 const saveBtn    = document.getElementById("saveBtn");
 const txBtn      = document.getElementById("txBtn");
-let rxBuffer = "";
+const hexBtn     = document.getElementById("hexBtn");
+const binBtn     = document.getElementById("binBtn");
+let rxTextBuffer = "";
 
 const endMap = new Map([
     ["CR", "\r"],       // Carriage Return
     ["NL", "\n"],       // New Line / Line Feed
-    ["NLCR", "\n\r"]    // Carriage Return + Line Feed
+    ["NLCR", "\n\r"],   // Line Feed + Carriage Return
+    ["CRNL", "\r\n"]    // Carriage Return + Line Feed
 ]);
 
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function timestamp() { return new Date().toLocaleTimeString("pt-BR"); }
 
-function logAdd(text, outgoing=false) {
+function renderSpan(span, text, outgoing=false, newLine = false) {
+    let prefix = "";
+    if (showTime) {
+        prefix += `[${timestamp()}]`;
+        if (showTx) {
+            prefix += outgoing ? "[TX]" : "[RX]";
+        }
+        prefix += " ";
+    } else if (outgoing && showTx) {
+        prefix += `[TX]${binMode ? "[BIN]" : "" } `;
+    }
+    span.textContent = prefix + text;
+}
 
+function logAdd(text, outgoing=false) {
 
     let idx;
     let last_line_complete = true;
 
+    console.log(text);
+
     // verifica se a ultima linha foi concluida com \n
     let lastLine = logDiv.lastChild;
     if (lastLine && lastLine instanceof HTMLSpanElement) {
-        if( lastLine.textContent.endsWith("\n") ){
+        if( lastLine.textContent.indexOf("\n") >= 0 ){
             last_line_complete = true;
         }else{
             last_line_complete = false;
@@ -279,22 +302,19 @@ function logAdd(text, outgoing=false) {
             line_complete = false;
         }
 
+        if( binMode ){
+            line_complete = true;
+            last_line_complete = true;
+            if( !line.endsWith('\n') ){
+                line += '\n';
+            }
+        }
+
         console.log( ` chunk[${line_complete}][${lastLine==null}] ${line}` );
 
         if( last_line_complete || lastLine == null ){
             lastLine = document.createElement("span");
-            let final_line = "";
-            if (showTime){
-                final_line += `[${timestamp()}]`;
-                if( showTx ){
-                    final_line += outgoing ? "[TX]" : "[RX]";
-                }
-                final_line+=' ';
-            }else if( outgoing && showTx ){
-                final_line += "[TX] "
-            }
-            final_line += line;
-            lastLine.textContent = final_line;
+            renderSpan(lastLine, line, outgoing);
             logDiv.appendChild(lastLine);
         }else{
             lastLine.textContent += line;
@@ -346,6 +366,8 @@ async function connect( requestPort = true ) {
     connectBtn.className = "connected";
     connectBtn.textContent = `COM ${port.getInfo().usbProductId || ""}`;
     rstBtn.className    = "reset-ready";
+    binBtn.className   = binMode ? "active" : "inactive";
+    hexBtn.className   = showHex ? "active" : "inactive";
     timeBtn.className   = showTime ? "active" : "inactive";
     scrollBtn.className = autoScroll ? "active" : "inactive";
     txBtn.className     = showTx ? "active" : "inactive";
@@ -377,6 +399,8 @@ async function disconnect() {
     txBtn.className = "inactive";
     clearBtn.className = "clear-empty";
     saveBtn.className = "";
+    binBtn.className = "";
+    hexBtn.className = "";
     const presetButtons = document.querySelectorAll('.presets button');
     presetButtons.forEach(btn => btn.classList.remove('active'));
 }
@@ -384,7 +408,12 @@ async function disconnect() {
 async function readLoop() {
     const decoder = new TextDecoder();
 
-    let rxBuffer = "";
+    let hexSpan = null;
+
+    let rxTextBuffer = "";
+    let rxBinBuffer  = [];   // bytes remanescentes (< hexCols)
+
+    // Buffer input
     let startTime = 0;
 
     const TIMEOUT_STREAM = 20;   // tempo mínimo sem receber nada (ms)
@@ -393,30 +422,87 @@ async function readLoop() {
     let timeout_max = 0;
     let timeout_stream = 0;
 
+    let rxBinMode = showHex || binMode;
+
+    function resetRx(newMode) {
+        rxTextBuffer = "";
+        rxBinBuffer.length = 0;
+        hexSpan = null;
+        startTime = null;
+        rxBinMode = newMode;
+    }
+
+    function logHex(line) {
+        // Se não houver linha aberta cria uma
+        if (!hexSpan) {
+            hexSpan = document.createElement("span");
+            logDiv.appendChild(hexSpan);
+        }
+        hexSpan.innerHTML = formatHexLine(line);
+        if( line.length >= hexCols ){
+            hexSpan = null;
+        }
+    }
+
     while (connected) {
         const { value, done } = await reader.read();
         if (done) break;
 
-        rxBuffer += decoder.decode(value);
+        console.log('[RX] in:',value);
 
-        if( rxBuffer.endsWith('\n') || rxBuffer.length > 10 ){
-            logAdd( rxBuffer );
-            rxBuffer = "";
-            startTime = null;
+        // Reinicia os buffers em caso de alteraçaõ de modo
+        const isBin = showHex || binMode;
+        const change = isBin != rxBinMode;
+        if( change ) resetRx(isBin);
+
+        if( rxBinMode ){
+            console.log('[RX-BIN] in:',value);
+            
+            // caso especial não usa logAdd (por enquanto)
+            
+            // caso tenha entrado algo depois da ultima linha
+            // reinicia o buffer pra plotar uma nova linha
+            if (hexSpan && logDiv.lastChild !== hexSpan) {
+                rxBinBuffer.length = 0;
+                hexSpan = null;
+            }
+            
+            rxBinBuffer.push(...value);
+
+            // enquanto houver linha completa
+            while ( rxBinBuffer.length >= hexCols ) {
+                const line = rxBinBuffer.splice(0, hexCols);
+                console.log('[RX-BIN] lineBytes:',line);
+                logHex(line);
+            }
+            
+            // sobra de bytes → re-renderiza
+            if (rxBinBuffer.length > 0) logHex(rxBinBuffer);
+
+            // autoScroll
+            if (autoScroll) logDiv.scrollTop = logDiv.scrollHeight;
         }else{
-            // início de um novo bloco
-            if (!startTime) {
-                startTime = performance.now();
-                timeout_max = startTime + TIMEOUT_MAX; // variar de acordo com o baudrate
-                timeout_stream = startTime + TIMEOUT_STREAM;
+            rxTextBuffer += decoder.decode(value);
+
+            if( rxTextBuffer.endsWith('\n') || rxTextBuffer.length > 10 ){
+                logAdd( rxTextBuffer );
+                rxTextBuffer = "";
+                startTime = null;
             }else{
-                const time = performance.now();
-                if( time >= timeout_stream || time >= timeout_max ){
-                    logAdd( rxBuffer );
-                    rxBuffer = "";
-                    startTime = null;
+                // início de um novo bloco
+                if (!startTime) {
+                    startTime = performance.now();
+                    timeout_max = startTime + TIMEOUT_MAX; // variar de acordo com o baudrate
+                    timeout_stream = startTime + TIMEOUT_STREAM;
                 }else{
-                    timeout_stream = time + TIMEOUT_STREAM;
+                    const time = performance.now();
+                    if( time >= timeout_stream || time >= timeout_max ){
+                        logAdd( rxTextBuffer );
+                        rxTextBuffer = "";
+                        startTime = null;
+                    }else{
+                        timeout_stream = time + TIMEOUT_STREAM;
+                    }
                 }
             }
         }
@@ -427,20 +513,75 @@ async function send(text, setEnd = true) {
     if (!connected) return;
     clearBtn.className = "disconnect";
     saveBtn.className   = "active";
-    let ending = "";
-    if( setEnd ){
-        endValue = document.getElementById("lineEnding").value;
-        if( endMap.has( endValue ) ){
-            ending = endMap.get(endValue);
+
+    let bytes;
+    let fullText = text;
+
+    if (binMode) {
+        // aceita: "10 45 40" ou "0xFF 0xAB" ou "10,45,40"
+        const values = text
+        .split(/[\s,]+/)
+        .map(v => {
+            v = v.trim();
+            if (!v) return NaN;
+
+            // 0xFF ou 0XFF
+            if (v.startsWith("0x") || v.startsWith("0X")) {
+                return parseInt(v, 16);
+            }
+
+            //// FF (hex sem prefixo)
+            //if (/^[0-9a-fA-F]{2}$/.test(v)) {
+            //    return parseInt(v, 16);
+            //}
+
+            // decimal padrão
+            return parseInt(v, 10);
+        })
+        .filter(v => !isNaN(v) && v >= 0 && v <= 255);
+        
+        bytes = new Uint8Array(values);
+
+        //const values = text
+        //    .split(/[\s,]+/)
+        //    .map(v => parseInt(v, 10))
+        //    .filter(v => !isNaN(v) && v >= 0 && v <= 255);
+    }else{
+        let ending = "";
+        if( setEnd ){
+            endValue = document.getElementById("lineEnding").value;
+            if( endMap.has( endValue ) ){
+                ending = endMap.get(endValue);
+            }
         }
+        console.log(`ending: ${new TextEncoder().encode(ending)}`)
+        fullText += ending;
+        bytes = new TextEncoder().encode(fullText);
     }
-    const fullText = text + ending;
-    const bytes = new TextEncoder().encode(fullText);
-    //console.log( `send:`,bytes);
+
+    console.log(`bytes: ${bytes}`);
+    
     await writer.write(bytes);
     if( showTx ){
-        logAdd(fullText, true);
+        if( binMode ){
+            logAdd(bytes.join(" "), true);
+        }else{
+            logAdd(fullText, true);
+        }
     }
+}
+
+function formatHexLine(bytes) {
+    const hex = bytes
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join(" ");
+
+    const ascii = bytes
+        .map(b => (b >= 32 && b <= 126) ? String.fromCharCode(b) : ".")
+        .join("");
+
+    // dois spans → estilização separada se quiser depois
+    return `<span class="hex-bytes">${hex.padEnd(hexCols * 3)}</span> <span class="hex-ascii">${ascii}</span>\n`;
 }
 
 function sendPreset(t) { send(t); }
@@ -471,6 +612,15 @@ function downloadLog() {
     URL.revokeObjectURL(url);
 }
 
+function toggleHex() {
+    showHex = !showHex;
+    const btn = document.getElementById("hexBtn");
+    btn.classList.toggle("active", showHex);
+    btn.classList.toggle("inactive", !showHex);
+
+    hexBuffer = []; // limpa ao alternar modo
+}
+
 function toggleTx() {
     showTx = !showTx;
     const btn = document.getElementById("txBtn");
@@ -490,6 +640,21 @@ function toggleTime() {
     const btn = document.getElementById("timeBtn");
     btn.classList.toggle("active", showTime);
     btn.classList.toggle("inactive", !showTime);
+}
+
+function toggleBin() {
+    binMode = !binMode;
+    const btn = document.getElementById("binBtn");
+    const input = document.getElementById("cmd");
+
+    btn.classList.toggle("active", binMode);
+    btn.classList.toggle("inactive", !binMode);
+
+    if (binMode) {
+        input.placeholder = "Ex: 10 45 40 (bytes)";
+    } else {
+        input.placeholder = "Digite comando e pressione Enter";
+    }
 }
 
 let history = [];
