@@ -244,6 +244,9 @@ const hexBtn     = document.getElementById("hexBtn");
 const binBtn     = document.getElementById("binBtn");
 let rxTextBuffer = "";
 
+// Logging
+let log_spanHex = null;
+
 const endMap = new Map([
     ["CR", "\r"],       // Carriage Return
     ["NL", "\n"],       // New Line / Line Feed
@@ -254,83 +257,222 @@ const endMap = new Map([
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 function timestamp() { return new Date().toLocaleTimeString("pt-BR"); }
 
-function renderSpan(span, text, outgoing=false, newLine = false) {
-    let prefix = "";
-    if (showTime) {
-        prefix += `[${timestamp()}]`;
-        if (showTx) {
-            prefix += outgoing ? "[TX]" : "[RX]";
-        }
-        prefix += " ";
-    } else if (outgoing && showTx) {
-        prefix += `[TX]${binMode ? "[BIN]" : "" } `;
+// coloca em span o conteudo formatado de data
+// se já houver um span e join=true, não imprime prefixo
+function renderLine(span, data, isTx = false, join = true) {
+
+    // --- detecta tipo do dado ---
+    let dataType = "unknown";
+    if (typeof data === "string") {
+        dataType = "text";
+    } else if (
+        data instanceof Uint8Array ||
+        data instanceof ArrayBuffer ||
+        Array.isArray(data)
+    ){
+        dataType = "bin";
     }
-    span.textContent = prefix + text;
+
+    const dataSource = ( isTx ? "TX" : "RX" );
+
+    console.log( `line(${dataSource}:${dataType}${join?"-join":""}) `, data );
+
+    // --- se o tipo ou fonte mudou, força novo span ---
+    if(
+        span && (
+            span.dataset.type !== dataType ||
+            span.dataset.source !== dataSource
+        )
+    ){
+        span = null;
+    }
+
+    // --- cria span se necessário ---
+    if (!span) {
+        join = false;
+        span = document.createElement("span");
+        span.dataset.type = dataType;
+        span.dataset.source = dataSource;
+        logDiv.appendChild(span);
+    }
+
+    // --- prefixo ---
+    let prefix = "";
+    if (!join) {
+        if (showTime) {
+            prefix += `[${timestamp()}]`;
+            if (showTx) prefix += `[${dataSource}]`;
+            prefix += " ";
+        } else if( showTx ){
+            prefix += `[${dataSource}]${binMode ? "[BIN]" : ""} `;
+        }
+    }
+
+    // === TEXTO ===
+    if (dataType === "text") {
+        if (join) {
+            span.textContent += data;
+        } else {
+            span.textContent = prefix + data;
+        }
+        return span;
+    }
+
+    // === BINÁRIO ===
+    if (dataType === "bin") {
+        let bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+        const hexText = formatHexLine(bytes);
+        if (join) {
+            span.innerHTML += hexText;
+        } else {
+            span.innerHTML = prefix + hexText;
+        }
+        return span;
+    }
+
+    // === DESCONHECIDO ===
+    console.warn("renderLine: tipo de dado não suportado", data);
+    span.textContent = prefix + "[unsupported data]";
+
+    return span;
 }
 
-function logAdd(text, outgoing=false) {
+let logOpenSpan = null;
+let logBinBuffer = [];
+let logLastSource = null;
 
-    let idx;
-    let last_line_complete = true;
+function log(data, isTx = false) {
 
-    console.log(text);
+    console.log( `log(${isTx?"TX":"RX"}): `, data );
 
-    // verifica se a ultima linha foi concluida com \n
-    let lastLine = logDiv.lastChild;
-    if (lastLine && lastLine instanceof HTMLSpanElement) {
-        if( lastLine.textContent.indexOf("\n") >= 0 ){
-            last_line_complete = true;
-        }else{
-            last_line_complete = false;
-        }
+    const source = isTx ? "TX" : "RX";
+
+    // troca RX/TX → fecha linha
+    if (logLastSource !== null && logLastSource !== source) {
+        logOpenSpan = null;
+        logBinBuffer.length = 0;
     }
+    logLastSource = source;
 
-    console.log( `add[${last_line_complete}] ${text}` );
-
-    let line_complete;
-    let line;
-
-    while( text.length > 0 ) {
-
-        if( (idx = text.indexOf("\n")) >= 0 ){
-            line = text.slice(0, idx + 1);
+    // === TEXTO ===
+    if (typeof data === "string") {
+        let text = data.replace(/\r/g, "");
+        let idx;
+        while ((idx = text.indexOf("\n")) >= 0) {
+            const line = text.slice(0, idx + 1);
             text = text.slice(idx + 1);
-            line_complete = true;
-        }else{
-            line = text;
-            text = "";
-            line_complete = false;
+            renderLine(logOpenSpan, line, isTx, true);
+            logOpenSpan = null;
+        }
+        if (text.length) {
+            logOpenSpan = renderLine(logOpenSpan, text, isTx, true);
+        }
+    }
+    // === BINÁRIO ===
+    else if (
+        data instanceof Uint8Array ||
+        data instanceof ArrayBuffer ||
+        Array.isArray(data)
+    ) {
+        const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+
+        logBinBuffer.push(...bytes);
+
+        while (logBinBuffer.length >= hexCols) {
+            renderLine(logOpenSpan, logBinBuffer.splice(0, hexCols), isTx, false);
+            logOpenSpan = null;
         }
 
-        if( binMode ){
-            line_complete = true;
-            last_line_complete = true;
-            if( !line.endsWith('\n') ){
-                line += '\n';
-            }
+        if (logBinBuffer.length > 0) {
+            logOpenSpan = renderLine(logOpenSpan, logBinBuffer, isTx, false);
         }
 
-        console.log( ` chunk[${line_complete}][${lastLine==null}] ${line}` );
-
-        if( last_line_complete || lastLine == null ){
-            lastLine = document.createElement("span");
-            renderSpan(lastLine, line, outgoing);
-            logDiv.appendChild(lastLine);
-        }else{
-            lastLine.textContent += line;
-        }
-
-        last_line_complete = line_complete;
-
-        if (autoScroll) logDiv.scrollTop = logDiv.scrollHeight;
+    }else{
+        console.warn("log: dado não suportado", data);
     }
 
+    if( autoScroll ) logDiv.scrollTop = logDiv.scrollHeight;
     //console.log("rx-line:",line);
     clearBtn.className = "disconnect";
     saveBtn.className   = "active";
-
 }
 
+async function readLoop() {
+    const decoder = new TextDecoder();
+
+    let rxTextBuffer = "";
+    let rxBinMode = showHex || binMode;
+
+    let flushTimer = null;
+    const TIMEOUT_STREAM = 60; // ms
+
+    function resetRx(newMode) {
+        rxTextBuffer = "";
+        rxBinMode = newMode;
+        clearFlushTimer();
+    }
+
+    function clearFlushTimer() {
+        if (flushTimer) {
+            clearTimeout(flushTimer);
+            flushTimer = null;
+        }
+    }
+
+    function scheduleFlush(delay) {
+        clearFlushTimer();
+        flushTimer = setTimeout(() => {
+            if (rxTextBuffer.length) {
+                log(rxTextBuffer);
+                rxTextBuffer = "";
+            }
+        }, delay);
+    }
+
+    while (connected) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        // impede que ocorra flush enquanto um pacote novo é verificado...
+        clearFlushTimer();
+
+        const isBin = showHex || binMode;
+        if (isBin !== rxBinMode) {
+            // se houver algo pendente (texto) loga antes de mudar
+            //if( !rxBinMode && rxTextBuffer.length ) log( rxTextBuffer, false ); // se o modo mudou pode plotar errado...
+            resetRx(isBin);
+        }
+
+        // === BINÁRIO ===
+        if (rxBinMode) {
+            log(value, false);
+            continue;
+        }
+
+        // === TEXTO ===
+        const chunk = decoder.decode(value, { stream: true });
+        rxTextBuffer += chunk;
+
+        const now = performance.now();
+
+        // flush imediato se achar \n
+        if (rxTextBuffer.includes("\n") || rxTextBuffer.length > 10) {
+            log(rxTextBuffer);
+            rxTextBuffer = "";
+            clearFlushTimer();
+            continue;
+        }
+
+        // timeout de stream (espera parar de chegar dado)
+        scheduleFlush(TIMEOUT_STREAM);
+    }
+
+    // limpa qualquer resto ao sair
+    if (rxTextBuffer.length) {
+        log(rxTextBuffer);
+    }
+    clearFlushTimer();
+}
 
 async function toggleConnection() {
     if (connected) {
@@ -405,110 +547,6 @@ async function disconnect() {
     presetButtons.forEach(btn => btn.classList.remove('active'));
 }
 
-async function readLoop() {
-    const decoder = new TextDecoder();
-
-    let hexSpan = null;
-
-    let rxTextBuffer = "";
-    let rxBinBuffer  = [];   // bytes remanescentes (< hexCols)
-
-    // Buffer input
-    let startTime = 0;
-
-    const TIMEOUT_STREAM = 20;   // tempo mínimo sem receber nada (ms)
-    const TIMEOUT_MAX    = 100;  // tempo máximo acumulando (ms)
-
-    let timeout_max = 0;
-    let timeout_stream = 0;
-
-    let rxBinMode = showHex || binMode;
-
-    function resetRx(newMode) {
-        rxTextBuffer = "";
-        rxBinBuffer.length = 0;
-        hexSpan = null;
-        startTime = null;
-        rxBinMode = newMode;
-    }
-
-    function logHex(line) {
-        // Se não houver linha aberta cria uma
-        if (!hexSpan) {
-            hexSpan = document.createElement("span");
-            logDiv.appendChild(hexSpan);
-        }
-        hexSpan.innerHTML = formatHexLine(line);
-        if( line.length >= hexCols ){
-            hexSpan = null;
-        }
-    }
-
-    while (connected) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        console.log('[RX] in:',value);
-
-        // Reinicia os buffers em caso de alteraçaõ de modo
-        const isBin = showHex || binMode;
-        const change = isBin != rxBinMode;
-        if( change ) resetRx(isBin);
-
-        if( rxBinMode ){
-            console.log('[RX-BIN] in:',value);
-            
-            // caso especial não usa logAdd (por enquanto)
-            
-            // caso tenha entrado algo depois da ultima linha
-            // reinicia o buffer pra plotar uma nova linha
-            if (hexSpan && logDiv.lastChild !== hexSpan) {
-                rxBinBuffer.length = 0;
-                hexSpan = null;
-            }
-            
-            rxBinBuffer.push(...value);
-
-            // enquanto houver linha completa
-            while ( rxBinBuffer.length >= hexCols ) {
-                const line = rxBinBuffer.splice(0, hexCols);
-                console.log('[RX-BIN] lineBytes:',line);
-                logHex(line);
-            }
-            
-            // sobra de bytes → re-renderiza
-            if (rxBinBuffer.length > 0) logHex(rxBinBuffer);
-
-            // autoScroll
-            if (autoScroll) logDiv.scrollTop = logDiv.scrollHeight;
-        }else{
-            rxTextBuffer += decoder.decode(value);
-
-            if( rxTextBuffer.endsWith('\n') || rxTextBuffer.length > 10 ){
-                logAdd( rxTextBuffer );
-                rxTextBuffer = "";
-                startTime = null;
-            }else{
-                // início de um novo bloco
-                if (!startTime) {
-                    startTime = performance.now();
-                    timeout_max = startTime + TIMEOUT_MAX; // variar de acordo com o baudrate
-                    timeout_stream = startTime + TIMEOUT_STREAM;
-                }else{
-                    const time = performance.now();
-                    if( time >= timeout_stream || time >= timeout_max ){
-                        logAdd( rxTextBuffer );
-                        rxTextBuffer = "";
-                        startTime = null;
-                    }else{
-                        timeout_stream = time + TIMEOUT_STREAM;
-                    }
-                }
-            }
-        }
-    }
-}
-
 async function send(text, setEnd = true) {
     if (!connected) return;
     clearBtn.className = "disconnect";
@@ -564,9 +602,10 @@ async function send(text, setEnd = true) {
     await writer.write(bytes);
     if( showTx ){
         if( binMode ){
-            logAdd(bytes.join(" "), true);
+            //log(bytes.join(" "), true);
+            log(bytes, true);
         }else{
-            logAdd(fullText, true);
+            log(fullText, true);
         }
     }
 }
@@ -612,15 +651,6 @@ function downloadLog() {
     URL.revokeObjectURL(url);
 }
 
-function toggleHex() {
-    showHex = !showHex;
-    const btn = document.getElementById("hexBtn");
-    btn.classList.toggle("active", showHex);
-    btn.classList.toggle("inactive", !showHex);
-
-    hexBuffer = []; // limpa ao alternar modo
-}
-
 function toggleTx() {
     showTx = !showTx;
     const btn = document.getElementById("txBtn");
@@ -642,6 +672,15 @@ function toggleTime() {
     btn.classList.toggle("inactive", !showTime);
 }
 
+function toggleHex() {
+    showHex = !showHex;
+    const btn = document.getElementById("hexBtn");
+    btn.classList.toggle("active", showHex);
+    btn.classList.toggle("inactive", !showHex);
+
+    hexBuffer = []; // limpa ao alternar modo
+}
+
 function toggleBin() {
     binMode = !binMode;
     const btn = document.getElementById("binBtn");
@@ -649,6 +688,10 @@ function toggleBin() {
 
     btn.classList.toggle("active", binMode);
     btn.classList.toggle("inactive", !binMode);
+
+    // Força HEX quando é BIN input
+    showHex = !binMode;
+    toggleHex();
 
     if (binMode) {
         input.placeholder = "Ex: 10 45 40 (bytes)";
