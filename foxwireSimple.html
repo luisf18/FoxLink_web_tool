@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>FoxWire Simple Tool</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #111;
+            color: #eee;
+            padding: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .box {
+            border: 1px solid #333;
+            padding: 12px;
+            margin-bottom: 16px;
+            border-radius: 6px;
+            background: #1a1a1a;
+        }
+
+        button {
+            margin-right: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+
+        input {
+            width: 80px;
+            padding: 4px;
+            margin-right: 6px;
+        }
+
+        .value {
+            display: inline-block;
+            min-width: 60px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h2>FoxWire – Simple Interface</h2>
+
+<div class="box">
+    <button id="btnConnect">Connect</button>
+    <strong>Status:</strong>
+    <span id="status">disconnected</span>
+</div>
+
+<div class="box">
+    <h3>Commands</h3>
+    <button id="btnReset">Reset</button>
+    <button id="btnRestore">Restore</button>
+    <button id="btnSave">Save</button>
+</div>
+
+<div class="box">
+    <h3>Read Register</h3>
+    Addr:
+    <input id="regAddr" type="number" min="0" max="31" value="0">
+    <button id="btnRead">Read</button>
+    Value:
+    <span class="value" id="regValue">--</span>
+</div>
+
+<script type="module">
+    import { FoxWire, FX_BASE } from "./js/foxwire.js";
+
+    const fx = new FoxWire(115200);
+    window.fx = fx;
+    const DEVICE_ADDR = 0; // endereço FoxWire do device
+
+    const statusEl = document.getElementById("status");
+    const regAddrEl = document.getElementById("regAddr");
+    const regValueEl = document.getElementById("regValue");
+
+    document.getElementById("btnConnect").onclick = async () => {
+        statusEl.textContent = "connecting...";
+        const ok = await fx.connect();
+        statusEl.textContent = ok ? "connected" : "error";
+    };
+
+    // -------------------------
+    // Buttons
+    // -------------------------
+
+    document.getElementById("btnReset").onclick = async () => {
+        const ans = await fx.reset(DEVICE_ADDR);
+        console.log("reset:", ans);
+    };
+
+    document.getElementById("btnRestore").onclick = async () => {
+        const ans = await fx.default(DEVICE_ADDR);
+        console.log("restore:", ans);
+    };
+
+    document.getElementById("btnSave").onclick = async () => {
+        const ans = await fx.save(DEVICE_ADDR);
+        console.log("save:", ans);
+    };
+
+    document.getElementById("btnRead").onclick = async () => {
+        const addr = parseInt(regAddrEl.value, 10) & 0x1F;
+
+        regValueEl.textContent = "...";
+
+        const ans = await fx.registerRead(DEVICE_ADDR, addr);
+
+        if (ans && ans.ok && ans.data?.length) {
+            const v = ans.data[0];
+            regValueEl.textContent =
+                "0x" + v.toString(16).padStart(2, "0") + " (" + v + ")";
+        } else {
+            regValueEl.textContent = "ERR";
+        }
+    };
+</script>
+
+</body>
+</html>

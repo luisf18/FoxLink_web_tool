@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>FoxWire Tester</title>
+
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    background: #111;
+    color: #eee;
+    padding: 16px;
+}
+
+h2 {
+    color: #ff8b39;
+    margin-bottom: 8px;
+}
+
+button {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button.red { background:#c0392b; color:#fff; }
+button.green { background:#27ae60; color:#fff; }
+button.gray { background:#555; color:#fff; }
+
+input, select {
+    padding: 6px;
+    border-radius: 6px;
+    border: none;
+    font-family: monospace;
+}
+
+.row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+#log {
+    background: #000;
+    font-family: monospace;
+    font-size: 13px;
+    padding: 8px;
+    height: 300px;
+    overflow-y: auto;
+    border-radius: 6px;
+    white-space: pre;
+}
+
+.tx { color: #ff9f43; }
+.rx { color: #2ecc71; }
+.meta { color:#888; }
+</style>
+</head>
+
+<body>
+
+<h2>🦊 FoxWire Tester</h2>
+
+<div class="row">
+    <button id="connectBtn" class="red">Connect</button>
+</div>
+
+<hr>
+
+<div class="row">
+    <input id="rawInput" style="flex:1"
+           placeholder='Ex: 0xE0 0x80 03 ou "hello\n"'>
+    <button class="gray" onclick="sendRaw()">Enviar</button>
+</div>
+
+<hr>
+
+<div class="row">
+    <label>Addr</label>
+    <input id="devAddr" value="0" size="4">
+    <button onclick="fwCheck()">CHECK</button>
+</div>
+
+<div class="row">
+    <input id="cmdVal" placeholder="cmd">
+    <button onclick="fwReadCmd()">READ cmd</button>
+    <button onclick="fwWriteCmd()">WRITE cmd</button>
+</div>
+
+<div class="row">
+    <input id="regAddr" placeholder="reg">
+    <input id="regVal" placeholder="val">
+    <button onclick="fwReadReg()">READ reg</button>
+    <button onclick="fwWriteReg()">WRITE reg</button>
+</div>
+
+<div class="row">
+    <input id="extAddr" placeholder="addr u16">
+    <input id="extSize" placeholder="len">
+    <button onclick="fwExtRead()">EXT READ</button>
+</div>
+
+<hr>
+
+<div id="log"></div>
+
+<script type="module">
+import { FoxWire } from "./js/foxwire.js";
+
+let fx = new FoxWire(115200);
+let connected = false;
+
+const logDiv = document.getElementById("log");
+const connectBtn = document.getElementById("connectBtn");
+
+function logHex(bytes, dir="RX") {
+    const hex = bytes.map(b=>b.toString(16).padStart(2,"0")).join(" ");
+    const ascii = bytes.map(b => (b>=32 && b<=126)?String.fromCharCode(b):".").join("");
+    const line = `${dir} | ${hex.padEnd(32)} | ${ascii}\n`;
+
+    const span = document.createElement("span");
+    span.className = dir === "TX" ? "tx" : "rx";
+    span.textContent = line;
+    logDiv.appendChild(span);
+    logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function parseInput(str) {
+    str = str.trim();
+
+    // texto entre aspas
+    if (str.startsWith('"') && str.endsWith('"')) {
+        return new TextEncoder().encode(
+            str.slice(1,-1)
+                .replace("\\n","\n")
+                .replace("\\r","\r")
+        );
+    }
+
+    return new Uint8Array(
+        str.split(/[\s,]+/).map(v=>{
+            if (v.startsWith("0x")) return parseInt(v,16);
+            if (/^[01]{8}$/.test(v)) return parseInt(v,2);
+            return parseInt(v,10);
+        }).filter(v=>!isNaN(v))
+    );
+}
+
+async function sendRaw() {
+    if (!connected) return;
+    const bytes = parseInput(rawInput.value);
+    logHex([...bytes],"TX");
+    await fx.sendRaw(bytes);
+}
+
+connectBtn.onclick = async () => {
+    if (!connected) {
+        connected = await fx.connect();
+        if (connected) {
+            connectBtn.textContent = "Connected";
+            connectBtn.className = "green";
+        }
+    } else {
+        await fx.disconnect();
+        connected = false;
+        connectBtn.textContent = "Connect";
+        connectBtn.className = "red";
+    }
+};
+
+// ===== FoxWire helpers =====
+
+function addr() { return parseInt(devAddr.value) & 0x1F; }
+
+async function fwCheck(){
+    const r = await fx.check(addr(),true);
+    logHex([r.value],"RX");
+}
+
+async function fwReadCmd(){
+    const c = parseInt(cmdVal.value);
+    const r = await fx.command(addr(),c,null,true);
+    logHex([r.value],"RX");
+}
+
+async function fwWriteCmd(){
+    const c = parseInt(cmdVal.value);
+    const v = parseInt(regVal.value);
+    const r = await fx.command(addr(),c,v,true);
+    logHex([r.value],"RX");
+}
+
+async function fwReadReg(){
+    const r = await fx.register_read(addr(),parseInt(regAddr.value),true);
+    logHex([r.value],"RX");
+}
+
+async function fwWriteReg(){
+    const r = await fx.register_write(
+        addr(),
+        parseInt(regAddr.value),
+        parseInt(regVal.value),
+        true
+    );
+    logHex([r.value],"RX");
+}
+
+async function fwExtRead(){
+    const r = await fx.extended_read(
+        addr(),
+        parseInt(extAddr.value),
+        parseInt(extSize.value),
+        "reg",
+        true
+    );
+    if(r?.data) logHex(r.data,"RX");
+}
+</script>
+
+</body>
+</html>
