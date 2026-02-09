@@ -1,0 +1,23 @@
+## Todo Versão 1.1.0
+- FoxWire.js / Hardware
+    - versão nova de "foxwire_ver" indicando suporte a read/write extended
+    - Definição dos outros endereços do Extended e retornos
+        - ACK, NACK ...
+- FoxWire.js
+    - extendedWrite
+    - extendedCommnds
+    - no readType ajuste inteligente se usa readExtend
+- Devices.js / device_card.js
+    - suporte a JSON
+    - Verificação da versão do FoxWire
+    - Informar versão e outros dados
+    - Informar uuid num box talvez
+- UI (Widgets.js / device_card.js / device_card.js)
+    - Agrupar widgets por campo
+    - Widget de check com mais flexibilidade, inserção por mascara e valor base fixo
+    - widget com valor e visibilidade condicional, em função de outro valor
+    - "title" dos widgets informando o endereço e etc.
+        - colocar no device tree input de "title"
+    - widgets de botão / ações como mover ou escolher cor
+    - widget de cor!!
+- Suporte completo aos ESCs duplos
