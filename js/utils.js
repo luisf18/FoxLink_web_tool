@@ -82,7 +82,24 @@ function numberToBytes(value, byteLength, signed, endian) {
 }
 
 function bytesToTypedValue(bytes, type = 'u8', littleEndian = true) {
-    if (!Array.isArray(bytes) || bytes.length === 0)
+    // -------------------------
+    // normalização de entrada
+    // -------------------------
+    if (bytes instanceof Uint8Array) {
+        // ok
+    } else if (bytes instanceof ArrayBuffer) {
+        bytes = new Uint8Array(bytes);
+    } else if (bytes instanceof DataView) {
+        bytes = new Uint8Array(bytes.buffer);
+    } else if (Array.isArray(bytes)) {
+        bytes = Uint8Array.from(bytes.map(b => (b ?? 0) & 0xFF));
+    } else if (typeof bytes === "number") {
+        bytes = Uint8Array.from([bytes & 0xFF]);
+    } else {
+        return null;
+    }
+
+    if (bytes.length === 0)
         return null;
 
     // String

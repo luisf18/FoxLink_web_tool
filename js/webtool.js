@@ -129,12 +129,12 @@ export async function scanDevices() {
             }
         }else{
             try {
-                let ans = await app.fx.check(i,true); // Aguarda a resposta antes de continuar
+                let ans = await app.fx.check(i); // Aguarda a resposta antes de continuar
                 if (ans.ok) {
                     console.log(`ID check:`);
-                    ans = await app.fx.getID( i, true );
+                    ans = await app.fx.getID( i );
                     if( ans.ok ){
-                        id = ans.value;
+                        id = ans.data;
                         found = true;
                     }
                 }

@@ -40,6 +40,43 @@
             min-width: 60px;
             font-weight: bold;
         }
+
+        .row {
+            margin-top: 6px;
+        }
+
+        button {
+            background: #2a2a2a;
+            color: #eee;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #333;
+        }
+
+        .value.ok {
+            color: #0f0;
+        }
+
+        .value.err {
+            color: #f44;
+        }
+
+        .value.idle {
+            color: #aaa;
+        }
+
+        button.ok {
+            background: #1f4;
+            color: #000;
+        }
+
+        button.err {
+            background: #f44;
+            color: #000;
+        }
     </style>
 </head>
 <body>
@@ -47,9 +84,12 @@
 <h2>FoxWire – Simple Interface</h2>
 
 <div class="box">
+    <h3>Device</h3>
     <button id="btnConnect">Connect</button>
-    <strong>Status:</strong>
-    <span id="status">disconnected</span>
+    Addr:
+    <input id="deviceAddr" type="number" min="0" max="31" value="0">
+    <button id="btnCheck">Check</button>
+    <span class="value idle" id="deviceStatus">--</span>
 </div>
 
 <div class="box">
@@ -60,12 +100,27 @@
 </div>
 
 <div class="box">
-    <h3>Read Register</h3>
-    Addr:
+    <h3>Register</h3>
+    Reg:
     <input id="regAddr" type="number" min="0" max="31" value="0">
+    Val:
+    <input id="regWriteVal" type="number" min="0" max="255" value="0">
     <button id="btnRead">Read</button>
-    Value:
-    <span class="value" id="regValue">--</span>
+    <button id="btnWrite">Write</button>
+    <span class="value idle" id="regValue">--</span>
+</div>
+
+<div class="box">
+    <h3>Extended</h3>
+    Addr:
+    <input id="extAddr" type="number" value="0">
+    Len:
+    <input id="extLen" type="number" value="1">
+    Val:
+    <input id="extWriteVal" type="number" value="0">
+    <button id="btnExtRead">Read</button>
+    <button id="btnExtWrite">Write</button>
+    <span class="value idle" id="extValue">--</span>
 </div>
 
 <script type="module">
@@ -73,43 +128,72 @@
 
     const fx = new FoxWire(115200);
     window.fx = fx;
-    const DEVICE_ADDR = 0; // endereço FoxWire do device
+    let deviceAddr = 0; // endereço FoxWire do device
 
     const statusEl = document.getElementById("status");
     const regAddrEl = document.getElementById("regAddr");
     const regValueEl = document.getElementById("regValue");
+    const deviceAddrEL = document.getElementById("deviceAddr");
+    const connectBtnEL = document.getElementById("btnConnect");
 
-    document.getElementById("btnConnect").onclick = async () => {
-        statusEl.textContent = "connecting...";
+    function updateConnectButton() {
+        if (fx.isConnected()) {
+            connectBtnEL.textContent = "Disconnect";
+            connectBtnEL.className = "ok";
+        } else {
+            connectBtnEL.textContent = "Connect";
+            connectBtnEL.className = "err";
+        }
+    }
+    updateConnectButton();
+
+    function getDeviceAddr(){
+        deviceAddr = parseInt(deviceAddrEL.value, 10) & 0x1F;
+        return deviceAddr;
+    }
+
+    connectBtnEL.onclick = async () => {
+        if (fx.isConnected()) {
+            await fx.disconnect();
+            updateConnectButton();
+            return;
+        }
+        connectBtnEL.textContent = "Connecting...";
+        connectBtnEL.className = "";
         const ok = await fx.connect();
-        statusEl.textContent = ok ? "connected" : "error";
+        updateConnectButton();
+        if (!ok) {
+            connectBtnEL.textContent = "Error";
+            connectBtnEL.className = "err";
+        }
     };
+
 
     // -------------------------
     // Buttons
     // -------------------------
 
     document.getElementById("btnReset").onclick = async () => {
-        const ans = await fx.reset(DEVICE_ADDR);
+        const ans = await fx.reset(getDeviceAddr());
         console.log("reset:", ans);
     };
 
     document.getElementById("btnRestore").onclick = async () => {
-        const ans = await fx.default(DEVICE_ADDR);
+        const ans = await fx.default(getDeviceAddr());
         console.log("restore:", ans);
     };
 
     document.getElementById("btnSave").onclick = async () => {
-        const ans = await fx.save(DEVICE_ADDR);
+        const ans = await fx.save(getDeviceAddr());
         console.log("save:", ans);
     };
 
     document.getElementById("btnRead").onclick = async () => {
-        const addr = parseInt(regAddrEl.value, 10) & 0x1F;
+        const regAddr = parseInt(regAddrEl.value, 10) & 0x1F;
 
         regValueEl.textContent = "...";
 
-        const ans = await fx.registerRead(DEVICE_ADDR, addr);
+        const ans = await fx.registerRead(getDeviceAddr(), regAddr);
 
         if (ans && ans.ok && ans.data?.length) {
             const v = ans.data[0];
@@ -119,6 +203,100 @@
             regValueEl.textContent = "ERR";
         }
     };
+
+    const deviceStatusEl = document.getElementById("deviceStatus");
+    const regWriteValEl = document.getElementById("regWriteVal");
+    const extAddrEl = document.getElementById("extAddr");
+    const extLenEl = document.getElementById("extLen");
+    const extWriteValEl = document.getElementById("extWriteVal");
+    const extValueEl = document.getElementById("extValue");
+
+    // -------------------------
+    // Device check
+    // -------------------------
+    document.getElementById("btnCheck").onclick = async () => {
+        deviceStatusEl.textContent = "...";
+        deviceStatusEl.className = "value idle";
+
+        const ans = await fx.check(getDeviceAddr());
+        if (ans.ok) {
+            deviceStatusEl.textContent = "OK";
+            deviceStatusEl.className = "value ok";
+        } else {
+            deviceStatusEl.textContent = "FAIL";
+            deviceStatusEl.className = "value err";
+        }
+    };
+
+    // -------------------------
+    // Register read
+    // -------------------------
+    document.getElementById("btnRead").onclick = async () => {
+        const reg = parseInt(regAddrEl.value) & 0x1F;
+        regValueEl.textContent = "...";
+        regValueEl.className = "value idle";
+
+        const ans = await fx.registerRead(getDeviceAddr(), reg);
+        if (ans?.ok && ans.data?.length) {
+            const v = ans.data[0];
+            regValueEl.textContent = `0x${v.toString(16)} (${v})`;
+            regValueEl.className = "value ok";
+        } else {
+            regValueEl.textContent = "ERR";
+            regValueEl.className = "value err";
+        }
+    };
+
+    // -------------------------
+    // Register write
+    // -------------------------
+    document.getElementById("btnWrite").onclick = async () => {
+        const reg = parseInt(regAddrEl.value) & 0x1F;
+        const val = parseInt(regWriteValEl.value) & 0xFF;
+
+        regValueEl.textContent = "...";
+        regValueEl.className = "value idle";
+
+        const ans = await fx.registerWrite(getDeviceAddr(), reg, val);
+        regValueEl.textContent = ans.ok ? "OK" : "FAIL";
+        regValueEl.className = ans.ok ? "value ok" : "value err";
+    };
+
+    // -------------------------
+    // Extended read
+    // -------------------------
+    document.getElementById("btnExtRead").onclick = async () => {
+        extValueEl.textContent = "...";
+        extValueEl.className = "value idle";
+
+        const addr = parseInt(extAddrEl.value);
+        const len = parseInt(extLenEl.value);
+
+        const ans = await fx.extendedRead(getDeviceAddr(), addr, len);
+        if (ans?.ok) {
+            extValueEl.textContent = fx.toHexLine(ans.data);
+            extValueEl.className = "value ok";
+        } else {
+            extValueEl.textContent = "ERR";
+            extValueEl.className = "value err";
+        }
+    };
+
+    // -------------------------
+    // Extended write (simples)
+    // -------------------------
+    document.getElementById("btnExtWrite").onclick = async () => {
+        extValueEl.textContent = "...";
+        extValueEl.className = "value idle";
+
+        const addr = parseInt(extAddrEl.value);
+        const val = parseInt(extWriteValEl.value) & 0xFF;
+
+        const ans = await fx.extended(getDeviceAddr(), 0x81, [val], 1);
+        extValueEl.textContent = ans?.ok ? "OK" : "FAIL";
+        extValueEl.className = ans?.ok ? "value ok" : "value err";
+    };
+
 </script>
 
 </body>

@@ -2,36 +2,6 @@
 // FOXWIRE 
 // ================================================
 
-// valores comuns a todos os dispositivos
-export const FX_BASE = Object.freeze({
-    cmd: {
-        DEVICE_ID_L:        0x00,
-        DEVICE_ID_H:        0x01,
-        LOT_L:              0x02,
-        LOT_H:              0x03,
-        LOT_DATE_L:         0x04,
-        LOT_DATE_H:         0x05,
-        FOXWIRE_VERSION_ID: 0x06,
-        FIRMWARE_ID:        0x07,
-        FIRMWARE_VERSION:   0x08,
-        REQUEST_WRITE:      0x09,
-        MCU_RESET:          0x0A,
-        MCU_VOLTAGE:        0x0B,
-        MCU_TEMPERATURE:    0x0C,
-        READ:               0x0D
-    },
-    cmd_write: {
-        SAVE:               0x01,
-        RESTORE:            0x02,
-        RESTORE_KEPP_ADDR:  0x03
-    },
-    reg: {
-        ADDR:     0x00,
-        FX_CTRL:  0x01,
-    }
-});
-
-
 export class FoxWire {
     constructor(baudRate = 115200) {
         
@@ -42,50 +12,209 @@ export class FoxWire {
         this.busy = false;
         this.busy_counter = 0;
 
-        this.timeout_read = 20;
-        this.timeout_write = 5;
+        this.timeoutRead = 5;
         this.retry = false;
 
-        this.logLevel = "lowLevel";
+        this.logLevel = "midleLevel";
         this.logLUT = {
             "error": 0,
             "warn": 1,
             "info": 2,
-            "midleLevel": 3,
-            "lowLevel": 4
+            "apiLevel": 3,
+            "highLevel": 4,
+            "midleLevel": 5,
+            "lowLevel": 6
         };
 
+        // request
+        this._requestQueue = [];
+        this._requestBusy  = 0;
+        this._requestTimeout = 300; // ms
+        this._inRequest = false;
+
+        this._warnedSendDeprecated = false;
+
+        this.LOG_STYLE = {
+            error:      "color:#ff5555;font-weight:bold",
+            warn:       "color:#ffcc00;font-weight:bold",
+            info:       "color:#4aa3ff",
+            lowLevel:   "color:#888",
+            midleLevel: "color:#aaa",
+            highLevel:  "color:#aaa",
+            apiLevel:   "color:#004FA3",
+
+            tx: "color:#00A857;font-weight:bold",   // verde
+            rx: "color:#7A00A8;font-weight:bold",    // roxo
+            ok: "color:#03E000;font-weight:bold",
+            name: "color:#0092F5;font-weight:bold",
+            fail: "color:#E00000;font-weight:bold"
+        };
+
+        this.LOG_OK = [`%c(ok)`, this.LOG_STYLE.ok];
+        this.LOG_FAIL = [`%c(fail)`, this.LOG_STYLE.fail];
+        this.LOG_TX = [`%cTX:`, this.LOG_STYLE.tx];
+        this.LOG_RX = [`%cRX:`, this.LOG_STYLE.rx];
+
+        // Headers
         this.HEAD_CHECK = 0x80;
         this.HEAD_READ  = 0xA0;
         this.HEAD_WRITE = 0xC0;
         this.HEAD_EXTENDED  = 0xE0;
         this.HEAD_CMD = 0x00;
         this.HEAD_REG = 0x80;
+
+        // comandos
+        this.CMD_DEVICE_ID_L        = 0x00;
+        this.CMD_DEVICE_ID_H        = 0x01;
+        this.CMD_LOT_L              = 0x02;
+        this.CMD_LOT_H              = 0x03;
+        this.CMD_LOT_DATE_L         = 0x04;
+        this.CMD_LOT_DATE_H         = 0x05;
+        this.CMD_FOXWIRE_VERSION_ID = 0x06;
+        this.CMD_FIRMWARE_ID        = 0x07;
+        this.CMD_FIRMWARE_VERSION   = 0x08;
+        this.CMD_REQUEST_WRITE      = 0x09;
+        this.CMD_MCU_RESET          = 0x0A;
+        this.CMD_MCU_VOLTAGE        = 0x0B;
+        this.CMD_MCU_TEMPERATURE    = 0x0C;
+        this.CMD_READ               = 0x0D;
+        
+        // comandos com valor
+        this.CMD2_SAVE              = 0x01;
+        this.CMD2_RESTORE           = 0x02;
+        this.CMD2_RESTORE_KEPP_ADDR = 0x03;
+        
+        // Registradores fixos
+        this.REG_ADDR = 0x00;
+        this.REG_CTRL = 0x01;
     }
 
     /*------------------
        logging
     ------------------*/
-
+    
     log(level, ...args) {
-        if (this.logLUT[level] <= this.logLUT[this.logLevel]) {
-            const tag = level.toUpperCase();
-            console.log(`[FoxWire][${tag}]`, ...args);
+        if (this.logLUT[level] > this.logLUT[this.logLevel]) return;
+
+        const tag    = level.toUpperCase();
+        const prefix = `[FoxWire][${tag}]`;
+        const style  = this.LOG_STYLE[level];
+
+        // log já estilizado?
+        if (typeof args[0] === "string" && args[0].includes("%c")) {
+
+            // prefix entra como %c também
+            if (style) {
+                console.log(
+                    `%c${prefix} ` + args[0],
+                    style,
+                    ...args.slice(1)
+                );
+            } else {
+                console.log(
+                    `${prefix} ` + args[0],
+                    ...args.slice(1)
+                );
+            }
+
+            return;
+        }
+
+        // log normal
+        if (style) {
+            console.log(`%c${prefix}`, style, ...args);
+        } else {
+            console.log(prefix, ...args);
         }
     }
+
 
     logE(...a){ this.log("error", ...a); }
     logW(...a){ this.log("warn", ...a); }
     logI(...a){ this.log("info", ...a); }
     logLL(...a){ this.log("lowLevel", ...a); }
     logML(...a){ this.log("midleLevel", ...a); }
+    logHL(...a){ this.log("highLevel", ...a); }
+    logA(...a){ this.log("apiLevel", ...a); }
 
     toHexLine(data) {
         if (!data) return "";
+        if (typeof data === "number") data = [data];
         return Array.from(data, b =>
-            (b & 0xFF).toString(16).padStart(2, "0")
+            (b & 0xFF).toString(16).toUpperCase().padStart(2, "0")
         ).join(" ");
     }
+
+    logStatus(ok) { 
+        return (ok ? this.LOG_OK : this.LOG_FAIL);
+    }
+
+    _valueLen(v) {
+        if (v == null) return 0;
+
+        if (typeof v === "number") return 1;
+        if (typeof v === "string") return v.length;
+
+        if (v instanceof Uint8Array) return v.length;
+        if (v instanceof ArrayBuffer) return v.byteLength;
+
+        if (Array.isArray(v)) return v.length;
+
+        // fallback (obj estranho, etc)
+        return 1;
+    }
+
+
+    logPack(name, ok, tx = null, rx = null) {
+        const parts  = [];
+        const styles = [];
+
+        const txLen = this._valueLen(tx);
+        const rxLen = this._valueLen(rx);
+
+        const [statusStr, statusStyle] = this.logStatus(ok);
+
+        parts.push(`%c${name.toUpperCase()} ${statusStr}`);
+        styles.push(this.LOG_STYLE.name);
+        styles.push(statusStyle);
+
+        if (tx != null) {
+            parts.push(`\n  %cTX(${txLen}): ${typeof tx === "string" ? tx : this.toHexLine(tx)}`);
+            styles.push(this.LOG_STYLE.tx);
+        }
+
+        if (rx != null) {
+            parts.push(`\n  %cRX(${rxLen}): ${typeof rx === "string" ? rx : this.toHexLine(rx)}`);
+            styles.push(this.LOG_STYLE.rx);
+        }
+
+        return [
+            parts.join(""),
+            ...styles
+        ];
+    }
+
+    logTx( ...a ){
+        return [
+            ...this.LOG_TX,
+            ...a
+        ];
+    }
+
+    logRx( ...a ){
+        return [
+            ...this.LOG_RX,
+            ...a
+        ];
+    }
+
+
+    // sempre visivel
+    //_textStyled(label, style, ...a) { return [`%c${label}`, style, ...a]; }
+    //logTx(...a) { return this._logFrag("TX:", this.LOG_STYLE.tx, ...a); }
+    //logRx(...a) { return this._textStyled("RX:", this.LOG_STYLE.rx, ...a); }
+    //logTxHex(v) { this.logTxHex( this.toHexLine(v) ); }
+    //logRxHex(v) { this.logRxHex( this.toHexLine(v) ); }
 
     /*-----------------------
        Serial connection
@@ -145,15 +274,45 @@ export class FoxWire {
     }
 
     /*--------------------------------
-       Low Level: receive and send
+       Low Level: _write and _read
     --------------------------------*/
 
-    async receiveRaw(n = 1, timeout = 50) {
+    async _write(data) {
+        if (!this.isConnected()) return;
+
+        if (!this._inRequest) {
+            this.logW("_write called outside request()");
+        }
+
+        const payload = this.toU8Array(data);
+        if (!(payload instanceof Uint8Array)) {
+            this.logE("_write: invalid payload", data);
+            return;
+        }
+
+        const writer = this.port.writable.getWriter();
+        try {
+            await writer.write(payload);
+            this.logLL("tx:", this.toHexLine(payload));
+        } catch (e) {
+            this.logE("_write:", e);
+        } finally {
+            writer.releaseLock();
+        }
+    }
+
+
+    async _read(n = 1, timeout = this.timeoutRead) {
         if (!this.isConnected()) return new Uint8Array([]);
 
-        const reader = this.port.readable.getReader();
+        if (!this._inRequest) {
+            this.logW("Protocol warning: _read called outside request()");
+        }
+
         const result = new Uint8Array(n);
         let offset = 0;
+
+        const reader = this.port.readable.getReader();
 
         try {
             while (offset < n) {
@@ -166,7 +325,6 @@ export class FoxWire {
 
                 if (!res || res.timeout || res.done || !res.value) break;
 
-                // consome TODOS os bytes recebidos
                 for (let i = 0; i < res.value.length && offset < n; i++) {
                     result[offset++] = res.value[i];
                 }
@@ -176,61 +334,109 @@ export class FoxWire {
         }
 
         const out = result.slice(0, offset);
-        this.logLL("rx:", this.toHexLine(out) );
+        this.logLL("rx:", this.toHexLine(out));
         return out;
     }
 
-    async sendRaw(data) {
-        if (!this.isConnected()) return;
 
-        const payload = this.toU8Array(data);
-
-        if (!(payload instanceof Uint8Array)) {
-            this.logE("sendRaw: invalid payload", data);
-            return;
-        }
-
-        const writer = this.port.writable.getWriter();
-        try {
-            await writer.write(payload);
-        } catch (e) {
-            this.logE("sendRaw:", e);
-        } finally {
-            this.logLL("tx:", this.toHexLine(payload) );
-            writer.releaseLock();
-        }
-    }
 
     /*--------------------------------
-       Midle Level: send
+       Midle Level: request
     --------------------------------*/
 
-    // envia e remove os bytes repetidos (eco)
-    async send( data, sizeIn = 1, timeout = 1000 ){
+    async _withRequestLock(fn, timeout = this._requestTimeout) {
+        return new Promise(resolve => {
+            const task = async () => {
+                try {
+                    resolve(await fn());
+                } catch (e) {
+                    this.logE("RequestLock Fail: ",e);
+                    resolve({ ok: false, data: [], error: e });
+                } finally {
+                    this._nextRequest();
+                }
+            };
+
+            const entry = { task };
+
+            entry.timer = setTimeout(() => {
+                const i = this._requestQueue.indexOf(entry);
+                if (i >= 0) {
+                    this._requestQueue.splice(i, 1);
+                    this.logW("requestLock timeout");
+                    resolve({ ok: false, data: [], error: "lock-timeout" });
+                }
+            }, timeout);
+
+            this._requestQueue.push(entry);
+
+            // WARN se fila crescendo demais
+            const pending = this._requestQueue.length + (this._requestBusy ? 1 : 0);
+            if (pending > 3) {
+                this.logW(
+                    `RequestLock congestion: ${pending} pending requests`
+                );
+            }
+
+            this._pumpRequest();
+        });
+    }
+
+    _pumpRequest() {
+        if (this._requestBusy) return;
+        const entry = this._requestQueue.shift();
+        if (!entry) return;
+
+        clearTimeout(entry.timer);
+        this._requestBusy = true;
+        entry.task();
+    }
+
+    _nextRequest() {
+        this._requestBusy = false;
+        this._pumpRequest();
+    }
+
+    async request(data, sizeIn = 1, timeout = this.timeoutRead) {
         if (!this.isConnected()) {
             return { ok: false, data: new Uint8Array([]) };
         }
 
-        data = this.toU8Array(data);
-        const sizeOut = data.length;
+        return this._withRequestLock(async () => {
 
-        // TX
-        await this.sendRaw(data);
+            data = this.toU8Array(data);
+            const sizeOut = data.length;
 
-        // RX
-        const rx = await this.receiveRaw( sizeOut + sizeIn, timeout );
+            this._inRequest = true;
+            // write
+            await this._write(data);
+            // read
+            const rx = await this._read(sizeOut + sizeIn, timeout);
+            this._inRequest = false;
 
-        // remove eco
-        const payload = rx.slice(sizeOut);
-        const ans = {
-            ok: payload.length === sizeIn,
-            data: payload
-        };
+            // process
+            const payload = rx.slice(sizeOut); // remove eco
+            const ans = {
+                ok: payload.length === sizeIn,
+                data: payload
+            };
 
-        this.logLL( `send-rx(${ans.ok?"ok":"fail"}): ${ans.data} from ${rx}` );
+            this.logML(
+                ...this.logPack('request',ans.ok, data, payload )
+            );
 
-        return ans;
+            return ans;
+        });
     }
+
+    async send(...args) {
+        if (!this._warnedSendDeprecated) {
+            this._warnedSendDeprecated = true;
+            this.logW("send() is deprecated, use request() instead");
+        }
+        return this.request(...args);
+    }
+
 
     /*--------------------------------
        Pack Level utils:
@@ -294,7 +500,7 @@ export class FoxWire {
         packet[0] = head | (addr & 0x1F);
         packet.set(payload, 1);
 
-        return await this.send(packet, sizeIn);
+        return await this.request(packet, sizeIn);
     }
 
     async check(addr){
@@ -312,6 +518,14 @@ export class FoxWire {
                 ansOut.ok = true;
             }
         }
+        this.logI(
+            ...this.logPack(
+                `[DEV-${addr}] check`,
+                ansOut.ok
+            ),
+            ':',
+            ansOut.arg
+        );
         return ansOut;
     }
     
@@ -355,7 +569,7 @@ export class FoxWire {
 
     // Comandos com chave pra dificultar escrita acidental
     async commandKey( addr, cmd ) {
-        const keyIn = await this.command( addr, FX_BASE.cmd.REQUEST_WRITE );
+        const keyIn = await this.command( addr, this.CMD_REQUEST_WRITE );
         if( keyIn.ok ){
             const keyOut = 0xff&(255-keyIn.data[0]);
             return await this.command( addr, cmd, keyOut );
@@ -377,90 +591,6 @@ export class FoxWire {
                 [ (2) addr-u16: 0x0400 ][ (2) crc-u16: 0x0263 ] 
     -> CRC = soma todos os bytes menos os do proprio CRC
     ==========================================================/*/
-
-    /*
-    async extended(addr, cmd, data = null, len = null) {
-        const head = this.HEAD_EXTENDED | (addr&0xFF);
-
-        // ======================
-        // EXTENDED Command
-        // ======================
-        if( cmd < 0x80 ) {
-            this.logI("extendedLow", { addr, cmd });
-
-            const packet = new Uint8Array(3);
-            packet[0] = head;
-            packet[1] = cmd & 0xFF;
-
-            // CRC8 = soma dos bytes anteriores
-            packet[2] = (packet[0] + packet[1]) & 0xFF;
-
-            return await this.send(packet, 2); // espera ACK(2)
-        }
-
-        // ======================
-        // EXTENDED
-        // ======================
-        if( len === null && data == null ){
-            this.logE("expected data or len");
-        }
-        const payload = this.toU8Array(data ?? []);
-
-        if( len == null ){
-
-        }
-        const realLen = len & 0xFF;
-
-        if (realLen === 0) {
-            this.logW("extendedHigh with zero length");
-        }
-
-        if (payload.length > 256) {
-            this.logW("Extended packet payload exceeds 256 bytes", payload.length);
-        }
-
-        this.logI("extendedHigh", {
-            addr,
-            cmd,
-            len: realLen,
-            payload: payload.length
-        });
-
-        const size =
-            1 + // head
-            1 + // cmd
-            1 + // len
-            2 + // addr u16
-            payload.length +
-            2;  // crc16
-
-        const packet = new Uint8Array(size);
-        let i = 0;
-
-        packet[i++] = head;
-        packet[i++] = cmd & 0xFF;
-        packet[i++] = realLen;
-        packet[i++] = addr & 0xFF;
-        packet[i++] = (addr >> 8) & 0xFF;
-
-        packet.set(payload, i);
-        i += payload.length;
-
-        // CRC16 = soma de todos os bytes anteriores
-        let crc = 0;
-        for (let j = 0; j < i; j++) crc += packet[j];
-        crc &= 0xFFFF;
-
-        packet[i++] = crc & 0xFF;
-        packet[i++] = (crc >> 8) & 0xFF;
-
-        return await this.send(packet, 2); // ACK ou resposta
-    }
-    async extended( addr, cmd, data = null, len=null ){
-
-        this.send( addr,  )
-    }
-    */
     
     async extendedRead( addr, dataAddr, size, base = "reg", log = true ) {
 
@@ -482,8 +612,8 @@ export class FoxWire {
             this.HEAD_EXTENDED|(addr&0x1F),
             0x80, // cmd-read
             (size-1)&0xFF,
-            (dataAddr>>8)&0xFF,
-            dataAddr&0xFF
+            dataAddr&0xFF,
+            (dataAddr>>8)&0xFF
         ];
 
         // por enquanto só le reg
@@ -493,14 +623,16 @@ export class FoxWire {
         packet.push(crc & 0xFF);        // LSB
         packet.push((crc >> 8) & 0xFF); // MSB
 
-        this.logI(`[EXTENDED READ TX][crc: ${crc.toString(16)}]`,
-            packet.map(b => b.toString(16).padStart(2, "0")).join(" ")
-        );
-
-        const ans = await this.send( this.toU8Array(packet) );
+        const ans = await this.request( this.toU8Array(packet), size+2 );
         let ansOut = { ok: false, data: [], crc: 0 };
 
         if ( !ans || !ans.ok || !ans.data || ans.data.length <= 2 ) {
+            this.logHL(
+                ...this.logPack( 
+                    `[EXTENDED-READ]`,
+                    false
+                )
+            );
             return ansOut;
         }
 
@@ -516,12 +648,14 @@ export class FoxWire {
         // -----------------------------
         const crc_calc = this.checksum(ansOut.data) & 0xFFFF;
         ansOut.ok = (ansOut.crc === crc_calc);
-        
-        this.logI("[EXTENDED READ RX DATA]",
-            ansOut.data.map(b => b.toString(16).padStart(2, "0")).join(" ")
-        );
-        this.logI(
-            `[CRC] rx=0x${ansOut.crc.toString(16)} calc=0x${crc_calc.toString(16)}`
+
+        this.logML(
+            ...this.logPack( 
+                `[EXTENDED-READ]`,
+                ansOut.ok,
+                null,
+                ans.data
+            )
         );
 
         return ansOut;
@@ -531,25 +665,51 @@ export class FoxWire {
        High Level comamnds
     --------------------------------*/
 
+    async scan({ getId = false } = {}) {
+        const devices = new Map();
+
+        for (let addr = 0; addr <= 0x1F; addr++) {
+            const ans = await this.check(addr);
+            if (!ans?.ok) continue;
+
+            const info = {};
+
+            if (getId) {
+                const idAns = await this.getID(addr);
+                info.id = idAns?.ok ? idAns.data : null;
+            }
+
+            devices.set(addr, info);
+        }
+
+        return devices;
+    }
+
+
     // Comando de reset
     async reset(addr) {
-        return await this.command( addr, FX_BASE.cmd.MCU_RESET );
+        return await this.command( addr, this.CMD_MCU_RESET );
+    }
+
+    // Comando de read
+    async read(addr) {
+        return await this.command( addr, this.CMD_READ );
     }
 
     // Comando de save
     async save(addr) {
-        return await this.commandKey( addr, FX_BASE.cmd_write.SAVE );
+        return await this.commandKey( addr, CMD2_SAVE );
     }
 
     // Comando de default keep addr
     async default(addr) {
-        return await this.commandKey( addr, FX_BASE.cmd_write.RESTORE_KEPP_ADDR );
+        return await this.commandKey( addr, CMD2_RESTORE_KEPP_ADDR );
     }
 
     // get ID
     async getID(addr) {
-        const ID_L = await this.command(addr,FX_BASE.cmd.DEVICE_ID_L);
-        const ID_H = await this.command(addr,FX_BASE.cmd.DEVICE_ID_H);
+        const ID_L = await this.command(addr,this.CMD_DEVICE_ID_L);
+        const ID_H = await this.command(addr,this.CMD_DEVICE_ID_H);
         if (ID_L.ok && ID_H.ok) {
             return { ok: true, data: ((ID_H.data<<8)|ID_L.data) };
         }
@@ -558,8 +718,8 @@ export class FoxWire {
 
     // get Firmware Version
     async getFirmwareVersion(addr) {
-        const FW_ID  = await this.command(addr,FX_BASE.cmd.FIRMWARE_ID);
-        const FW_VER = await this.command(addr,FX_BASE.cmd.FIRMWARE_VERSION);
+        const FW_ID  = await this.command(addr,this.CMD_FIRMWARE_ID);
+        const FW_VER = await this.command(addr,this.CMD_FIRMWARE_VERSION);
         if (FW_ID.ok && FW_VER.ok) {
             return { ok: true, data: (FW_ID.data*1000 + FW_VER.data) };
         }
@@ -569,10 +729,10 @@ export class FoxWire {
     // get ID
     async getLot(addr) {
         const pipeline = [
-            FX_BASE.cmd.LOT_DATE_H,
-            FX_BASE.cmd.LOT_DATE_L,
-            FX_BASE.cmd.LOT_H,
-            FX_BASE.cmd.LOT_L
+            this.CMD_LOT_DATE_H,
+            this.CMD_LOT_DATE_L,
+            this.CMD_LOT_H,
+            this.CMD_LOT_L
         ];
         let results = [];
         for(const cmd of pipeline){
@@ -598,7 +758,7 @@ export class FoxWire {
 
     
     // High level Read
-    async readType(deviceAddr, dataAddr, type = 'u8', len = 1, littleEndian = true, useExtended=true) {
+    async readType(deviceAddr, dataAddr, type = 'u8', len = 1, useExtended=true, littleEndian = true) {
         if (len <= 0) return null;
 
         const validTypes = ['u8','u16','u32','i8','i16','i32','char','str'];
@@ -618,26 +778,54 @@ export class FoxWire {
         const totalBytes = (type === 'str' || type === 'char') ? len : len * byteSize;
         let bytes = [];
 
-        // [2] Leitura byte a byte
+        
+        let ok = false;
+
+        // Modo Extended
+        // ideal para muitos bytes
         if( useExtended ){
             const ans = await this.extendedRead(
                 deviceAddr, 0x0400 + dataAddr, totalBytes
             );
-            if (!(ans?.ok)) return null;
-            bytes = ans.data;
-        }else{
-            for (let i = 0; i < totalBytes; i++) {
-                const ans = await this.registerRead(
-                    deviceAddr, dataAddr + i 
-                );
-                if (!ans?.ok) return null;
-                bytes.push(ans.value & 0xFF);
+            if( ans?.ok ){
+                ok = true;
+                bytes = ans.data;
             }
         }
 
-        this.logI( `ReadType[${deviceAddr}][${deviceAddr}]: ${bytes}` );
+        // modo classico de Leitura byte a byte
+        // (lento pra varios bytes)
+        if( !ok ){
+            if( (totalBytes + dataAddr) > 32 ){
+                this.logW( "readType cannot read address register bigger than 31 with READ pack, use extended" );
+            }else{
+                ok = true;
+                for (let i = 0;i < totalBytes; i++) {
+                    const ans = await this.registerRead(
+                        deviceAddr, dataAddr + i 
+                    );
+                    if (ans?.ok){
+                        bytes.push(ans.data & 0xFF);
+                        continue;
+                    }
+                    ok = false;
+                    break;
+                }
+            }
+        }
 
-        return bytesToTypedValue( bytes, type, littleEndian );
+        const ret = ok ? bytesToTypedValue( this.toU8Array(bytes), type, littleEndian ) : null;
+        this.logA(
+            ...this.logPack(
+                `[DEV-${deviceAddr}] ReadType<${type}-0x${dataAddr.toString(16)}>`,
+                ok
+            ),
+            ":",
+            ret,
+            bytes
+        );
+
+        return ret;
     }
 
 }

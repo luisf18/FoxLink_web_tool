@@ -1,4 +1,3 @@
-import { FX_BASE } from "./foxwire.js";
 import { MultiLineGraph } from "./graph.js"
 
 // ====================================================
@@ -199,9 +198,9 @@ export class FxdeviceCard {
     async graphUpdate(){
         //console.log("|-- ", this.graph);
         if( !this.graph ) return;
-        const ans = await this.fx.command(this.addr, FX_BASE.cmd.READ);
+        const ans = await this.fx.read(this.addr);
         if( ans.ok ){
-            this.graph.addValue(0, ans.value);
+            this.graph.addValue(0, ans.data);
             this.graph.update();
         }
     }
@@ -218,7 +217,7 @@ export class FxdeviceCard {
             const wg = this.param[p].wg;
             if( addr ){ // Addr=0 é o endereço do dispositivo
                 const ans = await this.fx.readType(this.addr, addr, wg.outputType, wg.outputLen );
-                console.log( `[Device ${this.addr}] reg ${addr} -> type ${wg.outputType} len ${wg.outputLen}\n  - get: `, ans );
+                console.log( `[FX-CARD][Device ${this.addr}] reg ${addr} -> type ${wg.outputType} len ${wg.outputLen}\n  - get: `, ans );
                 if (ans !== null) {
                     wg.setSavedValue(ans);
                 } else {
