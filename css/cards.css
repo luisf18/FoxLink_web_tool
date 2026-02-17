@@ -96,7 +96,7 @@
 .card-device-img {
     width: 50px;
     height: 50px;
-    border-radius: 50%;        /* 🔵 circular */
+    border-radius: 50%;
     object-fit: contain;
     background: #ffffff;       /* fundo branco */
     padding: 3px;              /* espaço interno */
@@ -119,7 +119,7 @@
 .card-footer {
     padding: 10px;
     display: flex;
-    flex-direction: column;   /* 👈 empilha */
+    flex-direction: column;   /* empilha */
     gap: 10px;
     background: #fafafa;
 }
@@ -130,22 +130,37 @@
 }
 
 .card-footer-buttons button {
-    flex: 1;                  /* 👈 todos iguais */
+    flex: 1;                  /* todos iguais */
     padding: 7px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-size: 12px;
-    background: #ff842b;
-    color: #ffffff;
+    font-weight: bold;
+    background:#ffb27b /*#ff832be3*/;
+    color: #93440d;
     transition: 
         background-color 0.15s ease,
         transform 0.1s ease,
         box-shadow 0.1s ease;
 }
 
+
+.card-footer-buttons #btn_save.pending,
+.card-footer-buttons .pending{
+    color:   #755500 /*#755500*/;
+    background: #ffdb77 /*#ffbb00b1*/;
+}
+
+/*.card-footer-buttons #btn_apply.ok,*/
+.card-footer-buttons #btn_save {
+    color: #047016;
+    background: #9affa2 /*#00d3239d #00d957 #00cc30*/ /*#00d957  #00cc30*/;
+}
+
 .card-footer-buttons button:hover {
-    background: #af4900;              /* levemente mais escuro */
+    /* background: #af4900; levemente mais escuro */
+    filter: brightness(1.2);
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 

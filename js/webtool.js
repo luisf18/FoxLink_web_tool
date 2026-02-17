@@ -1,17 +1,26 @@
 import { resolveDevice } from "./device_resolver.js";
 import { FxdeviceCard } from "./device_card.js";
+import { DebugLog } from "./debug.js";
 
 // Variavies globais da aplicação
 export let app = {
-    version: "1.0.1",
+    version: "1.1.0",
     devMode: false, // set true to test UI (sem FoxWire)
     connected: false,
     fx: null,
     devices: new Map(),
-    cardsInterval: null
+    cardsInterval: null,
+    log: new DebugLog( "WEBTOOL", "#aa00ff" )
 };
 
 window.app = app;
+window.resolveDevice = resolveDevice;
+
+const cardContainer = document.querySelector('#cards');
+
+/* ========================
+    Init WebTool
+========================= */
 
 // Faz o bind dos botões da side bar
 export async function webtoolInit() {
@@ -22,20 +31,22 @@ export async function webtoolInit() {
     if (!app.devMode) {
         const { FoxWire } = await import("./foxwire.js");
         app.fx = new FoxWire();
-        console.log("FoxWire carregado em modo dev");
+        app.fx.log.level = "info";
+        //console.log("FoxWire carregado em modo dev");
     }
 }
 
-export async function webtoolUpdate() {
+export async function cardsUpdate() {
     // Atualização em tempo real os graficos
     for (const [addr, card] of app.devices) {
         await card.update();
-        await delay(30);
+        await delay(10);
     }
 }
 
-
-// Botão de conexão
+/* ========================
+    Conexão
+========================= */
 export async function toggleConnection() {
 
     let connected = false;
@@ -45,10 +56,11 @@ export async function toggleConnection() {
         connected = app.connected;
     }else{
         if(app.fx.isConnected()){
-            console.log("DESCONECTANDO...");
+            app.log.i("DESCONECTANDO...");
             await app.fx.disconnect();
+            // precisa encerrar os devices!!
         }else{
-            console.log("CONECTANDO...");
+            app.log.i("CONECTANDO...");
             await app.fx.connect();
         }
         connected = app.fx.isConnected();
@@ -57,8 +69,9 @@ export async function toggleConnection() {
     const btn = document.getElementById("connectBtn");
     const scanBtn = document.querySelector(".scan-btn");
 
+    clearDevices();
+
     if(connected){
-        clearDevices();
         btn.classList.add("connected", "just-connected");
         btn.querySelector(".text").textContent = "Connected";
         scanBtn.disabled = false;
@@ -72,23 +85,34 @@ export async function toggleConnection() {
     }
 }
 
+/* ========================
+    Devices Manage
+========================= */
+
 function clearDevices(){
     if( app.cardsInterval )
         clearInterval(app.cardsInterval);
     app.devices.clear();
-    const cc = document.querySelector('#cards');
-    cc.innerHTML = "";
+    cardContainer.innerHTML = "";
     // Somente pra testes
+    /*/
     if( app.devMode ){
         // Cria e coloca todos os cards como offline
         [0,1].forEach(i => {
-            const card = new FxdeviceCard( i, i, resolveDevice(1,0) );
+            const card = new FxdeviceCard( i, i, resolveDevice({1,0}) );
             app.devices.set( i, card );
             card.setConnected( false );
-            cc.appendChild( card.el );
+            cardContainer.appendChild( card.el );
         });
         delay(200);
     }
+    /*/
+
+    // clear list
+    const results = document.getElementById("scanResults");
+    const list    = document.getElementById("scanList");
+    list.innerHTML = "";
+    results.style.display = "none";
 }
 
 // Escaneia a linha buscando dispositivos conectados
@@ -109,72 +133,46 @@ export async function scanDevices() {
         }
     }
 
+
     list.innerHTML = "";
     results.style.display = "none";
     progressWrap.style.display = "block";
     progressBar.style.width = "0%";
 
-    for (let i = 0; i <= 32; i++) {
-
-        let progress = Math.ceil( 100*(i/32) );
-        if (progress > 100) progress = 100;
+    await app.fx.scan("id fxv version", async ({ addr, found, info }) => {
+        let progress = Math.ceil( 100*(addr/32) );
         progressBar.style.width = progress + "%";
-
-        let found = false;
-        let id = 0;
-        if( app.devMode ){
-            await delay(120);
-            if( Math.floor(Math.random() * 10) % 2 ){
-                found = true;
-            }
-        }else{
-            try {
-                let ans = await app.fx.check(i); // Aguarda a resposta antes de continuar
-                if (ans.ok) {
-                    console.log(`ID check:`);
-                    ans = await app.fx.getID( i );
-                    if( ans.ok ){
-                        id = ans.data;
-                        found = true;
-                    }
-                }
-            }catch (error) {
-                console.error(`Erro ao verificar endereço ${i}:`, error);
-            }
+        if (found) {
+            await addDeviceCard(addr, info);
+            await delay( 20 );
         }
-
-        if( found ){
-            console.log(`Endereço ${i}: arg ${id}`);
-            discoverDevice(i,id);
-        }
-
-    }
+    });
 
     progressWrap.style.display = "none";
 
+    // cria uma task pra atualizar os cards
     if( app.devices.size ){
         if( app.cardsInterval )
             clearInterval(app.cardsInterval);
-        app.cardsInterval = setInterval( webtoolUpdate, 400 );
+        app.cardsInterval = setInterval( cardsUpdate, 400 );
     }
 }
 
-function discoverDevice(addr,device_id) {
-
-    console.log(`[discover device] addr ${addr} list:`,app.devices);
-
+async function addDeviceCard(addr,info) {
+    
+    app.log.i(`[addCard][DEV-${addr}] info:`,info);
+    
     let card = null;
+    const deviceId = info?.id ?? null;
     const card_id = app.devices.size;
-    const cardContainer = document.querySelector('#cards');
-
-    //let hasCard = 
-
     if( app.devices.has( addr ) ){
         card = app.devices.get(addr);
     }else{
-        const options = resolveDevice( device_id ,0);
+        const options = await resolveDevice( info );
         if (options){
-            card = new FxdeviceCard( card_id, addr, options, app );
+            app.log.i(`[addCard][DEV-${addr}] op:`,options);
+            card = new FxdeviceCard( card_id, addr, info, options, app );
+            await card.init();
             if( !card.el ){
                 card = null;
             }
@@ -189,13 +187,19 @@ function discoverDevice(addr,device_id) {
     if(card)
         card.setConnected();
 
-    // Adiciona na Lista ------------------------------
+    /* ----------------------------------------
+        Adiciona na Lista Lateral de devices
+     ---------------------------------------- */
     const results = document.getElementById("scanResults");
     const list    = document.getElementById("scanList");
     const div     = document.createElement("div");
 
     div.className = "scan-item";
-    div.textContent = `Addr ${addr} - ID${device_id}`;
+    div.textContent = `Addr ${addr} - ID 0x${
+        deviceId != null
+        ? "0x" + deviceId.toString(16)
+        : "N/A"
+    }`;
     div.onclick = () => {
         console.log( "card: ", addr );
         if (!card || !card.el) return;
@@ -208,13 +212,19 @@ function discoverDevice(addr,device_id) {
     list.appendChild(div);
     results.style.display = "block";
 
+    /* ----------------------------------------
+        Scroll
+     ---------------------------------------- */
+    // scroll na lista
     div.scrollIntoView({ behavior: "smooth", block: "nearest" });
-
+    // scroll no card
     card?.el.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
         inline: "nearest"
     });
+
+    app.log.i(`[addCard][DEV-${addr}] END`);
 }
 
 function openRepo() {

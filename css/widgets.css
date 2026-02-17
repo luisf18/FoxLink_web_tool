@@ -119,12 +119,38 @@ input[type="range"] {
     height: 13px;
     border-radius: 50%;
     background: #dc3545;
+
+    position: relative;
+    cursor: pointer;
 }
-/* Status ok */
-.status.ok {
-    background: #28a745;
+/* Status */
+.status.saved.applied { background: #28a745; }
+.status.saved { background: #2c87ff; }
+.status.applied { background: #ffd12c; }
+
+/*
+.widget_tooltip {
+    display: none;
+    position: absolute;
+    top: 120%;
+    left: 0;
+    background: #222;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 100;
 }
 
+.status:hover .widget_tooltip {
+    display: block;
+}
+
+.green  { color: #00cc00; }
+.blue   { color: #0099ff; }
+.yellow { color: #ffcc00; }
+.red    { color: #ff4444; }
+*/
 
 .checkbox-group-vertical {
     margin-top: 6px;

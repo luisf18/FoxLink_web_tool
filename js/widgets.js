@@ -89,14 +89,27 @@ class Widget {
                 this.realFromAbstract(opts.abstractLimit[1])
             );
         }
+
+        // status
+        this.STATUS_NONE    = 0; // vermelho
+        this.STATUS_APPLIED = 1; // amarelo
+        this.STATUS_SAVED   = 2; // azul
+        this.STATUS_SAVED_AND_APPLIES =  // verde
+            this.STATUS_APPLIED | 
+            this.STATUS_SAVED;
+        this.status = this.STATUS_NONE;
         
         this.defaultValue = opts.defaultValue ?? 0;
         this.savedValue   = opts.savedValue ?? 0;
         this.currentValue = this.savedValue;
-        this.dirty        = false;
+        this.appliedValue = this.savedValue;
+        this.isSaved      = false;
+        this.isApplied    = false;
 
         this.el = document.createElement('div');
         this.el.className = 'widget';
+
+        this.change_callback = null;
 
 
         //console.log(
@@ -132,7 +145,7 @@ class Widget {
                             <path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/>
                         </svg>
                     </span>
-                    <span class="home-btn" title="Restaurar padrão">
+                    <span class="home-btn" title="valor padrão">
                         <svg xmlns="http://www.w3.org/2000/svg"
                             width="16" height="16"
                             fill="currentColor"
@@ -142,10 +155,22 @@ class Widget {
                             <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293z"/>
                         </svg>
                     </span>
-                    <span class="status" title="Salvo?"></span>
+                    <span class="status" title="status:\nverde: salvo e aplicado\nazul: salvo apenas\namarelo: aplicado apenas\nvermelho: nem salvo nem aplicado"></span>
                 </div>
             </div>
         `;
+
+        /*
+        // tooltip do status
+        <span class="status">
+            <div class="widget_tooltip">
+                <div class="green">Verde: salvo e aplicado</div>
+                <div class="blue">Azul: salvo apenas</div>
+                <div class="yellow">Amarelo: aplicado apenas</div>
+                <div class="red">Vermelho: nem salvo nem aplicado</div>
+            </div>
+        </span>
+        */
 
         this.elRow    = this.el.querySelector('.widget-row');
         this.elMain   = this.el.querySelector('.widget-main');
@@ -192,6 +217,8 @@ class Widget {
                 this.setFromAbstract(this.elAbsInp.value);
             };
         }
+
+        this.isApplied = true;
 
     }
 
@@ -244,6 +271,7 @@ class Widget {
             this.setValue(this.elRealInp2.value);
         };
     }
+
     renderCheck() {
         this.elCheck = document.createElement('div');
         this.elCheck.className = "checkbox-group-vertical";
@@ -311,18 +339,37 @@ class Widget {
         return a;
     }
 
+    //_checkIsSaved(v) {
+    //    return this.isSaved = (v !== this.savedValue);
+    //}
+
+    updateStatus( ){
+        this.isApplied = (this.currentValue == this.appliedValue);
+        this.isSaved   = (this.currentValue == this.savedValue);
+        this.status = (this.isSaved<<1) | this.isApplied;
+    }
+
     setValue(v) {
         v = this.clamp(v);
         this.currentValue = v;
-        this.dirty = (v !== this.savedValue);
+        this.updateUIValue();
+        if( this.change_callback ){
+            this.change_callback(this);
+        }
+    }
+
+    setAppliedValue(v) {
+        v = this.clamp(v);
+        this.currentValue = v;
+        this.appliedValue = v;
         this.updateUIValue();
     }
 
     setSavedValue(v) {
         v = this.clamp(v);
-        this.savedValue   = v;
         this.currentValue = v;
-        this.dirty        = false;
+        this.appliedValue = v;
+        this.savedValue   = v;
         this.updateUIValue();
     }
 
@@ -335,6 +382,8 @@ class Widget {
     }
 
     updateUIValue(){
+
+        this.updateStatus();
 
         //console.log(
         //    `Wg-${this.name} | ` +
@@ -352,7 +401,7 @@ class Widget {
         if (this.elReturn) {
             this.elReturn.classList.toggle(
                 'active',
-                this.currentValue == this.savedValue
+                this.isSaved
             );
         }
 
@@ -360,7 +409,7 @@ class Widget {
         const abstract = this.abstractFromReal( this.currentValue );
         [
             this.elHideAbsInp,
-            this.elAbsInp,
+            this.elAbsInp
         ].forEach(el => {
             if (!el) return;   // se não existe, ignora
             el.value = abstract;
@@ -385,8 +434,10 @@ class Widget {
             this.elHideAbsSpan.textContent = `${abstract}`;
         if (this.elRealSpan)
             this.elRealSpan.textContent = `[${this.currentValue}]`;
-        if (this.elStatus)
-            this.elStatus.classList.toggle('ok', !this.dirty);
+        if (this.elStatus){
+            this.elStatus.classList.toggle('saved', this.isSaved);
+            this.elStatus.classList.toggle('applied', this.isApplied);
+        }
     }
 
     /* =================================================
