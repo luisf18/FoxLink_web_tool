@@ -1,0 +1,46 @@
+{
+    "0": {
+        "model": "IrKey",
+        "graphOptions": {
+            "points": 60,
+            "autoScale": true,
+            "min": 0,
+            "max": 1,
+            "hideLegend": true,
+            "hideYAxis": true,
+            "variables": [ { "name": "read", "color": "orange" } ]
+        },
+        "param": {
+            "name": {
+                "addr": 47,
+                "wg": {
+                    "name": "Name",
+                    "type": "string",
+                    "defaultValue": "IrKey",
+                    "outputLen": 16
+                }
+            },
+            "startProtocols": {
+                "addr": "0x03",
+                "wg": {
+                    "name": "Start Protocols",
+                    "type": "select",
+                    "defaultValue": 1,
+                    "selOptions":{
+                        "SONY":1,
+                        "SONY and SAMSUNG":3
+                    }
+                }
+            },
+            "CTRL":{
+                "addr": "0x02",
+                "wg": {
+                    "name": "Options",
+                    "type": "check",
+                    "defaultValue": 0,
+                    "checkOptions": ["Log enable"]
+                }
+            }
+        }
+    }
+}

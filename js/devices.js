@@ -1,5 +1,6 @@
 /* ============================================================
     DeviceTree - Insira Aqui as Informações dos Dispositivos
+    // descontinuado... agora esta em json
 =============================================================== */
 
 export const deviceRegistry = {

@@ -46,9 +46,12 @@
 <pre id="output"></pre>
 
 <script type="module">
-import { deviceRegistry, deviceDefs } from "./js/devices.js";
+//import { deviceRegistry, deviceDefs } from "./js/devices.js";
 import { resolveDevice } from "./js/device_resolver.js";
 
+window.resolveDevice = resolveDevice;
+
+/*/
 const modelSel = document.getElementById("modelSelect");
 const versionSel = document.getElementById("versionSelect");
 const idInput = document.getElementById("idInput");
@@ -59,7 +62,7 @@ const output = document.getElementById("output");
 for (const id in deviceRegistry) {
     const opt = document.createElement("option");
     opt.value = id;
-    opt.textContent = `${deviceRegistry[id].name} (id=${id})`;
+    opt.textContent = `${deviceRegistry[id].name} (id=0x${id.toString(16)})`;
     modelSel.appendChild(opt);
 }
 
@@ -88,7 +91,7 @@ function updateOutput() {
         const id = Number(idInput.value);
         const v  = Number(verInput.value);
 
-        const dev = resolveDevice(id, v);
+        const dev = resolveDevice({id: id, fwv: v});
         output.textContent = JSON.stringify(dev, null, 2);
     } catch (e) {
         output.textContent = e.message;
@@ -115,6 +118,8 @@ verInput.oninput = updateOutput;
 // init
 modelSel.value = Object.keys(deviceRegistry)[0];
 modelSel.onchange();
+
+/*/
 </script>
 
 </body>

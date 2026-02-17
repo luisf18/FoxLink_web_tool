@@ -1,0 +1,124 @@
+{
+    "0": {
+        "model": "ESC 2x Brushed",
+        
+        "struct":{
+
+            "motor":{
+
+                "_prefix": "M$ ",
+
+                "config": {
+                    "offset": 0,
+                    "wg": {
+                        "type": "check",
+                        "defaultValue": 0,
+                        "checkOptions": [ "Bidirectional", "Invert", "limit Min", "limit Max" ]
+                    }
+                },
+                "min": {
+                    "offset": 1,
+                    "wg": {
+                        "name": "min power",
+                        "type": "slide",
+                        "defaultValue": 0,
+                        "abstract": [0, 100]
+                    }
+                },
+                "max": {
+                    "offset": 2,
+                    "wg": {
+                        "name": "max power",
+                        "type": "slide",
+                        "defaultValue": 255,
+                        "abstract": [0, 100]
+                    }
+                },
+                "ch_center": {
+                    "offset": 3,
+                    "wg": {
+                        "name": "ch center",
+                        "type": "slide",
+                        "defaultValue": 255,
+                        "abstract": [1000, 2000]
+                    }
+                },
+                "ch_min": {
+                    "offset": 4,
+                    "wg": {
+                        "name": "ch min",
+                        "type": "slide",
+                        "defaultValue": 255,
+                        "abstract": [1000, 2000]
+                    }
+                },
+                "ch_max": {
+                    "offset": 5,
+                    "wg": {
+                        "name": "ch max",
+                        "type": "slide",
+                        "defaultValue": 255,
+                        "abstract": [1000, 2000]
+                    }
+                },
+                "ch_deadband": {
+                    "offset": 6,
+                    "wg": {
+                        "name": "ch deadband",
+                        "type": "slide",
+                        "defaultValue": 255,
+                        "abstract": [1000, 2000]
+                    }
+                }
+
+            }
+        },
+
+        "param": {
+            "name": {
+                "addr": 47,
+                "wg": {
+                    "name": "Name",
+                    "type": "string",
+                    "defaultValue": "BESC 2x",
+                    "outputLen": 16
+                }
+            },
+            "basic": {
+                "addr": "0x03",
+                "wg": {
+                    "name": "Basic config.",
+                    "type": "check",
+                    "defaultValue": 0,
+                    "checkOptions": [ "Mix", "swap channels" ]
+                }
+            },
+            
+            "failsafe": {
+                "addr": "0x07",
+                "wg": {
+                    "name": "Failsafe delay",
+                    "type": "slide",
+                    "defaultValue": 63,
+                    "abstract": [148, 1020]
+                }
+            },
+
+            "_motor_1": 12,
+            
+            "_motor_2": 20
+
+        }
+    },
+
+    "1":{
+        "struct":{
+            "motor":{
+                "min": null
+            }
+        },
+        "param": {
+            "_motor_1": 13
+        }
+    }
+}

@@ -1,0 +1,69 @@
+{
+    "0": {
+        "model": "FX-S50",
+        "image": "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png",
+        "graphOptions": {
+            "points": 60,
+            "autoScale": true,
+            "min": 0,
+            "max": 1,
+            "hideLegend": true,
+            "hideYAxis": true,
+            "variables": [ { "name": "read", "color": "orange" } ]
+        },
+        "param": {
+            "name": {
+                "addr": "0x08",
+                "wg": {
+                    "name": "Name",
+                    "type": "string",
+                    "defaultValue": "FX-S50",
+                    "outputLen": 16
+                }
+            },
+            "Mode": {
+                "addr": "0x06",
+                "wg": {
+                    "name": "Mode",
+                    "type": "select",
+                    "defaultValue": 0,
+                    "selOptions":{
+                        "Digital": 0,
+                        "Analog": 1
+                    }
+                }
+            },
+            "ledFreq": {
+                "addr": "0x02",
+                "wg": {
+                    "name": "EmitterFreq",
+                    "type": "slide",
+                    "defaultValue": 120
+                }
+            },
+            "ledPower": {
+                "addr": "0x03",
+                "wg": {
+                    "name": "Led Power",
+                    "type": "slide",
+                    "defaultValue": 30,
+                    "limit": [0,100]
+                }
+            },
+            "FilterTop": {
+                "addr": "0x04",
+                "wg": {
+                    "name": "Filter Size",
+                    "defaultValue": 15
+                }
+            },
+            "FilterTh": {
+                "addr": "0x05",
+                "wg": {
+                    "name": "Filter Th.",
+                    "defaultValue": 6
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "0x001": {
+        "path": "fxs50",
+        "type": "sensor" 
+    },
+    "0x020": {
+        "path": "irkey",
+        "type": "sensor"
+    },
+    "0x200": {
+        "path": "besc8p",
+        "type": "ESC brushed"
+    }
+}
