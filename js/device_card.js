@@ -49,6 +49,10 @@ export class FxdeviceCard {
         this.graph      = null;
     }
 
+    /* =================================================
+      Funções Foxwire
+    ================================================= */
+    
     async retry_until_ok(f, n=3, delayMs = 20) {
         for (let i = 0; i < n; i++) {
             const ans = await f();
@@ -58,10 +62,191 @@ export class FxdeviceCard {
         return false;
     }
 
-    async _reset() {
-        return await this.retry_until_ok( () => { return this.fx.reset(this.addr); } );
+    async _fx_retry_until_ok(f, options = {}, ...a) {
+        if (!this.fx) return null;
+
+        const { n = 3, delayMs = 20 } = options;
+
+        const fn = f.bind(this.fx); // bind uma vez
+
+        for (let i = 0; i < n; i++) {
+            const ans = await fn(this.addr, ...a);
+
+            if (ans.ok) return ans;
+
+            await new Promise(r => setTimeout(r, delayMs));
+        }
+
+        return null;
     }
 
+    async _reset() {
+        return (await this._fx_retry_until_ok( this.fx.reset ) !== null);
+    }
+
+    async getBasicInfo(){
+        const fw = this.fx.getFirmwareVersion(this.addr);
+        const lot = this.fx.getLot(this.addr);
+        if( fw.ok ) this.firmwareVersion = fw.value;
+        if( lot.ok ) this.lot = lot.date;
+        //this.foxWireVersion
+    }
+
+    async _getFxv( ){
+        const ans = await this._fx_retry_until_ok( this.fx.getFoxWireVersion )
+        return ( ans ? ans.data : 0 );
+    }
+
+    async _save(){
+        return ( await this._fx_retry_until_ok( this.fx.save ) != null );
+    }
+
+    async _default(){
+        return ( await this._fx_retry_until_ok( this.fx.restore ) != null );
+    }
+
+    async _writeReg( addr, byte, opt={} ){
+        return ( await this._fx_retry_until_ok( this.fx.registerWrite, opt, addr, byte ) != null );
+    }
+
+    async _readReg( addr, byte, opt={} ){
+        return await this._fx_retry_until_ok( this.fx.registerRead, opt, addr, byte );
+    }
+
+    async _writeBytes( addr, bytes, opt={} ){
+        
+        if( !this.fx ) return false;
+        
+        if( this.info.fxv >= 2 ){
+            console.log( "try extenderWrite: ", bytes );
+            return (
+                await this._fx_retry_until_ok( this.fx.extendedWrite, opt, addr, bytes ) != null
+            );
+        }
+
+        // registerWrite não acessa addr maior que 31
+        if( bytes.length + addr >= 32 ) return false;
+
+        for (let i = 0; i < bytes.length; i++) {
+            if( ! await this._writeReg( addr+i,bytes[i] ) )
+                return false;
+        }
+
+        return true;
+    }
+
+    /* =================================================
+      Buttons Actions
+    ================================================= */
+
+    // Read
+    async read( saved = false ){
+        
+        if( !this.param || !this.fx ) return;
+        
+        for( const p in this.param ){
+            
+            const addr = this.param[p].addr;
+            const wg = this.param[p].wg;
+
+            const value = ( 
+                addr ? 
+                await this.fx.readType(
+                    this.addr,
+                    addr,
+                    wg.outputType,
+                    wg.outputLen,
+                    ( this.info.fxv >= 2 )
+                ) :
+                this.addr
+            );
+            
+            if (value !== null) {
+                ( saved ? 
+                    wg.setSavedValue(value) :
+                    wg.setAppliedValue(value) 
+                );
+            }
+
+            this.log.packI(
+                "read",
+                (value !== null),
+                null,
+                value,
+                `${wg.name} 0x${addr.toString(16)} <${wg.outputType}-${wg.outputLen}> `
+            );
+        }
+
+        this.updateButtons();
+    }
+
+    // Apply
+    async apply( readAtEnd = true ){
+        if( !this.param || !this.fx ) return;
+        for( const p in this.param ){
+            let addr = this.param[p].addr;
+            const wg = this.param[p].wg;
+            const bytes = wg.output();
+            let ok = false;
+            if( addr == 0 ){
+                // se é o mesmo não precisa reescreve
+                if( wg.currentValue == this.addr ) continue
+                // endereço do dispositivo na rede FoxWire
+                // [todo!] precisa verifica se outro dispositivo esta usando o novo endereço!!
+                if( await this._writeReg( 0, wg.currentValue ) ){
+                    ok = true;
+                    this.addr = wg.currentValue;
+                    wg.setAppliedValue( this.addr );
+                }
+            }else{
+                // Outros endereços
+                ok = await this._writeBytes( addr, bytes );
+            }
+            this.log.i( "bytes:", bytes );
+            this.log.packI(
+                "APPLY",
+                ok,
+                bytes,
+                null, 
+                `${wg.name} 0x${addr.toString(16)}`
+            );
+        }
+        if(readAtEnd)
+            await this.read();
+    }
+
+    // Save
+    async save(){
+        if( !this.fx ) return;
+        await this.apply(false);
+        this.log.packI( "SAVE", await this._save() );
+        await delay(20);
+        await this.read( true );
+        this.updateButtons();
+    }
+
+    // Reset
+    async reset() {
+        if( !this.fx ) return false;
+        this.log.packI( "RESET", await this._reset() );
+        await delay(20);
+        await this.read( true );
+        if( this.graph ){
+            this.graph.clear();
+        }
+    }
+
+    // Default
+    async default() {
+        if( !this.fx ) return;
+        this.log.packI( "DEFAULT", await this._default() );
+        await delay(1);
+        await this.read();
+    }
+
+    /* =================================================
+      Init
+    ================================================= */
     async init() {
         
         // Reset
@@ -73,49 +258,19 @@ export class FxdeviceCard {
         this.log.packI( "RESET", true );
         await delay( 20 );
 
-        if (!("fxv" in this.info)) {
-            let x;
-            this.info.fxv = (
-                await this.retry_until_ok(
-                    async () => {
-                        const ans = await this.fx.getFoxWireVersion( this.addr );
-                        x = ans.data;
-                        return ans;
-                    }
-                ) ? 
-                x :
-                0 
-            );
+        // Get fox wire version
+        if(!("fxv" in this.info)) {
+            this.info.fxv = await this._getFxv();
         }
+        this.log.i( `fxv=${this.info.fxv}` );
 
-        this.log.i( `fxv = ${this.info.fxv}` );
-
-        /*/
-        // Get required informations off device
-        const requiredInfo = {
-            lot: this.fx.CMD_,
-            fwv: 1,
-            fwx: 1,
-            id: 0,
-        };
-        for (const field of requiredInfo) {
-            if (!(field in this.info)) {
-                this.log.i(`${field} não existe, buscar...`);
-                this.info[field] = await buscarCampo(field);
-            }
-        }
-        /*/
-
+        // renderiza no DOM
         this.render();
+
+        // Le os valores de cada parametro
         await this.read( true );
 
         return true;
-    }
-
-    static async create(id, addr, opts, app) {
-        const dev = new Device(id, addr, opts, app);
-        await dev.init();
-        return dev;
     }
 
     /* =================================================
@@ -272,180 +427,13 @@ export class FxdeviceCard {
         //this.log.i("|-- ", this.graph);
         if( !this.graph ) return;
         const ans = await this.fx.read(this.addr);
-        this.log.packI("read",ans.ok);
+        this.log.packI("sensor_read",ans.ok);
         if( ans.ok ){
             this.graph.addValue(0, ans.data);
             this.graph.update();
         }else{
             this.log.packE("read",ans.ok,null,ans.data);
         }
-    }
-
-    /* =================================================
-      Funções Foxwire
-    ================================================= */
-    async getBasicInfo(){
-        const fw = this.fx.getFirmwareVersion(this.addr);
-        const lot = this.fx.getLot(this.addr);
-        if( fw.ok ) this.firmwareVersion = fw.value;
-        if( lot.ok ) this.lot = lot.date;
-        //this.foxWireVersion
-    }
-
-    async fxRegWrite( addr, byte, retry = 3 ){
-        return await this.retry_until_ok(
-            async () => {
-                return this.fx.registerWrite( this.addr, addr, byte );
-            }, retry
-        );
-    }
-
-    async fxRegRead( addr, retry = 3 ){
-        let value;
-        if( !await this.retry_until_ok(
-            async () => {
-                const ans = this.fx.registerRead( this.addr, addr );
-                value = ans.data;
-                return ans;
-            }, retry
-        )) return null;
-        return value;
-    }
-
-    async fxWriteBytes( addr, bytes ){
-        if( !this.fx ) return false;
-
-        if( this.info.fxv >= 2 ){
-            if( await this.retry_until_ok(
-                async () => {
-                    return this.fx.extendedWrite( this.addr, addr, bytes );
-                }
-            ) ){
-                return true;
-            }
-        }
-
-        // register Write não acessa addr maior que 31
-        if( bytes.length + addr >= 32 ) return false;
-
-        for (let i = 0; i < bytes.length; i++) {
-            if( ! await fxRegWrite( addr+i,bytes[i] ) )
-                return false;
-        }
-        
-        return true;
-    }
-
-    /* =================================================
-      Actions
-    ================================================= */
-
-    // Read
-    async read( saved = false ){
-        
-        if( !this.param || !this.fx ) return;
-        
-        for( const p in this.param ){
-            
-            const addr = this.param[p].addr;
-            const wg = this.param[p].wg;
-
-            const value = ( 
-                addr ? 
-                await this.fx.readType(
-                    this.addr,
-                    addr,
-                    wg.outputType,
-                    wg.outputLen,
-                    ( this.info.fxv >= 2 )
-                ) :
-                this.addr
-            );
-            
-            if (value !== null) {
-                ( saved ? 
-                    wg.setSavedValue(value) :
-                    wg.setAppliedValue(value) 
-                );
-            }
-
-            this.log.packI(
-                "apply",
-                (value !== null),
-                null,
-                value,
-                `${wg.name} 0x${addr.toString(16)} <${wg.outputType}-${wg.outputLen}> `
-            );
-        }
-
-        this.updateButtons();
-    }
-
-    // Apply
-    async apply( readAtEnd = true ){
-        if( !this.param || !this.fx ) return;
-        for( const p in this.param ){
-            let addr = this.param[p].addr;
-            const wg = this.param[p].wg;
-            const bytes = wg.output();
-            let ok = false;
-            if( addr == 0 ){
-                // se é o mesmo não precisa reescreve
-                if( wg.currentValue == this.addr ) continue
-                // endereço do dispositivo na rede FoxWire
-                // [todo!] precisa verifica se outro dispositivo esta usando o novo endereço!!
-                if( await fxRegWrite( 0, wg.currentValue ) ){
-                    ok = true;
-                    this.addr = wg.currentValue;
-                    wg.setAppliedValue( this.addr );
-                }
-            }else{
-                // Outros endereços
-                await this.fxWriteBytes( addr, bytes );
-            }
-            this.log.packI(
-                "apply",
-                ok,
-                bytes,
-                null, 
-                `${wg.name} 0x${addr.toString(16)}`
-            );
-        }
-        if(readAtEnd)
-            await this.read();
-    }
-
-    // Save
-    async save(){
-        if( !this.fx ) return;
-        await this.apply(false);
-        let ans = await this.fx.save(this.addr); // Comando de save
-        this.log.i( "[BTN-SAVE] return: ", ans );
-        if( ans.ok ){
-            await delay(20);
-            await this.read( true );
-        }
-        this.updateButtons();
-    }
-
-    // Reset
-    async reset() {
-        if( !this.fx ) return false;
-        const ans = await this.fx.reset(this.addr,true);
-        await delay(20);
-        await this.read( true );
-        if( this.graph ){
-            this.graph.clear();
-        }
-    }
-
-    // Default
-    async default() {
-        if( !this.fx ) return;
-        const ans = await this.fx.default(this.addr);
-        this.log.i( "[Default] -> ", ans );
-        await delay(20);
-        await this.read();
     }
 
     /* =================================================
@@ -459,6 +447,7 @@ export class FxdeviceCard {
             this.el.classList.remove("inactive");
             this.el.classList.add("connected");
             //card.querySelector(".label").textContent = "Online";
+            // fazer reset e leitura??
         } else {
             this.el.classList.remove("connected");
             this.el.classList.add("inactive");
@@ -488,10 +477,6 @@ export class FxdeviceCard {
         
         if(connected){
             await this.graphUpdate();
-            //if( !this.param ) return;
-            //for( const p in this.param ){
-            //    const wg = this.param[p].isSaved;
-            //}
         }
     }
 

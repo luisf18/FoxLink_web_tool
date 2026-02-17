@@ -718,6 +718,15 @@ export class FoxWire {
         return await this.command(addr,this.CMD_FOXWIRE_VERSION_ID);
     }
 
+    async getVoltage(addr) {
+        await this.command(addr,this.CMD_MCU_VOLTAGE);
+        let ans = await this.command(addr,this.CMD_MCU_VOLTAGE);
+        if( ans.ok ){
+            ans.data = (ans.data+128)*(125.0/8.0);
+        }
+        return ans;
+    }
+
     // get Lot
     async getLot(addr) {
         const pipeline = [
@@ -789,6 +798,18 @@ export class FoxWire {
         return false;
     }
 
+
+    async _retryUntilOk(f, options = {}, ...a) {
+        const { n = 3, delayMs = 8 } = options;
+        const fn = f.bind(this); // bind uma vez
+        for (let i = 0; i < n; i++) {
+            const ans = await fn(...a);
+            if (ans.ok) return ans;
+            await new Promise(r => setTimeout(r, delayMs));
+        }
+        return null;
+    }
+
     
     // High level Read
     async readType(
@@ -796,95 +817,68 @@ export class FoxWire {
         dataAddr,
         type = 'u8',
         len = 1,
-        useExtended = true,
+        hasExtended = true,
         littleEndian = true
     ) {
         if (len <= 0) return null;
 
-        const validTypes = ['u8','u16','u32','i8','i16','i32','char','str'];
-        if (!validTypes.includes(type)) return null;
+        const types = {
+            'u8': 1,
+            'u16':2,
+            'u32':4,
+            'i8':1,
+            'i16':2,
+            'i32':4,
+            'char':1,
+            'str': 1
+        };
+        if (! ( type in types ) ) return null;
 
         // [1] Determina quantidade de bytes
-        let byteSize = 1;
-        let bits = 8;
-        let isSigned = false;
-
-        if (type !== 'str' && type !== 'char') {
-            bits = parseInt(type.slice(1), 10);
-            byteSize = bits / 8;
-            isSigned = type.startsWith('i');
-        }
-
-        const totalBytes =
-            (type === 'str' || type === 'char')
-                ? len
-                : len * byteSize;
-
-        let bytes = [];
+        const totalBytes = len*types[type];
         let ok = false;
-        let ret = null;
+        let bytes = [];
 
-        const readOnce = async () => {
-
-            bytes = [];
-            ok = false;
-
-            // ---- Extended mode ----
-            if (useExtended) {
-                const ans = await this.extendedRead(
-                    deviceAddr,
-                    dataAddr,
-                    totalBytes
-                );
-
-                if (ans?.ok) {
-                    ok = true;
-                    bytes = ans.data;
-                }
+        if( hasExtended ){
+            const ans = await this._retryUntilOk(
+                this.extendedRead,
+                {},
+                deviceAddr,
+                dataAddr,
+                totalBytes
+            );
+            if( ans ){
+                ok = true;
+                bytes = ans.data;
             }
-
-            // ---- Classic byte-by-byte ----
-            if (!ok) {
-                if ((totalBytes + dataAddr) > 32) {
-                    this.logW(
-                        "readType cannot read address register bigger than 31 with READ pack, use extended"
-                    );
-                } else {
-
-                    ok = true;
-
-                    for (let i = 0; i < totalBytes; i++) {
-
-                        const ans = await this.registerRead(
-                            deviceAddr,
-                            dataAddr + i
-                        );
-
-                        if (!ans?.ok) {
-                            ok = false;
-                            break;
-                        }
-
-                        bytes.push(ans.data & 0xFF);
-                    }
-                }
-            }
-
-            if (ok) {
-                ret = bytesToTypedValue(
-                    this.toU8Array(bytes),
-                    type,
-                    littleEndian
-                );
-            }
-
-            return ok;
-        };
-
-        // ---- Retry (até 3 tentativas) ----
-        for (let i = 0; i < 3; i++) {
-            if (await readOnce()) break;
         }
+
+        if( !ok && ( (dataAddr + totalBytes) <= 32 ) ){
+            ok = true;
+            for (let i = 0; i < totalBytes; i++) {
+                const ans = await this._retryUntilOk(
+                    this.registerRead,
+                    {},
+                    deviceAddr,
+                    dataAddr+i
+                );
+                if( !ans ){
+                    ok = false;
+                    break;
+                }
+                bytes.push(ans.data & 0xFF);
+            }
+        }
+
+        let ret = (
+            ok ?
+            bytesToTypedValue(
+                this.toU8Array(bytes),
+                type,
+                littleEndian
+            ) : 
+            null
+        );
 
         this.logA(
             ...this.logPack(
@@ -897,6 +891,79 @@ export class FoxWire {
         );
 
         return ret;
+    }
+
+    async dump(addr) {
+
+        const level = this.log.level;
+        this.log.level = "warn";
+
+        const fxv = (await this.getFoxWireVersion(addr)).data;
+        const hasExtended = (fxv>=2);
+
+        const dumpRegion = async (baseAddr, length, title = "") => {
+
+            const bytes = await this.readType(
+                addr,
+                baseAddr,
+                'u8',
+                length,
+                hasExtended
+            );
+
+            if (!bytes || !Array.isArray(bytes)) {
+                console.log(`Dump failed at 0x${baseAddr.toString(16)}`);
+                return;
+            }
+
+            const rowSize = 16;
+
+            console.log(
+                `\n===== HEXDUMP DEV-${addr} ${title} @0x${baseAddr.toString(16).padStart(4,'0')} (${length} bytes) =====`
+            );
+
+            for (let i = 0; i < bytes.length; i += rowSize) {
+
+                const slice = bytes.slice(i, i + rowSize);
+
+                const offset = (baseAddr + i)
+                    .toString(16)
+                    .padStart(4, '0');
+
+                const hex = slice
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join(' ')
+                    .padEnd(rowSize * 3 - 1, ' ');
+
+                const ascii = slice
+                    .map(b => (b >= 32 && b <= 126) ? String.fromCharCode(b) : '.')
+                    .join('');
+
+                console.log(`${offset}  ${hex}  |${ascii}|`);
+            }
+        };
+
+        console.log("===================[ BASIC-INFO ]====================\n");
+        console.log( "id:", (await this.getId(addr)).data );
+        console.log( "FoxWire Version:", fxv );
+        console.log( "Firmware Version:", (await this.getFirmwareVersion(addr)).data );
+        const lot = (await this.getLot(addr)).data;
+        console.log( "Lot:", lot.date, " id: ", lot.id  );
+        console.log( "Voltage: ", (await this.getVoltage(addr)).data, " mV" );
+
+        // 🔹 Dump principal
+        const mainLen = hasExtended ? 64 : 32;
+        await dumpRegion(0x0000, mainLen, "MAIN");
+
+        // 🔹 Dump extra se extended
+        if (hasExtended) {
+            await dumpRegion(0xFF00, 32, "INFO");
+        }
+
+        console.log("====================================================\n");
+        
+        this.log.level = level;
+
     }
 
 
