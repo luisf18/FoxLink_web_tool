@@ -5,15 +5,17 @@
         "struct":{
 
             "motor":{
-
-                "_prefix": "M$ ",
-
                 "config": {
                     "offset": 0,
                     "wg": {
                         "type": "check",
                         "defaultValue": 0,
-                        "checkOptions": [ "Bidirectional", "Invert", "limit Min", "limit Max" ]
+                        "checkOptions": [
+                            "Bidirectional",
+                            "Invert",
+                            "limit Min",
+                            "limit Max" 
+                        ]
                     }
                 },
                 "min": {
@@ -39,8 +41,8 @@
                     "wg": {
                         "name": "ch center",
                         "type": "slide",
-                        "defaultValue": 255,
-                        "abstract": [1000, 2000]
+                        "defaultValue": 128,
+                        "abstract": [860, 2135]
                     }
                 },
                 "ch_min": {
@@ -48,8 +50,8 @@
                     "wg": {
                         "name": "ch min",
                         "type": "slide",
-                        "defaultValue": 255,
-                        "abstract": [1000, 2000]
+                        "defaultValue": 0,
+                        "abstract": [860, 2135]
                     }
                 },
                 "ch_max": {
@@ -58,7 +60,7 @@
                         "name": "ch max",
                         "type": "slide",
                         "defaultValue": 255,
-                        "abstract": [1000, 2000]
+                        "abstract": [860, 2135]
                     }
                 },
                 "ch_deadband": {
@@ -66,8 +68,7 @@
                     "wg": {
                         "name": "ch deadband",
                         "type": "slide",
-                        "defaultValue": 255,
-                        "abstract": [1000, 2000]
+                        "defaultValue": 10
                     }
                 }
 
@@ -89,14 +90,19 @@
                 "wg": {
                     "name": "Basic config.",
                     "type": "check",
-                    "defaultValue": 0,
-                    "checkOptions": [ "Mix", "swap channels" ]
+                    "defaultValue": 1,
+                    "checkBaseValue": 8,
+                    "checkOptions": {
+                        "Mix": 0,
+                        "swap channels": 1
+                    }
                 }
             },
             
             "failsafe": {
                 "addr": "0x07",
                 "wg": {
+                    "unitSulfix": " ms",
                     "name": "Failsafe delay",
                     "type": "slide",
                     "defaultValue": 63,
@@ -104,9 +110,13 @@
                 }
             },
 
-            "_motor_1": 12,
+            ">Motor1":{
+                "_motor": 11
+            },
             
-            "_motor_2": 20
+            ">Motor2":{
+                "_motor": 20
+            }
 
         }
     },

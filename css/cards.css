@@ -9,6 +9,8 @@
 
 /* cards -------------------------------------------- */
 .card {
+
+    font-family: Arial, Helvetica, sans-serif;
     background: #fff;
     border-radius: 16px;
 
@@ -48,7 +50,7 @@
 }
 
 .card.just-connected::after,
-.card.blink,
+.card.card-blink,
 .card.just-connected {
     animation: cardBlink 0.6s ease-in-out 2;
 }
@@ -146,8 +148,8 @@
 }
 
 
-.card-footer-buttons #btn_save.pending,
-.card-footer-buttons .pending{
+.card-footer-buttons #btn_save.card-pending,
+.card-footer-buttons .card-pending{
     color:   #755500 /*#755500*/;
     background: #ffdb77 /*#ffbb00b1*/;
 }
@@ -169,7 +171,7 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-.card.inactive {
+.card.card-inactive {
     opacity: 0.55;
     filter: grayscale(100%);
     pointer-events: none;   /* 🔥 trava interação */
@@ -177,6 +179,7 @@
 
 /* Card novo! ---------------------------------- */
 
+/*/
 .card-status {
     position: absolute;
     top: 6px;
@@ -190,32 +193,16 @@
     color: #777;
 }
 
-.card-status .dot {
+.card-status{
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: #999;
 }
 
-.card.connected {
+.card.card-connected {
     opacity: 1;
     filter: none;
     pointer-events: auto;
 }
-
-.card.connected .card-status .dot {
-    background: #2ecc71;
-}
-
-.card.connected .card-status .label {
-    color: #2e7d32;
-}
-
-
-.card.inactive .card-status .dot {
-    background: #999;
-}
-
-.card.inactive .card-status .label {
-    color: #888;
-}
+/*/

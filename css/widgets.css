@@ -1,17 +1,36 @@
+/*
+flags de especificidade:
+    - wg-left
+    - wg-applied
+    - wg-saved
+    - wg-active
+*/
+
+
 /* div widgets */
 .widget {
+    line-height: 0.5;
+
     background: #f7f7f7;
     border-radius: 10px;
-    padding: 8px;
+    padding: 6px 8px;
     margin-bottom: 5px;
     font-size: 14px;
+
+
+    border: 1px solid #eceff3;
+    border-radius: 8px;
+
+    border: 1px solid #e5e5e5;
+
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 /*  */
 .widget-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     flex-wrap: nowrap;
 }
 
@@ -19,6 +38,7 @@
 .widget-name {
     font-weight: 600;
     min-width: 50px;
+    line-height: 1;
 }
 
 .widget-main {
@@ -27,24 +47,90 @@
     align-items: center;
 }
 
-input[type="range"] {
+
+/* INPUT */
+
+/* BASE para qualquer input dentro de widget 
+input[data-wg]*/
+input.wg-input-hide,
+.wg-input{
+    all: revert; /* remove heranças indesejadas */
+    width: 60px;
+    font-size: 13px;
+    flex: 1;
+    padding: 3px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 0;
+    transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+/*input[data-wg]:focus*/
+input.wg-input-hide:focus,
+.wg-input:focus{
+    outline: none;
+    border-color: #ffa353;
+    box-shadow: 0 0 0 2px rgba(255,163,83,0.2);
+}
+
+/*input escondido*/
+input.wg-input-hide{
+    display: none;
+    width: 52px;
+    min-height: 16px;
+    /*font-size: 13px;*/
+    /*margin: 0;*/
+}
+
+/*span do input escondido*/
+span.wg-input-hide{
+    cursor: pointer;
+    padding-right: 5px;
+    font-size: 13px;
+    color: #777;
+    min-width: 36px;
+    text-align: right;
+}
+span.wg-input-hide.wg-left{
+    text-align: center;
+}
+
+/*INPUT NUMBER e STRING*/
+.wg-input[type="number"],
+.wg-input[type="text"]{
+    padding-left: 5px;
+    border: 1px solid #ccc;
+    display: inline-block;
+}
+/*INPUT-SLIDE*/
+.wg-input[type="range"]{
     accent-color: #ff7a18;   /* cursor + fill */
     background: #ffe0cc;     /* fundo */
     border: none;
     outline: none;
     width: 100%;
-    margin: 0;
     padding: 0;
 }
+.wg-input[type="range"]:focus{
+    border-color: none;
+    box-shadow: none;
+}
+/*INPUT CHECKBOX*/
+.wg-input[type="checkbox"]{
+    all: revert;
+}
+.wg-input[type="range"]:focus{
+    border-color: none;
+    box-shadow: none;
+}
+
 
 /* canto direito do widget "real value" + "status" */
 .widget-right {
-    
     /*
     border-radius: 4px;
     background-color: #c4c4c4;
      */
-
     height: 20px;
     min-width: 100px;
     margin-left: auto;
@@ -61,56 +147,8 @@ input[type="range"] {
 }
 */
 
-
-/* valor real da variavel */
-.hide-span,
-.real-value {
-    font-size: 13px;
-    color: #777;
-    min-width: 36px;
-    text-align: right;
-}
-
-.hide-span.slide {
-    padding-right: 5px;
-    text-align: center;
-}
-
-/* Valor real input */
-.hide-input,
-.real-input {
-    display: none;
-    width: 52px;
-    min-height: 16px;
-    font-size: 13px;
-}
-
-/* abs?? */
-.real-value.abs {
-    font-size: 12px;
-    min-width: 48px;
-    text-align: right;
-    color: #666;
-}
-
-/* abs?? */
-.real-value.editable {
-    cursor: pointer;
-}
-
-.abs-input {
-    width: 60px;
-    font-size: 13px;
-    flex: 1;
-    padding: 3px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    display: inline-block;
-}
-
 /* Status */
-.status {
-
+.wg-status {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -124,9 +162,9 @@ input[type="range"] {
     cursor: pointer;
 }
 /* Status */
-.status.saved.applied { background: #28a745; }
-.status.saved { background: #2c87ff; }
-.status.applied { background: #ffd12c; }
+.wg-status.wg-saved.wg-applied { background: #28a745; }
+.wg-status.wg-saved { background: #2c87ff; }
+.wg-status.wg-applied { background: #ffd12c; }
 
 /*
 .widget_tooltip {
@@ -160,25 +198,6 @@ input[type="range"] {
     accent-color: #ffb47d;   /* cursor + fill */
 }
 
-.int-input {
-    width: 60px;
-    font-size: 13px;
-    flex: 1;
-    padding: 3px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-/* Input de string */
-.string-input {
-    width: 60px;
-    font-size: 13px;
-    flex: 1;
-    padding: 3px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
 /* botão da casa */
 .return-btn {
     width: 16px;
@@ -190,7 +209,7 @@ input[type="range"] {
 }
 
 /* quando está no valor default */
-.return-btn.active {
+.return-btn.wg-active {
     /*color: #268fff;*/
     color: #ffa353;
 }
@@ -206,7 +225,70 @@ input[type="range"] {
 }
 
 /* quando está no valor default */
-.home-btn.active {
+.home-btn.wg-active {
     /*color: #268fff;*/
     color: #ffa353;
+}
+
+
+/* groups of widgets */
+
+.widget-group {
+    border: 1px solid #e2e2e2;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e3e6ea;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.widget-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    user-select: none;
+    background: #f0f0f0;
+    transition: background 0.2s ease;
+}
+
+.widget-group-header:hover {
+    background: #e8e8e8;
+}
+
+.widget-group-toggle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid #ccc;
+    transition: transform 0.2s ease;
+}
+
+.widget-group-toggle.wg-open {
+    transform: rotate(90deg);
+}
+
+.widget-group-arrow {
+    width: 12px;
+    height: 12px;
+    display: block;
+}
+
+.widget-group-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, padding 0.2s ease;
+    padding: 0 12px;
+}
+
+.widget-group-body.wg-open {
+    max-height: 1000px;
+    padding: 10px 12px 5px 12px;
 }

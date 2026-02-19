@@ -1,5 +1,6 @@
 
-// 
+import * as utils from "./utils.js";
+
 const TypeRules = {
     u8: {
         min: 0,
@@ -30,7 +31,7 @@ const TypeRules = {
     }
 };
 
-class Widget {
+export class Widget {
     constructor(opts) {
         
         this.name = opts.name || 'name';
@@ -46,8 +47,9 @@ class Widget {
             this.outputLen = opts.outputLen;
         
         //this.value = opts.value ?? 0;
-        this.checkOptions = opts.checkOptions || ["bit0"];
-        this.selOptions   = opts.selOptions || {"sel0":0};
+        this.checkOptions   = opts.checkOptions || ["bit0"];
+        this.selOptions     = opts.selOptions || {"sel0":0};
+        this.checkBaseValue = opts.checkBaseValue || 0;
 
         // Propriedade do tipo
         this.real = TypeRules[this.outputType]; // min/max naturais
@@ -69,8 +71,10 @@ class Widget {
             min: this.real.min,
             max: this.real.max,
         };
+
+        console.log( `wg-${this.name} limit: `, opts.limit );
         
-        if (opts.limit) {
+        if( opts.limit ){
             this.realLimit.min = Math.max(
                 this.realLimit.min,
                 opts.limit[0]
@@ -79,6 +83,7 @@ class Widget {
                 this.realLimit.max,
                 opts.limit[1]
             );
+            console.log( `wg-${this.name} this.realLimit: `, this.realLimit );
         }else if (opts.abstractLimit && this.abstract) {
             this.realLimit.min = Math.max(
                 this.realLimit.min,
@@ -100,9 +105,9 @@ class Widget {
         this.status = this.STATUS_NONE;
         
         this.defaultValue = opts.defaultValue ?? 0;
-        this.savedValue   = opts.savedValue ?? 0;
-        this.currentValue = this.savedValue;
-        this.appliedValue = this.savedValue;
+        this.savedValue   = 0;
+        this.currentValue = 0;
+        this.appliedValue = 0;
         this.isSaved      = false;
         this.isApplied    = false;
 
@@ -110,6 +115,8 @@ class Widget {
         this.el.className = 'widget';
 
         this.change_callback = null;
+
+        this.unitSulfix = opts.unitSulfix ?? "";
 
 
         //console.log(
@@ -124,7 +131,7 @@ class Widget {
 
         this.render();
 
-        this.setValue( this.currentValue );
+        this.setSavedValue( this.defaultValue );
     }
 
     /* =================================================
@@ -155,7 +162,7 @@ class Widget {
                             <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293z"/>
                         </svg>
                     </span>
-                    <span class="status" title="status:\nverde: salvo e aplicado\nazul: salvo apenas\namarelo: aplicado apenas\nvermelho: nem salvo nem aplicado"></span>
+                    <span class="wg-status" title="status:\nverde: salvo e aplicado\nazul: salvo apenas\namarelo: aplicado apenas\nvermelho: nem salvo nem aplicado"></span>
                 </div>
             </div>
         `;
@@ -190,18 +197,23 @@ class Widget {
         // Caixa a direita com o Valor Real e Status
         if( this.outputType != 'str' ){
             const right = this.el.querySelector('.widget-right');
+            // real-input
+            //<span class="real-value editable" title="register value">[${this.currentValue}]</span>
+            // <input class="wg wg-input--real"
             right.insertAdjacentHTML('afterbegin', `
-                <span class="real-value editable" title="register value">[${this.savedValue}]</span>
-                <input class="real-input"
+                <span class="wg-input-hide" title="register value" data-wg="${this.type}">[${this.currentValue}]</span>
+                <input class="wg-input-hide"
+                    data-wg="${this.type}"
                     type="number"
-                    min="${this.real.min}"
-                    max="${this.real.max}">
+                    min="${this.realLimit.min}"
+                    max="${this.realLimit.max}">
             `);
-            this.elRealSpan = this.el.querySelector('.real-value:not(.abs)');
-            this.elRealInp  = this.el.querySelector('.real-input');
-            makeEditable(this.elRealSpan, this.elRealInp, v => this.setValue(v));
+            //this.elRealSpan = this.el.querySelector('.real-value:not(.abs)');
+            this.elRealInp   = this.el.querySelector('input.wg-input-hide');
+            this.elRealSpan  = this.el.querySelector('span.wg-input-hide');
+            utils.makeEditable( this.elRealSpan, this.elRealInp, v => this.setValue(v) );
         }
-        this.elStatus   = this.el.querySelector('.status');
+        this.elStatus = this.el.querySelector('.wg-status');
 
         // renderiza o restante em função do tipo
         if( this.type == 'int' ) this.renderInt();
@@ -211,7 +223,7 @@ class Widget {
         else if( this.type == 'select' ) this.renderSelect();
 
         if( this.type != 'slide' && this.type != 'check' ){
-            this.elAbsInp   = this.el.querySelector('.abs-input');
+            this.elAbsInp   = this.el.querySelector('.wg-input');
             this.elAbsInp.onchange = () => {
                 //console.log(`set: ${this.elAbsInp.value}`);
                 this.setFromAbstract(this.elAbsInp.value);
@@ -224,13 +236,14 @@ class Widget {
 
     renderInt() {
         this.elMain.innerHTML = `
-            <input class="abs-input int" type="number">
+            <input class="wg-input" type="number" data-wg=${this.type}>
         `;
     }
 
     renderSelect() {
         this.select = document.createElement("select");
-        this.select.className = "abs-input select";
+        this.select.className = "wg-input";
+        this.select.dataset.wg = `${this.type}`;
         
         for( const option in this.selOptions ){
             const opt = document.createElement("option");
@@ -249,44 +262,105 @@ class Widget {
 
         this.elMain.appendChild(this.select);
     }
+
     renderString() {
         this.elMain.innerHTML = `
-            <input class="abs-input string" type="text" value="${this.currentValue}" maxlength="${this.outputLen-1}">
+            <input type="text" class="wg-input" data-wg="${this.type}" value="${this.currentValue}" maxlength="${this.outputLen-1}">
         `;
     }
+
     renderSlide() {
-        //<span class="real-value abs editable"></span>
         this.elMain.innerHTML = `
-            <span class="hide-span slide">${this.currentValue}</span>
-            <input class="hide-input slide" type="number">
-            <input class="abs-input slide" type="range"
-            min="${this.real.min}"
-            max="${this.real.max}">
+            <span class="wg-input-hide wg-left" title="physical value">${this.currentValue}</span>
+            <input class="wg-input-hide" type="number">
+            <input class="wg-input" type="range"
+                data-wg="${this.type}"
+                min="${this.realLimit.min}"
+                max="${this.realLimit.max}"
+            >
         `;
-        this.elHideAbsInp   = this.el.querySelector('.hide-input');
-        this.elHideAbsSpan   = this.el.querySelector('.hide-span');
-        makeEditable(this.elHideAbsSpan, this.elHideAbsInp, v => this.setFromAbstract(v));
-        this.elRealInp2   = this.el.querySelector('.abs-input');
+        this.elHideAbsInp  = this.elMain.querySelector('input.wg-input-hide');
+        this.elHideAbsSpan = this.elMain.querySelector('span.wg-input-hide');
+        utils.makeEditable(this.elHideAbsSpan, this.elHideAbsInp, v => this.setFromAbstract(v));
+        
+        this.elRealInp2   = this.elMain.querySelector('.wg-input');
         this.elRealInp2.onchange = () => {
             this.setValue(this.elRealInp2.value);
         };
+        // Atualiza visual enquanto arrasta
+        this.elRealInp2.addEventListener('input', () => {
+            let v = this.elRealInp2.value;
+            v = this.clamp(v);
+            this.setAbsSpanText( this.abstractFromReal(v) );
+        });
+    }
+
+    setAbsSpanText( v ){
+        if (this.elHideAbsSpan)
+            this.elHideAbsSpan.textContent = `${v}${this.unitSulfix}`
     }
 
     renderCheck() {
+
+        function normalizeCheckOptions(checkOptions) {
+
+            const result = {};
+            if (!checkOptions) return {};
+            // -------- ARRAY --------
+            if (Array.isArray(checkOptions)) {
+                checkOptions.forEach((label, i) => {
+                    result[label] = i;
+                });
+            }
+
+            // -------- OBJECT --------
+            else if (typeof checkOptions === "object") {
+                Object.entries(checkOptions).forEach(([key, value]) => {
+                    // valor absoluto
+                    //if (key.startsWith("$")) {
+                    //    const label = key.substring(1);
+                    //    result[label] = Number(value);
+                    //}
+                    // bit position
+                    //else {
+                        result[key] = Number(value);
+                    //}
+                });
+            }
+
+            return result;
+        }
+
         this.elCheck = document.createElement('div');
         this.elCheck.className = "checkbox-group-vertical";
-        
-        this.checkOptions.forEach((opt, i) => {
+
+        const options = normalizeCheckOptions(this.checkOptions);
+
+        //this._checkMap = options;
+
+        Object.entries(options).forEach(([opt, bit]) => {
             const label = document.createElement('label');
             const chk   = document.createElement('input');
             chk.type = 'checkbox';
-
+            chk.title = `bit ${bit}`;
+            chk.className = `wg-input`;
+            label.title = `bit ${bit}`;
+            
+            chk.dataset.value = bit;
+            
             chk.onchange = () => this.updateFromChecks();
-
+            
             label.append(chk, ' ', opt);
             this.elCheck.appendChild(label);
         });
+
         this.el.appendChild(this.elCheck);
+
+        if( this.defaultValue < this.checkBaseValue ){
+            this.defaultValue |= this.checkBaseValue;
+        }
+
+        this.realLimit.min |= this.checkBaseValue;
     }
 
     /* =================================================
@@ -307,13 +381,12 @@ class Widget {
     abstractFromReal(v) {
         if( this.type == 'select' ){
             for( const option in this.selOptions ){
-                const opt = document.createElement("option");
                 if( this.selOptions[option] === v )
                     return option;
             }
             return v;
         }else if( this.abstract ){
-            return intResizeClamp(
+            return utils.intResizeClamp(
                 v,
                 this.real.min,
                 this.real.max,
@@ -328,7 +401,7 @@ class Widget {
         if( this.type == 'select' ){
             return this.selOptions[a];
         }else if( this.abstract ){
-            return intResizeClamp(
+            return utils.intResizeClamp(
                 a,
                 this.abstract.min,
                 this.abstract.max,
@@ -374,11 +447,14 @@ class Widget {
     }
 
     updateFromChecks() {
-        let v = 0;
-        [...this.elCheck.querySelectorAll('input')].forEach((chk, i) => {
-            if (chk.checked) v |= (1 << i);
-        });
-        this.setValue(v);
+        let value = this.checkBaseValue;
+        this.elCheck.querySelectorAll("input[type=checkbox]")
+            .forEach(chk => {
+                if (chk.checked) {
+                    value |= (1<<Number(chk.dataset.value));
+                }
+            });
+        this.setValue(value);
     }
 
     updateUIValue(){
@@ -393,14 +469,14 @@ class Widget {
 
         if (this.elHome) {
             this.elHome.classList.toggle(
-                'active',
+                'wg-active',
                 this.currentValue == this.defaultValue
             );
         }
 
         if (this.elReturn) {
             this.elReturn.classList.toggle(
-                'active',
+                'wg-active',
                 this.isSaved
             );
         }
@@ -425,18 +501,19 @@ class Widget {
         });
 
         if( this.elCheck ){
+            let value = Math.max( 0, this.currentValue - this.checkBaseValue );
             [...this.elCheck.querySelectorAll('input')].forEach((chk, i) => {
-                chk.checked = (this.currentValue >> i) & 1;
+                chk.checked = (value>>i) & 1;
             });
         }
         
-        if (this.elHideAbsSpan)
-            this.elHideAbsSpan.textContent = `${abstract}`;
+        this.setAbsSpanText( abstract );
+
         if (this.elRealSpan)
             this.elRealSpan.textContent = `[${this.currentValue}]`;
         if (this.elStatus){
-            this.elStatus.classList.toggle('saved', this.isSaved);
-            this.elStatus.classList.toggle('applied', this.isApplied);
+            this.elStatus.classList.toggle('wg-saved', this.isSaved);
+            this.elStatus.classList.toggle('wg-applied', this.isApplied);
         }
     }
 
@@ -449,7 +526,7 @@ class Widget {
         // caso especial: string
         if (this.outputType === 'str') {
             const str = String(this.currentValue);
-            bytes = stringToBytes(str, this.outputLen);
+            bytes = utils.stringToBytes(str, this.outputLen);
         } else {
             // tipos numéricos: u8, i8, u16, i16, ...
             const type = this.outputType;
@@ -463,7 +540,7 @@ class Widget {
             }
 
             const v = Number(this.currentValue);
-            bytes = numberToBytes(v, size, signed, this.endian);
+            bytes = utils.numberToBytes(v, size, signed, this.endian);
         }
 
         // converte para HEX
@@ -471,6 +548,13 @@ class Widget {
         //.map(b =>
         //    b.toString(16).padStart(2, '0').toUpperCase()
         //);
+    }
+
+    setNameTitle( text ){
+        const elName = this.el.querySelector( ".widget-name" );
+        if( elName ){
+            elName.title = text;
+        }
     }
 
 

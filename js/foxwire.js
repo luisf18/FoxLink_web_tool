@@ -1,7 +1,7 @@
 // ================================================
 // FOXWIRE 
 // ================================================
-
+import * as utils from "./utils.js";
 import { DebugLog } from "./debug.js";
 
 export class FoxWire {
@@ -872,7 +872,7 @@ export class FoxWire {
 
         let ret = (
             ok ?
-            bytesToTypedValue(
+            utils.bytesToTypedValue(
                 this.toU8Array(bytes),
                 type,
                 littleEndian

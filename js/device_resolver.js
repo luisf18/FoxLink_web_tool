@@ -1,7 +1,15 @@
 
 // cache simples
-const deviceCache = {};
-let registryCache = null;
+export const deviceCache = {};
+export let registryCache = null;
+
+export async function fillDevicesChace(){
+    await loadRegistry();
+    // popula modelos
+    for (const id in registryCache) {
+        await loadDeviceDef(registryCache[id].path);
+    }
+}
 
 // ==============================
 // HEX normalizer
@@ -31,7 +39,7 @@ function deepHexToNumber(obj) {
 // Load registry
 // ==============================
 
-async function loadRegistry() {
+export async function loadRegistry() {
     if (registryCache) return registryCache;
 
     const res = await fetch("./devices/registry.json");
@@ -47,7 +55,7 @@ async function loadRegistry() {
         };
     }
 
-    console.log( "registryCache ", registryCache);
+    //console.log( "registryCache ", registryCache);
 
     return registryCache;
 }
@@ -56,7 +64,7 @@ async function loadRegistry() {
 // Load device definition
 // ==============================
 
-async function loadDeviceDef(name) {
+export async function loadDeviceDef(name) {
     if (deviceCache[name]) return deviceCache[name];
 
     const res = await fetch(`./devices/${name}/def.json`);
@@ -68,81 +76,116 @@ async function loadDeviceDef(name) {
     return normalized;
 }
 
-
-export async function resolveDeviceStructs(dev) {
-    const structs = dev.struct;
-    if (!structs) return;
+export async function resolveDeviceStructs( input, structs = null ) {
+    
+    if( !input ) return;
+    let root = null;
+    let param = input;
+    if( !structs ){
+        root = input;
+        param = root.param;
+        if( !param ) return;
+        structs = root.struct || {};
+    }
 
     //function log(...a){
     //    console.log( "[struct]", ...a );
     //}
 
-    for (let key in dev.param) {
-        if (key.startsWith("_")) {
-            const structName = key.substring(1);  // exemplo: "motor_1"
-            const structParts = structName.split("_");
-            const baseStructName = structParts[0]; // "motor"
-            const instanceName = structParts[1];    // "1"
+    const countStruct = {};
 
-            //log( ` ${key} -> struct=${baseStructName} instance=${instanceName}` );
+    for (let key in param) {
 
-            const structDef = structs[baseStructName];
-            if (!structDef) continue;
+        if (key.startsWith(">")) {
+            resolveDeviceStructs( param[key], structs );
+        }else if (key.startsWith("_")) {
+            
+            const structParts = key.substring(1).split("_");
+            const structName = structParts[0]; // "motor"
 
-            //log( ` struct_${key} ->`, structDef );
+            countStruct[structName] = (countStruct[structName] ?? -1) + 1;
 
-            // pega addr_base da instancia (pode ser número ou objeto { addr: ... })
-            let addr_base = dev.param[key];
-            if (typeof addr_base === "object" && addr_base !== null) {
-                addr_base = addr_base.addr;
+            const instanceName = (
+                structParts[1] || (
+                    root ?
+                    `${countStruct[structName]}`:
+                    ""
+                )
+            );
+
+            //log( ` ${key} -> struct=${structName} instance=${instanceName} count: ${countStruct[structName]}` );
+
+            // obtem o struct especifico e se falhar só deleta
+            const structDef = structs[structName];
+            let ok = false;
+
+            // obtem o endereço base desse novo struct
+            let addr_base;
+            if (structDef) {
+                const raw = param[key];
+                if (typeof raw === "number") {
+                    addr_base = raw;
+                } else if (raw && typeof raw === "object" && typeof raw.addr === "number") {
+                    addr_base = raw.addr;
+                }
+                ok = (typeof addr_base === "number");
             }
 
-            if( addr_base == null || addr_base == undefined ) continue;
+            // expande o struct em widgets
+            if (ok){
+                
+                const prefix = (
+                    structDef["!prefix"] || (
+                        root ?
+                        `${structName}$ ` :
+                        ""
+                    )
+                ).replace("$", instanceName);
 
-            //log( "addr_base", addr_base );
+                //log( "struct=", structName, " prefix=", prefix, " instanceName=", instanceName );
 
-            const prefix = (structDef._prefix || `${baseStructName}_$_`).replace("$", instanceName);
+                // percorre cada campo do struct
+                for (let field in structDef) {
+                    if( field.startsWith('!') ) continue;
 
-            //log( "prefix=", prefix );
+                    const fieldDef = structDef[field];
+                    let newField = structuredClone( fieldDef );
 
-            // percorre cada campo do struct
-            for (let field in structDef) {
-                if (field === "_prefix") continue;
+                    // calcula addr
+                    if ("offset" in fieldDef) {
+                        const offset = Number(fieldDef.offset);
+                        newField.addr = addr_base + offset;
+                        delete newField.offset;
+                    }else{
+                        continue;
+                    }
 
-                const fieldDef = structDef[field];
-                let newField = structuredClone( fieldDef );
+                    // aplica prefix no wg.name
+                    if (newField.wg) {
+                        //log(` struct_field=${field}: `,newField.wg.name);
+                        newField.wg.name = (
+                            newField.wg.name ?
+                            prefix + newField.wg.name :
+                            `${prefix}${field}`
+                        );
+                        //log(` struct_field=${field}: `,newField.wg.name);
+                    }
 
-                // calcula addr
-                if ("offset" in fieldDef) {
-                    const offset = Number(fieldDef.offset);
-                    newField.addr = addr_base + offset;
-                    delete newField.offset;
-                }else{
-                    continue;
+                    // salva de volta no dev.param
+                    const paramKey = `${structName}_${instanceName}_${field}`;
+                    param[paramKey] = newField;
                 }
-
-                // aplica prefix no wg.name
-                if (newField.wg) {
-                    //log(` struct_field=${field}: `,newField.wg.name);
-                    newField.wg.name = (
-                        newField.wg.name ?
-                        prefix + newField.wg.name :
-                        `${prefix}${field}`
-                    );
-                    //log(` struct_field=${field}: `,newField.wg.name);
-                }
-
-                // salva de volta no dev.param
-                const paramKey = `${baseStructName}_${instanceName}_${field}`;
-                dev.param[paramKey] = newField;
             }
-
-            // remove a referência original do _motor_X
-            delete dev.param[key];
+            
+            // remove a referência original do _<struct>_<name>
+            delete param[key];
         }
+        
     }
 
-    delete dev.struct;
+    if( root ){
+        delete root.struct;
+    }
 }
 
 export async function resolveDevice(info) {
@@ -186,7 +229,7 @@ export async function resolveDevice(info) {
         result.image = `devices/${reg.path}/img.png`;
     }
 
-    console.log( `result`, result );
+    //console.log( `result`, result );
 
     resolveDeviceStructs( result );
 

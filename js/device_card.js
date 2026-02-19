@@ -1,5 +1,6 @@
 import { MultiLineGraph } from "./graph.js"
 import { DebugLog } from "./debug.js";
+import { Widget } from "./widgets.js";
 
 // ====================================================
 // Fox Devices
@@ -11,9 +12,7 @@ export class FxdeviceCard {
         
         this.id = id;
 
-        this.connected = true;
-
-        this.log = new DebugLog( `CARD-DEV-${addr}`, "#ff7300" );
+        this.connected = true;        
         
         /*
         app -> variaveis globais
@@ -23,6 +22,10 @@ export class FxdeviceCard {
         */
         this.app = app;
         this.fx = app?.fx ?? null;
+
+        this.devMode = (app == "dev");
+
+        this.log = new DebugLog( `CARD-DEV-${addr}${this.devMode?"-DEV_MODE":""}`, "#ff7300" );
 
         // Informations
         this.info = info;
@@ -50,16 +53,21 @@ export class FxdeviceCard {
     }
 
     /* =================================================
+      Funções dev
+    ================================================= */
+    async _devApplyDefault( ){
+        for( v in this.param ){
+            const wg = this.param[v].wg
+            wg.setSavedValue( wg.defaultValue );
+        }
+    }
+
+    /* =================================================
       Funções Foxwire
     ================================================= */
-    
-    async retry_until_ok(f, n=3, delayMs = 20) {
-        for (let i = 0; i < n; i++) {
-            const ans = await f();
-            if( ans.ok ) return true;
-            await new Promise(r => setTimeout(r, delayMs));
-        }
-        return false;
+
+    async delay(ms){
+        await new Promise(r => setTimeout(r, ms));
     }
 
     async _fx_retry_until_ok(f, options = {}, ...a) {
@@ -74,16 +82,17 @@ export class FxdeviceCard {
 
             if (ans.ok) return ans;
 
-            await new Promise(r => setTimeout(r, delayMs));
+            await this.delay(delayMs);
         }
 
         return null;
     }
 
     async _reset() {
-        return (await this._fx_retry_until_ok( this.fx.reset ) !== null);
+        return (await this._fx_retry_until_ok( this.fx?.reset ) !== null);
     }
 
+    /*/
     async getBasicInfo(){
         const fw = this.fx.getFirmwareVersion(this.addr);
         const lot = this.fx.getLot(this.addr);
@@ -91,26 +100,27 @@ export class FxdeviceCard {
         if( lot.ok ) this.lot = lot.date;
         //this.foxWireVersion
     }
+    /*/
 
     async _getFxv( ){
-        const ans = await this._fx_retry_until_ok( this.fx.getFoxWireVersion )
+        const ans = await this._fx_retry_until_ok( this.fx?.getFoxWireVersion )
         return ( ans ? ans.data : 0 );
     }
 
     async _save(){
-        return ( await this._fx_retry_until_ok( this.fx.save ) != null );
+        return ( await this._fx_retry_until_ok( this.fx?.save ) != null );
     }
 
     async _default(){
-        return ( await this._fx_retry_until_ok( this.fx.restore ) != null );
+        return ( await this._fx_retry_until_ok( this.fx?.restore ) != null );
     }
 
     async _writeReg( addr, byte, opt={} ){
-        return ( await this._fx_retry_until_ok( this.fx.registerWrite, opt, addr, byte ) != null );
+        return ( await this._fx_retry_until_ok( this.fx?.registerWrite, opt, addr, byte ) != null );
     }
 
     async _readReg( addr, byte, opt={} ){
-        return await this._fx_retry_until_ok( this.fx.registerRead, opt, addr, byte );
+        return await this._fx_retry_until_ok( this.fx?.registerRead, opt, addr, byte );
     }
 
     async _writeBytes( addr, bytes, opt={} ){
@@ -120,7 +130,7 @@ export class FxdeviceCard {
         if( this.info.fxv >= 2 ){
             console.log( "try extenderWrite: ", bytes );
             return (
-                await this._fx_retry_until_ok( this.fx.extendedWrite, opt, addr, bytes ) != null
+                await this._fx_retry_until_ok( this.fx?.extendedWrite, opt, addr, bytes ) != null
             );
         }
 
@@ -151,7 +161,7 @@ export class FxdeviceCard {
 
             const value = ( 
                 addr ? 
-                await this.fx.readType(
+                await this.fx?.readType(
                     this.addr,
                     addr,
                     wg.outputType,
@@ -220,16 +230,16 @@ export class FxdeviceCard {
         if( !this.fx ) return;
         await this.apply(false);
         this.log.packI( "SAVE", await this._save() );
-        await delay(20);
+        await this.delay(20);
         await this.read( true );
         this.updateButtons();
     }
 
     // Reset
     async reset() {
-        if( !this.fx ) return false;
+        if( !this.fx ) return;
         this.log.packI( "RESET", await this._reset() );
-        await delay(20);
+        await this.delay(20);
         await this.read( true );
         if( this.graph ){
             this.graph.clear();
@@ -240,7 +250,7 @@ export class FxdeviceCard {
     async default() {
         if( !this.fx ) return;
         this.log.packI( "DEFAULT", await this._default() );
-        await delay(1);
+        await this.delay(1);
         await this.read();
     }
 
@@ -248,6 +258,13 @@ export class FxdeviceCard {
       Init
     ================================================= */
     async init() {
+
+        // Modo desenvolvimento
+        if( this.devMode ){
+            // renderiza no DOM
+            this.render();
+            return true;
+        }
         
         // Reset
         if( !(await this._reset()) ){
@@ -256,7 +273,7 @@ export class FxdeviceCard {
         }
 
         this.log.packI( "RESET", true );
-        await delay( 20 );
+        await this.delay( 20 );
 
         // Get fox wire version
         if(!("fxv" in this.info)) {
@@ -357,47 +374,105 @@ export class FxdeviceCard {
     }
 
     renderParams(){
-        // Parametros
+        
         this.param = {};
-
-        if( this.showAddrWidget ){
-            const wg = new Widget({
-                name: "Addr", limit: [0,31]
-            });
-            this.param["addr"] = {
-                addr: 0,
-                wg: wg
-            };
-            this.cardBody.appendChild(wg.el);
-        }
-
-        for (const name in this.optParam) {
-            const p = this.optParam[name];
-            let p_name = name;
-            //  se o widget de endereço ja estiver
-            // ativo descarta outros. Se não adimite ele
-            // Mas com o nome "addr" pra garantir que vai funcionar
-            if( p.addr == 0 ){
-                if( this.showAddrWidget ) continue;
-                p_name = "addr";
-            }else if( name == 'addr' ){ // impede que exista outro Addr
-                p_name = 'addr2';
+        
+        const addWg = (p, name, isAddr=false) => {
+            if( !isAddr ){
+                if (p.addr == 0) {
+                    if (this.showAddrWidget) return null;
+                    name = "addr";
+                } else if (name === "addr") {
+                    name = "addr2";
+                }
             }
-            // constrói o widget a partir da config
             const wg = new Widget(p.wg);
-            wg.change_callback = (r) => { this.updateButtons() };
-            if (!wg || !wg.el) continue;
-            // estrutura final normalizada
-            this.param[p_name] = {
+            wg.setNameTitle( `start at 0x${(p.addr).toString(16)}` );
+            wg.change_callback = () => this.updateButtons();
+            this.param[name] = {
                 addr: p.addr,
                 wg: wg
             };
-            //this.widgets[name] = wg;
-            this.cardBody.appendChild(wg.el);
+            return wg.el;
+        };
+
+        this.log.i( "showAddrWidget: ", this.showAddrWidget );
+
+        if (this.showAddrWidget) {
+            const el = addWg( {
+                    addr: 0,
+                    wg:{
+                        name: "Addr",
+                        limit: [0, 31]
+                    }
+                },
+                "addr",
+                true 
+            );
+
+            if (el) this.cardBody.appendChild(el);
         }
 
-        this.param["addr"]?.wg.setSavedValue( this.addr );
+        for (const name in this.optParam) {
 
+            const p = this.optParam[name];
+
+            // -------- GRUPO DE WIDGETS --------
+            if (name.startsWith(">")) {
+
+                const groupInternalName = name.substring(1);
+                const groupName = p["!opt"]?.name || p["!name"] || groupInternalName;
+
+                const groupContainer = document.createElement("div");
+                groupContainer.className = "widget-group";
+
+                const header = document.createElement("div");
+                header.className = "widget-group-header";
+                const toggleIcon = document.createElement("div");
+                toggleIcon.className = "widget-group-toggle";
+                toggleIcon.innerHTML = `
+                <svg class="widget-group-arrow" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>`;
+                
+                const title = document.createElement("span");
+                title.textContent = groupName;
+                header.appendChild(toggleIcon);
+                header.appendChild(title);
+
+                const body = document.createElement("div");
+                body.className = "widget-group-body";
+                //body.style.display = "none";
+                body.className = "widget-group-body";
+
+                header.onclick = () => {
+                    const open = body.classList.toggle("wg-open");
+                    toggleIcon.classList.toggle("wg-open", open);
+                };
+
+                groupContainer.appendChild(header);
+                groupContainer.appendChild(body);
+                this.cardBody.appendChild(groupContainer);
+
+                // renderiza widgets internos
+                for (const innerName in p) {
+                    if (innerName.startsWith("!")) continue;
+                    const el = addWg(
+                        p[innerName],
+                        `${groupInternalName}_${innerName}`
+                    );
+                    body.appendChild(el);
+                }
+
+                continue;
+            }
+
+            // -------- NORMAL --------
+            const el = addWg( p, name );
+            if (el) this.cardBody.appendChild(el);
+        }
+
+        this.param["addr"]?.wg.setSavedValue(this.addr);
     }
 
     bindButtons(){
@@ -426,7 +501,12 @@ export class FxdeviceCard {
     async graphUpdate(){
         //this.log.i("|-- ", this.graph);
         if( !this.graph ) return;
-        const ans = await this.fx.read(this.addr);
+        //const ans = await this.fx?.read(this.addr);
+        const ans = (
+            this.devMode ?
+            await this._fx_retry_until_ok( this.fx?.read ) :
+            { ok: true, data: 70 }
+        );
         this.log.packI("sensor_read",ans.ok);
         if( ans.ok ){
             this.graph.addValue(0, ans.data);
@@ -443,16 +523,17 @@ export class FxdeviceCard {
         
         this.connected = connected;
 
+        this.el.classList.toggle("card-inactive",!connected);
+
+        /*/
         if (connected) {
-            this.el.classList.remove("inactive");
-            this.el.classList.add("connected");
-            //card.querySelector(".label").textContent = "Online";
-            // fazer reset e leitura??
+            this.el.classList.remove("card-inactive");
+            //this.el.classList.add("card-connected");
         } else {
-            this.el.classList.remove("connected");
-            this.el.classList.add("inactive");
-            //card.querySelector(".label").textContent = "Offline";
+            //this.el.classList.remove("card-connected");
+            this.el.classList.add("card-inactive");
         }
+        /*/
 
         if( blink && connected ){
             this.blink();
@@ -461,15 +542,11 @@ export class FxdeviceCard {
 
     async update(){
         if( !this.fx ){
-            this.setConnected(false);
+            if(!this.devMode) this.setConnected(false);
             return;
         }
         
-        let connected = await this.retry_until_ok(
-            () => {
-                return this.fx.check(this.addr);
-            } 
-        );
+        let connected = (await this._fx_retry_until_ok( this.fx?.check ) !== null);
         
         if( this.connected != connected ){
             this.setConnected(connected);
@@ -495,8 +572,8 @@ export class FxdeviceCard {
         //this.isApplied = isApplied;
         //this.isSaved = isSaved;
 
-        this.elBtnApply.classList.toggle('pending', !isApplied);
-        this.elBtnSave.classList.toggle('pending', !isSaved);
+        this.elBtnApply.classList.toggle('card-pending', !isApplied);
+        this.elBtnSave.classList.toggle('card-pending', !isSaved);
 
         this.log.i(
             `[btn-update][ ${
@@ -508,8 +585,8 @@ export class FxdeviceCard {
     }
 
     blink(){
-        this.el.classList.remove("blink");
+        this.el.classList.remove("card-blink");
         void this.el.offsetWidth; // reset da animação
-        this.el.classList.add("blink");
+        this.el.classList.add("card-blink");
     }
 }

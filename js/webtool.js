@@ -1,6 +1,7 @@
 import { resolveDevice } from "./device_resolver.js";
 import { FxdeviceCard } from "./device_card.js";
 import { DebugLog } from "./debug.js";
+import * as utils from "./utils.js";
 
 // Variavies globais da aplicação
 export let app = {
@@ -40,7 +41,7 @@ export async function cardsUpdate() {
     // Atualização em tempo real os graficos
     for (const [addr, card] of app.devices) {
         await card.update();
-        await delay(10);
+        await utils.delay(10);
     }
 }
 
@@ -104,7 +105,7 @@ function clearDevices(){
             card.setConnected( false );
             cardContainer.appendChild( card.el );
         });
-        delay(200);
+        utils.delay(200);
     }
     /*/
 
@@ -144,7 +145,7 @@ export async function scanDevices() {
         progressBar.style.width = progress + "%";
         if (found) {
             await addDeviceCard(addr, info);
-            await delay( 20 );
+            await utils.delay( 20 );
         }
     });
 

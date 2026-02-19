@@ -1,24 +1,24 @@
-function clamp(v) {
+export function clamp(v) {
     return Math.max(0, Math.min(255, v));
 }
 
-function abstractValue(byte) {
+export function abstractValue(byte) {
     return 5 * byte + 860;
 }
 
-function intResize( x, i, I, o, O ){
+export function intResize( x, i, I, o, O ){
 	if( i == I || x <= i ) return o;
     if( x >= I ) return O;
 	return Math.floor( ((x-i)*(O-o))/(I-i) + o );
 }
 
-function intResizeClamp( x, i, I, o, O ){
+export function intResizeClamp( x, i, I, o, O ){
 	if( i == I || x <= i ) return o;
     if( x >= I ) return O;
 	return Math.floor( ((x-i)*(O-o))/(I-i) + o );
 }
 
-function makeEditable(span, input, onCommit) {
+export function makeEditable(span, input, onCommit) {
     span.onclick = () => {
         const n = parseInt(span.textContent.replace(/\D/g, '')) || 0;
         input.value = n;
@@ -50,7 +50,7 @@ function makeEditable(span, input, onCommit) {
    Manipulação de Bytes
 ============================================== */
 
-function stringToBytes(str, len) {
+export function stringToBytes(str, len) {
     const bytes = [];
     for (let i = 0; i < len-1; i++) {
         if (i < str.length) {
@@ -63,7 +63,7 @@ function stringToBytes(str, len) {
     return bytes;
 }
 
-function numberToBytes(value, byteLength, signed, endian) {
+export function numberToBytes(value, byteLength, signed, endian) {
     const buffer = new ArrayBuffer(byteLength);
     const view = new DataView(buffer);
 
@@ -81,7 +81,7 @@ function numberToBytes(value, byteLength, signed, endian) {
     return Array.from(new Uint8Array(buffer));
 }
 
-function bytesToTypedValue(bytes, type = 'u8', littleEndian = true) {
+export function bytesToTypedValue(bytes, type = 'u8', littleEndian = true) {
     // -------------------------
     // normalização de entrada
     // -------------------------
@@ -172,6 +172,6 @@ function bytesToTypedValue(bytes, type = 'u8', littleEndian = true) {
 }
 
 
-function delay(ms) {
+export function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }

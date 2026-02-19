@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Device Resolver Debug</title>
+    <link rel="stylesheet" href="css/widgets.css">
+    <link rel="stylesheet" href="css/charts.css">
+    <link rel="stylesheet" href="css/cards.css">
     <style>
         body {
             font-family: monospace;
@@ -18,6 +21,20 @@
             margin-top: 15px;
             max-height: 500px;
             overflow: auto;
+        }
+
+        #mainContainer {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        #output {
+            flex: 1;
+        }
+
+        #cardContainer {
+            flex: 1;
         }
     </style>
 </head>
@@ -43,15 +60,25 @@
     <input id="verInput" type="number" min="0">
 </div>
 
-<pre id="output"></pre>
+<div id="mainContainer">
+    <pre id="output"></pre>
+    <div id="cardContainer"></div>
+</div>
 
 <script type="module">
-//import { deviceRegistry, deviceDefs } from "./js/devices.js";
-import { resolveDevice } from "./js/device_resolver.js";
+import { FxdeviceCard } from "./js/device_card.js";
+import { registryCache, deviceCache, resolveDevice, fillDevicesChace } from "./js/device_resolver.js";
 
+await fillDevicesChace();
 window.resolveDevice = resolveDevice;
+const deviceRegistry = registryCache;
+const deviceDefs = deviceCache;
 
-/*/
+// Card
+const cardContainer = document.getElementById("cardContainer");
+let currentCard = null;
+
+//*/
 const modelSel = document.getElementById("modelSelect");
 const versionSel = document.getElementById("versionSelect");
 const idInput = document.getElementById("idInput");
@@ -62,20 +89,22 @@ const output = document.getElementById("output");
 for (const id in deviceRegistry) {
     const opt = document.createElement("option");
     opt.value = id;
-    opt.textContent = `${deviceRegistry[id].name} (id=0x${id.toString(16)})`;
+    opt.textContent = `${deviceRegistry[id].path} (id=0x${Number(id)
+        .toString(16)
+        .padStart(2, '0')})`;
     modelSel.appendChild(opt);
 }
 
 // atualiza versões disponíveis
 function updateVersions(id) {
     versionSel.innerHTML = "";
-    const name = deviceRegistry[id].name.replace("-", "_");
-    const versions = Object.keys(deviceDefs[name]?.versions || []);
+    const name = deviceRegistry[id].path.replace("-", "_");
+    const versions = Object.keys(deviceDefs[name]);
 
-    const base = document.createElement("option");
-    base.value = 0;
-    base.textContent = "base (v0)";
-    versionSel.appendChild(base);
+    //const base = document.createElement("option");
+    //base.value = 0;
+    //base.textContent = "base (v0)";
+    //versionSel.appendChild(base);
 
     for (const v of versions) {
         const opt = document.createElement("option");
@@ -86,17 +115,70 @@ function updateVersions(id) {
 }
 
 // resolve e mostra
-function updateOutput() {
+async function updateOutput() {
     try {
         const id = Number(idInput.value);
         const v  = Number(verInput.value);
 
-        const dev = resolveDevice({id: id, fwv: v});
+        const info = { id: id, fwv: v };
+
+        const dev = await resolveDevice(info);
+
+        // mostra JSON
+        output.textContent = JSON.stringify(dev, null, 2);
+
+        // remove card anterior
+        if (currentCard) {
+            cardContainer.innerHTML = "";
+            currentCard = null;
+        }
+
+        // cria novo card
+        if (dev) {
+
+            console.log("dev:",dev);
+
+            cardContainer.innerHTML = "";
+            
+            currentCard = new FxdeviceCard(
+                0,
+                0,
+                info,
+                dev,
+                "dev"
+            );
+
+            cardContainer.appendChild(
+                document.createElement("div")
+            );
+
+            await currentCard.init();
+
+            // supondo que o card crie um elemento raiz acessível:
+            if (currentCard.el) {
+                cardContainer.appendChild(currentCard.el);
+            }
+        }
+
+    } catch (e) {
+        console.log("erro:",e);
+        output.textContent = e.message;
+    }
+}
+
+/*/
+async function updateOutput() {
+    try {
+        const id = Number(idInput.value);
+        const v  = Number(verInput.value);
+        const dev = await resolveDevice({id: id, fwv: v});
         output.textContent = JSON.stringify(dev, null, 2);
     } catch (e) {
         output.textContent = e.message;
     }
 }
+/*/
+
 
 // eventos
 modelSel.onchange = () => {
@@ -119,7 +201,7 @@ verInput.oninput = updateOutput;
 modelSel.value = Object.keys(deviceRegistry)[0];
 modelSel.onchange();
 
-/*/
+//*/
 </script>
 
 </body>
