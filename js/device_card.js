@@ -50,6 +50,9 @@ export class FxdeviceCard {
         // Gráfico
         this.graphOptions = opts.graphOptions ?? null;
         this.graph      = null;
+
+        // Actions
+        this.actions = [];
     }
 
     /* =================================================
@@ -340,12 +343,12 @@ export class FxdeviceCard {
         // Grafico
         //this.renderGraph();
 
+        // Botões de baixo
+        this.bindButtons();
+
         // Parametros
         this.cardBody = this.el.querySelector(".card-body");
         this.renderParams();
-
-        // Botões de baixo
-        this.bindButtons();
 
     }
 
@@ -377,7 +380,7 @@ export class FxdeviceCard {
         
         this.param = {};
         
-        const addWg = (p, name, isAddr=false) => {
+        const addWg = ( p, name, path="", isAddr=false ) => {
             if( !isAddr ){
                 if (p.addr == 0) {
                     if (this.showAddrWidget) return null;
@@ -391,7 +394,9 @@ export class FxdeviceCard {
             wg.change_callback = () => this.updateButtons();
             this.param[name] = {
                 addr: p.addr,
-                wg: wg
+                wg: wg,
+                actions: p?.wg?.externalActions,
+                path: path
             };
             return wg.el;
         };
@@ -407,6 +412,7 @@ export class FxdeviceCard {
                     }
                 },
                 "addr",
+                "",
                 true 
             );
 
@@ -459,7 +465,8 @@ export class FxdeviceCard {
                     if (innerName.startsWith("!")) continue;
                     const el = addWg(
                         p[innerName],
-                        `${groupInternalName}_${innerName}`
+                        `${groupInternalName}_${innerName}`,
+                        groupInternalName
                     );
                     body.appendChild(el);
                 }
@@ -473,6 +480,9 @@ export class FxdeviceCard {
         }
 
         this.param["addr"]?.wg.setSavedValue(this.addr);
+
+        this.resolveParamActions();
+
     }
 
     bindButtons(){
@@ -513,6 +523,199 @@ export class FxdeviceCard {
             this.graph.update();
         }else{
             this.log.packE("read",ans.ok,null,ans.data);
+        }
+    }
+
+    /* ====================================
+        Actions engine
+    ==================================== */
+
+    actionParseWidget(obj, path = "") {
+        if (!obj || typeof obj !== "object") return null;
+
+        let name = obj.widget;
+        if (typeof name !== "string") return null;
+
+        if (name.startsWith("!")) {
+            name = `${path}_${name.slice(1)}`;
+        }
+
+        const wg = this.param[name]?.wg ?? null;
+
+        return { name, wg, property: obj.property ?? "reg" };
+    }
+
+    actionParseInput(origin, value, path = ""){
+        //this.log.i( "[actionParseInput]", log, value );
+
+        this.log.i( "get-input = ", value );
+
+        if( value == null ) return [];
+
+        // ==============================
+        // ARRAY
+        // ==============================
+        if (Array.isArray(value)) {
+            return value
+                .map( v => ( Array.isArray(v) ? [] : this.actionParseInput(origin, v, path) ) )
+                .flat()
+                .filter(f => typeof f === "function");
+        }
+
+        // ==============================
+        // OBJECT
+        // ==============================
+        if (value && typeof value === "object") {
+            // widget reference
+            const element = this.actionParseWidget(value,path);
+            this.log.i( "get-widget = ", element.wg );
+            if (element) {
+                if( element.wg ){
+                    return [
+                        () => element.wg.get(element.property)
+                    ];
+                }
+                return [];
+            }
+            // nested expression
+            const opResolver = this.resolveActionExpression(origin, value, path);
+            this.log.i( "get-exp = ", value );
+            this.log.i( "exp-result = ", opResolver );
+            if (typeof opResolver === "function") {
+                return [ opResolver ];
+            }
+            return [];
+        }
+
+        // ==============================
+        // STRING (origin property)
+        // ==============================
+        if (typeof value === "string") {
+            return [
+                () => origin.get(value)
+            ];
+        }
+
+        // ==============================
+        // NUMBER
+        // ==============================
+        if (typeof value === "number") {
+            return [
+                () => value
+            ];
+        }
+
+        return [];
+    }
+
+    resolveActionExpression(origin, expr, path="") {
+
+        this.log.i( "resolve-exp = ", expr );
+        
+        //this.log.i( "[resolveActionExpression]", log, expr );
+        
+        if (!expr ) return null;
+        const op = expr?.op ?? null;        
+        
+        let inputVector = this.actionParseInput(origin, expr.value, path);
+        this.log.i( "input = ", inputVector );
+
+        if( op == null ){
+            if( inputVector.length == 0) inputVector = [ () => origin.get( 'reg' ) ];
+            return () => { return inputVector[0](); };
+        }
+
+        if (op.startsWith('bit')) {
+            if( inputVector.length == 0) inputVector = [ () => origin.get( 'reg' ) ];
+            const bit = expr.bit ?? 0;
+            if( op == "bitSet" ){
+                return () => {
+                    return ( ( inputVector[0]() & (1 << bit) ) !== 0 );
+                };
+            }
+            if( op == "bitClear" ){
+                return () => {
+                    return ( ( inputVector[0]() & (1 << bit) ) == 0 );
+                };
+            }
+            return null;
+        }
+
+        // =========================================
+        // SUM (N values)
+        // =========================================
+        if (op === "sum") {
+            if( inputVector.length == 0 ) return null;
+            return () => {
+                let total = 0;
+                for (const fn of inputVector) total += fn();
+                return total;
+            };
+        }
+
+        if (op === "minus") {
+            if( inputVector.length == 0 ) return null;
+            return () => {
+                let total = inputVector[0](); // executa a primeira
+                for (let i = 1; i < inputVector.length; i++) {
+                    total -= inputVector[i]();
+                }
+                return total;
+            };
+        }
+
+        // =========================================
+        // DEFAULT (direct value)
+        // =========================================
+        return null;
+    }
+    
+    resolveAction( origin, target, action, path = "" ){
+        const type = action?.type;
+        this.log.i( `[SET-ACTION] type: ${type}` );
+        this.log.i( `[SET-ACTION] origin:`, origin );
+        this.log.i( `[SET-ACTION] target:`, target );
+        this.log.i( `[SET-ACTION] action:`, action );
+        if( target && origin && type ){
+            if( type == "update" ){
+                origin.setAction( () => { target.update(); } );
+                return true;
+            }
+            let expr = this.resolveActionExpression( origin, action.expr, path );
+            this.log.i( "exp-result = ", expr );
+            if( type == "visible" ){
+                if( !expr ) return false;
+                origin.setAction( () => { target.visible( expr() ); } );
+                return true;
+            }
+            if( type == "set" ){
+                if( !expr ){
+                    expr = () => { return origin.get('abs'); };
+                }
+                const property = ( action?.to?.property ?? null );
+                if( property == null ) return false;
+                origin.setAction( () => { target.set( property, expr() ); } );
+                return true;
+            }
+        }
+        return false;
+    }
+
+    resolveParamActions( ){
+        for( const originName in this.param ){
+            const actions = this.param[originName]?.actions ?? null;
+            const origin = this.param[originName]?.wg ?? null;
+            const path = this.param[originName]?.path ?? "";
+            if( origin == null || actions == null ) continue;
+            origin.actions = [];
+            for( const action of actions ) {
+                const element = this.actionParseWidget( action.to, path )
+                this.log.i( "get-widget = ", element.wg );
+                const target = element?.wg;
+                if( !target ) continue;
+                this.log.i( `[SET-ACTION] ${originName} -> ${element.name}` );
+                this.resolveAction( origin, target, action, path );
+            }
         }
     }
 
@@ -572,8 +775,8 @@ export class FxdeviceCard {
         //this.isApplied = isApplied;
         //this.isSaved = isSaved;
 
-        this.elBtnApply.classList.toggle('card-pending', !isApplied);
-        this.elBtnSave.classList.toggle('card-pending', !isSaved);
+        this.elBtnApply?.classList?.toggle('card-pending', !isApplied);
+        this.elBtnSave?.classList?.toggle('card-pending', !isSaved);
 
         this.log.i(
             `[btn-update][ ${

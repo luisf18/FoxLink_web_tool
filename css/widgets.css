@@ -26,6 +26,12 @@ flags de especificidade:
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
+.widget.wg-blocked {
+    opacity: 0.6;
+    filter: grayscale(100%) brightness(0.9);
+    pointer-events: none;
+}
+
 /*  */
 .widget-row {
     display: flex;

@@ -63,6 +63,7 @@ export class Widget {
                 max: opts.abstract[1],
             };
         }
+        this.abstractOriginal = this.abstract;
 
         // Limites válidos (subconjunto do real ou do abstrato)
         // Para casos em que valores possiveis não fazem sentido
@@ -104,7 +105,7 @@ export class Widget {
             this.STATUS_SAVED;
         this.status = this.STATUS_NONE;
         
-        this.defaultValue = opts.defaultValue ?? 0;
+        this.defaultValue = opts.defaultValue ?? this.realFromAbstract(opts.defaultValueAbs) ?? 0;
         this.savedValue   = 0;
         this.currentValue = 0;
         this.appliedValue = 0;
@@ -116,8 +117,11 @@ export class Widget {
 
         this.change_callback = null;
 
-        this.unitSulfix = opts.unitSulfix ?? "";
+        this.unit = opts.unit ?? "";
 
+        // action
+        this.actions = [];
+        this.isBlocked = false;
 
         //console.log(
         //    `Wg-${this.name} | ` +
@@ -297,7 +301,7 @@ export class Widget {
 
     setAbsSpanText( v ){
         if (this.elHideAbsSpan)
-            this.elHideAbsSpan.textContent = `${v}${this.unitSulfix}`
+            this.elHideAbsSpan.textContent = `${v}${this.unit}`
     }
 
     renderCheck() {
@@ -364,6 +368,100 @@ export class Widget {
     }
 
     /* =================================================
+      External Actions
+    ================================================= */
+    visible( state ){
+        console.log( `[widget ${this.name}] Action -> visible=`, state );
+        if( state == null ) return;
+        this.isBlocked = !!state;
+        this.el.classList.toggle("wg-blocked", this.isBlocked);
+    }
+
+    get( property ){
+        const value = (
+            (property == "reg" || property == "real" ) ?
+            this.currentValue :
+            ( property == 'abs' ) ?
+            this.abstractFromReal( this.currentValue ) :
+            null
+        );
+        console.log( `[widget ${this.name}] get ${property}=${value}` );
+        return value;
+    }
+
+    setAction(action) {
+        if (typeof action === "function") {
+            this.actions.push(action);
+            console.log( `[widget ${this.name}] setAction -> ${action}` );
+            action();
+        }
+    }
+
+    set(property, value){
+        
+        console.log(`[widget ${this.name}] Action -> ${property}=${value}`);
+        
+        if( property == null || value == null) return;
+        
+        const parts = property.split(".");
+        const base = parts[0];          // real | reg | abs
+        const sub  = parts[1] ?? null;  // limitMin | limitMax | limit | null
+
+        const isAbs = (base === "abs");
+        const isReal = (base === "real" || base === "reg");
+
+        if( isAbs ){
+            value = this.realFromAbstract(value);
+            console.log(`[widget ${this.name}] Action -> convert to real value=${value}`);
+        }
+
+        // ================================
+        // VALUE SET
+        // ================================
+        if (!sub) {
+            if( isAbs || isReal )
+                this.setValue(real);
+            return;
+        }
+
+        // ================================
+        // LIMITS
+        // ================================
+        if( sub && sub.startsWith("limit") ) {
+            if( sub === "limitMin" ){
+                this.realLimit.min = value;
+                console.log(`[widget ${this.name}] Action -> this.realLimit.min=${value}`);
+            }else if (sub === "limitMax") {
+                this.realLimit.max = value;
+                console.log(`[widget ${this.name}] Action -> this.realLimit.max=${value}`);
+            }else{
+                return;
+            }
+            this.update();
+            //this.setUIlimits();
+        }
+    }
+
+    /*/
+    setUIlimits(){
+        if( this.type == 'slide' ){
+            this.elRealInp2.min = this.realLimit.min;
+            this.elRealInp2.max = this.realLimit.max;
+        }
+        if( this.elRealInp ){
+            this.elRealInp.min = this.realLimit.min;
+            this.elRealInp.max = this.realLimit.max;
+        }
+    }
+    /*/
+
+    // força a recalcular os valores e atualizar UI
+    update(){
+        this.setValue( this.currentValue );
+    }
+        
+
+    /* =================================================
       Tratamento dos Valores e status
     ================================================= */
     clamp(v) {
@@ -398,6 +496,7 @@ export class Widget {
     }
 
     realFromAbstract(a) {
+        if( a == null ) return null;
         if( this.type == 'select' ){
             return this.selOptions[a];
         }else if( this.abstract ){
@@ -514,6 +613,11 @@ export class Widget {
         if (this.elStatus){
             this.elStatus.classList.toggle('wg-saved', this.isSaved);
             this.elStatus.classList.toggle('wg-applied', this.isApplied);
+        }
+
+        for (const action of this.actions) {
+            console.log(`[widget ${this.name}] action:`, action);
+            action();
         }
     }
 

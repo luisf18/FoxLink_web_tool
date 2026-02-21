@@ -8,67 +8,128 @@
                 "config": {
                     "offset": 0,
                     "wg": {
+                        "name": "Config. Flags",
                         "type": "check",
                         "defaultValue": 0,
                         "checkOptions": [
                             "Bidirectional",
                             "Invert",
-                            "limit Min",
-                            "limit Max" 
+                            "Set Min. Power",
+                            "Set Max. Power" 
+                        ],
+                        "externalActions": [
+                            {
+                                "type": "visible",
+                                "to": "ch_min",
+                                "expr": { "op": "bitClear", "bit": 0 }
+                            },
+                            {
+                                "type": "visible",
+                                "to": "min",
+                                "expr": { "op": "bitClear", "bit": 2 }
+                            },
+                            {
+                                "type": "visible",
+                                "to": "max",
+                                "expr": { "op": "bitClear", "bit": 3 }
+                            }
                         ]
                     }
                 },
                 "min": {
                     "offset": 1,
                     "wg": {
-                        "name": "min power",
+                        "unit": "%",
+                        "name": "Min. power",
                         "type": "slide",
                         "defaultValue": 0,
-                        "abstract": [0, 100]
+                        "abstract": [0, 100],
+                        "externalActions": [
+                            {
+                                "type": "set",
+                                "expr": { "value": "real" },
+                                "to": { "widget": "max", "property": "real.limitMin" }
+                            }
+                        ]
                     }
                 },
                 "max": {
                     "offset": 2,
                     "wg": {
-                        "name": "max power",
+                        "unit": "%",
+                        "name": "Max. power",
                         "type": "slide",
                         "defaultValue": 255,
                         "abstract": [0, 100]
                     }
                 },
-                "ch_center": {
-                    "offset": 3,
-                    "wg": {
-                        "name": "ch center",
-                        "type": "slide",
-                        "defaultValue": 128,
-                        "abstract": [860, 2135]
-                    }
-                },
                 "ch_min": {
                     "offset": 4,
                     "wg": {
-                        "name": "ch min",
+                        "name": "Ch min",
                         "type": "slide",
-                        "defaultValue": 0,
+                        "defaultValueAbs": 1000,
                         "abstract": [860, 2135]
+                    }
+                },
+                "ch_center": {
+                    "offset": 3,
+                    "wg": {
+                        "name": "Ch center",
+                        "type": "slide",
+                        "defaultValue": 128,
+                        "abstract": [860, 2135],
+                        "externalActions": [
+                            {
+                                "type": "set",
+                                "expr": "real",
+                                "to": { "widget": "ch_min", "property": "real.limitMax" }
+                            },
+                            {
+                                "type": "set",
+                                "expr": "real",
+                                "to": { "widget": "ch_max", "property": "real.limitMin" }
+                            },
+                            {
+                                "type": "#set",
+                                "expr": { "op": "minus", "value": [
+                                    "abs",
+                                    { "widget": "ch_deadband", "property": "real" }
+                                ] },
+                                "to": { "widget": "ch_min", "property": "abs.limitMax" }
+                            },
+                            {
+                                "type": "#set",
+                                "expr": { "op": "sum", "value": [
+                                    "abs",
+                                    { "widget": "ch_deadband", "property": "real" }
+                                ] },
+                                "to": { "widget": "ch_max", "property": "abs.limitMin" }
+                            }
+                        ]
                     }
                 },
                 "ch_max": {
                     "offset": 5,
                     "wg": {
-                        "name": "ch max",
+                        "name": "Ch max",
                         "type": "slide",
-                        "defaultValue": 255,
+                        "defaultValueAbs": 2000,
                         "abstract": [860, 2135]
                     }
                 },
                 "ch_deadband": {
                     "offset": 6,
                     "wg": {
-                        "name": "ch deadband",
+                        "name": "Ch deadband",
                         "type": "slide",
-                        "defaultValue": 10
+                        "defaultValue": 20,
+                        "externalActions": [
+                            {
+                                "type": "#update",
+                                "to": "ch_center"
+                            }
+                        ]
                     }
                 }
 
@@ -102,7 +163,7 @@
             "failsafe": {
                 "addr": "0x07",
                 "wg": {
-                    "unitSulfix": " ms",
+                    "unit": " ms",
                     "name": "Failsafe delay",
                     "type": "slide",
                     "defaultValue": 63,

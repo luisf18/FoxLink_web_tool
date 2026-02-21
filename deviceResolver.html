@@ -77,6 +77,7 @@ const deviceDefs = deviceCache;
 // Card
 const cardContainer = document.getElementById("cardContainer");
 let currentCard = null;
+window.currentCard = currentCard;
 
 //*/
 const modelSel = document.getElementById("modelSelect");
@@ -164,6 +165,8 @@ async function updateOutput() {
         console.log("erro:",e);
         output.textContent = e.message;
     }
+
+    window.card = currentCard;
 }
 
 /*/

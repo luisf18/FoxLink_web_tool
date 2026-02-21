@@ -11,6 +11,31 @@ export async function fillDevicesChace(){
     }
 }
 
+// retorna { parent, key, value, path }
+export function walkJson(obj, targetKey, callback, path = []) {
+    if (obj === null || typeof obj !== "object") return;
+
+    for (const key of Object.keys(obj)) {
+
+        const currentPath = [...path, key];
+
+        if (key === targetKey) {
+
+            callback({
+                parent: obj,
+                key,
+                value: obj[key],
+                path: currentPath
+            });
+
+            continue; // prune
+        }
+
+        walkJson(obj[key], targetKey, callback, currentPath);
+    }
+}
+
+
 // ==============================
 // HEX normalizer
 // ==============================
@@ -134,6 +159,7 @@ export async function resolveDeviceStructs( input, structs = null ) {
             // expande o struct em widgets
             if (ok){
                 
+                const paramPrefix = `${structName}_${instanceName}_`;
                 const prefix = (
                     structDef["!prefix"] || (
                         root ?
@@ -160,19 +186,37 @@ export async function resolveDeviceStructs( input, structs = null ) {
                         continue;
                     }
 
-                    // aplica prefix no wg.name
+                    // aplica prefixo no wg.name
                     if (newField.wg) {
+                        // salva nome original
+                        //newField.wg["!name"] = newField.wg.name;
+                        //newField.wg["!idx"] = countStruct[structName];
                         //log(` struct_field=${field}: `,newField.wg.name);
-                        newField.wg.name = (
-                            newField.wg.name ?
-                            prefix + newField.wg.name :
-                            `${prefix}${field}`
-                        );
+                        newField.wg.name = `${prefix}${newField.wg.name ?? field}`;
+
                         //log(` struct_field=${field}: `,newField.wg.name);
+                        if( newField.wg.externalActions ){
+                            console.log( "Widget-externalActions" );
+                            walkJson( newField.wg.externalActions, "to", ({ parent, key, value, path }) => {
+                                if (typeof value === "string")
+                                    parent[key] = { widget: `${value}` };
+                            });
+                            walkJson( newField.wg.externalActions, "widget", ({ parent, key, value, path }) => {
+                                parent[key] = `!${paramPrefix}${value}`;
+                            });
+                            //walkJson( newField.wg.externalActions, "to", ({ parent, key, value, path }) => {
+                            //    if (typeof parent[key] === "string") {
+                            //        parent[key] = { widget: `!${paramPrefix}${value}` };
+                            //    }else if (value?.widget != null) {
+                            //        value.widget = `!${paramPrefix}${value.widget}`;
+                            //    }
+                            //    console.log( "Encontrado em:", path.join("."), " value:", value );
+                            //});
+                        }
                     }
 
                     // salva de volta no dev.param
-                    const paramKey = `${structName}_${instanceName}_${field}`;
+                    const paramKey = `${paramPrefix}${field}`;
                     param[paramKey] = newField;
                 }
             }

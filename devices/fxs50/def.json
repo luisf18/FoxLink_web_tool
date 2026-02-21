@@ -46,6 +46,7 @@
                 "wg": {
                     "name": "Led Power",
                     "type": "slide",
+                    "unit": "%",
                     "defaultValue": 30,
                     "limit": [0,100]
                 }
