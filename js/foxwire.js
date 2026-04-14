@@ -490,7 +490,7 @@ export class FoxWire {
         ];
 
         // por enquanto só le reg
-        const crc = this.checksum(packet) & 0xFFFF;
+        const crc = (this.checksum(packet) - packet[0]) & 0xFFFF;
 
         // CRC u16 little-endian
         packet.push(crc & 0xFF);        // LSB
@@ -556,7 +556,7 @@ export class FoxWire {
         ];
 
         // por enquanto só le reg
-        const crc = this.checksum(packet) & 0xFFFF;
+        const crc = (this.checksum(packet)-packet[0]) & 0xFFFF;
 
         // CRC u16 little-endian
         packet.push(crc & 0xFF);        // LSB

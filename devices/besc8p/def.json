@@ -152,7 +152,7 @@
                     "name": "Basic config.",
                     "type": "check",
                     "defaultValue": 1,
-                    "checkBaseValue": 8,
+                    "checkBaseValue": 0,
                     "checkOptions": {
                         "Mix": 0,
                         "swap channels": 1

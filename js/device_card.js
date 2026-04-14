@@ -514,8 +514,8 @@ export class FxdeviceCard {
         //const ans = await this.fx?.read(this.addr);
         const ans = (
             this.devMode ?
-            await this._fx_retry_until_ok( this.fx?.read ) :
-            { ok: true, data: 70 }
+            { ok: true, data: 70 } :
+            await this._fx_retry_until_ok( this.fx?.read )
         );
         this.log.packI("sensor_read",ans.ok);
         if( ans.ok ){

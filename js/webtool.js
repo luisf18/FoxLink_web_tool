@@ -196,7 +196,7 @@ async function addDeviceCard(addr,info) {
     const div     = document.createElement("div");
 
     div.className = "scan-item";
-    div.textContent = `Addr ${addr} - ID 0x${
+    div.textContent = `Addr ${addr} - ID ${
         deviceId != null
         ? "0x" + deviceId.toString(16)
         : "N/A"
