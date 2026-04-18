@@ -76,6 +76,11 @@ export function numberToBytes(value, byteLength, signed, endian) {
                 ? view.setInt16(0, value, endian === 'little')
                 : view.setUint16(0, value, endian === 'little');
             break;
+        //default:
+        //    for (let i = 0; i < byteLength; i++) {
+        //        buffer[i] = ((value >> (8 * i)) & 0xFF);
+        //    }
+        //    break
     }
 
     return Array.from(new Uint8Array(buffer));

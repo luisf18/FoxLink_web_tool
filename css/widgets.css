@@ -117,10 +117,6 @@ span.wg-input-hide.wg-left{
     width: 100%;
     padding: 0;
 }
-.wg-input[type="range"]:focus{
-    border-color: none;
-    box-shadow: none;
-}
 /*INPUT CHECKBOX*/
 .wg-input[type="checkbox"]{
     all: revert;
@@ -297,4 +293,176 @@ span.wg-input-hide.wg-left{
 .widget-group-body.wg-open {
     max-height: 1000px;
     padding: 10px 12px 5px 12px;
+}
+
+
+
+/* MULTICHANNELS */
+
+/* MULTICHANNELS */
+
+.wg-multi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px 6px; /* mais espaço vertical */
+    margin-top: 10px;
+    margin-bottom: 3px;
+    width: 100%;
+}
+
+.wg-multi-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px; /* aumenta leve respiro */
+}
+
+.wg-multi-label {
+    /*font-weight: 550;*/
+    font-size: 12px; /* menor */
+    color: #2e2e2e;       /* mais suave */
+    line-height: 1;
+    margin-top: 1px;
+    margin-bottom: 1px;
+}
+
+.wg-multi-item .wg-input {
+    width: 100%;
+    max-width: 65px;
+    padding: 2px;
+    font-size: 12px;
+    text-align: center;
+}
+
+
+.checkbox-group-vertical {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    accent-color: #ffb47d;   /* cursor + fill */
+}
+
+
+/* COLOR */
+
+
+.wg-color-input {
+    all: revert; /* remove heranças indesejadas */
+    
+    width: 100%;
+    height: 8px;
+    border-radius: 8px;
+
+    accent-color: orange;
+
+    width: 60px;
+    font-size: 13px;
+    flex: 1;
+    padding: 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 0px;
+    transition: border 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wg-hue,
+.wg-bright {
+    /* remove cor padrão */
+    /*accent-color: transparent;
+    -webkit-appearance: none;
+    background: none;*/
+    appearance: none;
+}
+
+.wg-hue {
+    background: linear-gradient(to right,
+        red,
+        yellow,
+        lime,
+        cyan,
+        blue,
+        magenta,
+        red
+    );
+}
+
+.wg-bright {
+    background: linear-gradient(to right,
+        black,
+        white
+    );
+}
+
+
+
+
+
+.wg-color8 {
+    margin: 3px 6px;
+    margin-top: 6px; /* separa do header */
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.wg-color8-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wg-color8-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wg-color8-row .wg-input-hide {
+    min-width: 32px;
+    text-align: right;
+}
+
+.wg-color8-preview {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+}
+
+
+/* RTTTL */
+.wg-rtttl {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wg-rtttl-input {
+    flex: 1;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 3px 6px;
+}
+
+.wg-rtttl-btn {
+    width: 26px;
+    height: 22px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #f0f0f0;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s;
+}
+
+.wg-rtttl-btn:hover {
+    background: #ffa353;
+    color: white;
 }

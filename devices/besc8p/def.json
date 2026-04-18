@@ -155,7 +155,23 @@
                     "checkBaseValue": 0,
                     "checkOptions": {
                         "Mix": 0,
-                        "swap channels": 1
+                        "swap channels": 1,
+                        "Invert in1": 2,
+                        "Invert in2": 3
+                    }
+                }
+            },
+
+            "protocols": {
+                "addr": "0x04",
+                "wg": {
+                    "name": "Protocolos",
+                    "type": "check",
+                    "defaultValue": 1,
+                    "checkBaseValue": 0,
+                    "checkOptions": {
+                        "Enable IBUS": 0,
+                        "Enable PPM": 1
                     }
                 }
             },
@@ -171,11 +187,79 @@
                 }
             },
 
-            ">Motor1":{
+            "sound": {
+                "addr": "0x08",
+                "wg": {
+                    "unit": "%",
+                    "name": "Sound Volume",
+                    "type": "slideCheck",
+                    "defaultValue": 63,
+                    "slide": {
+                        "offset": 0,
+                        "bit_size": 6,
+                        "abstract": [0,100]
+                    },
+                    "checkOptions": {
+                        "Sound On": 7,
+                        "Automatic volume compensation": 6
+                    }
+                }
+            },
+
+            "channels": {
+                "addr": 29,
+                "wg": {
+                    "type": "multiChannels",
+                    "name": "Multi Channels",
+                    "size": 4,
+                    "defaultValue": "0x21",
+                    "optionsDefault": {
+                        "prefix": "CH",
+                        "bit_size": 4,
+                        "range": [0,10],
+                        "color": "normal",
+                        "special_values":{
+                            "0": {
+                                "name": "-"
+                            }
+                        }
+                    },
+                    "options":{
+                        "In1/speed": 0,
+                        "In2/rotation": 4,
+                        "Flip": 8,
+                        "Max speed": 12,
+                        "Sound": 16,
+                        "Move1": 20,
+                        "Move2": 24
+                    }
+                }
+            },
+
+            "colors": {
+                "addr": 33,
+                "wg": {
+                    "type": "color8",
+                    "name": "Color Off",
+                    "defaultValue": 0
+                }
+            },
+
+            "Start Melody": {
+                "addr": 33,
+                "wg": {
+                    "type": "rtttl",
+                    "name": "Start Sound",
+                    "defaultValue": "",
+                    "outputLen": 5
+                }
+            },
+
+            ">Motor 1":{
                 "_motor": 11
             },
             
-            ">Motor2":{
+            ">Motor 2":{
                 "_motor": 20
             }
 
