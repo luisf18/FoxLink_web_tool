@@ -119,14 +119,16 @@
 /* footer (rodape) -------------------------------------------- */
 
 .card-footer {
-    padding: 10px;
     display: flex;
     flex-direction: column;   /* empilha */
-    gap: 10px;
     background: #fafafa;
 }
 
 .card-footer-buttons {
+    
+    /*/ background: #ff7310; /*/
+
+    padding: 10px;
     display: flex;
     gap: 6px;
 }
@@ -134,7 +136,11 @@
 .card-footer-buttons button {
     flex: 1;                  /* todos iguais */
     padding: 7px;
+    
     border: none;
+    
+    /*/border: 1px solid #da0a0a;/*/
+    
     border-radius: 8px;
     cursor: pointer;
     font-size: 12px;
@@ -175,6 +181,132 @@
     opacity: 0.55;
     filter: grayscale(100%);
     pointer-events: none;   /* 🔥 trava interação */
+}
+
+
+/* MENU COLAPSÁVEL -------------------------------------------- */
+
+
+.card-footer-menu {
+    border-top: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    /* background: #f3f3f3; */
+    /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); */
+}
+
+/* header igual seção */
+.card-footer-menu-header {
+
+    /*/background: #ffb47d;/*/
+
+    display: flex;
+    align-items: center;
+    /*/justify-content: space-between;/*/
+
+    position: relative;
+
+    padding: 6px 12px;
+    /*border-radius: 8px;*/
+
+    font-size: 13px;
+    font-weight: bold;
+
+    color: #3b3b3b;
+
+    cursor: pointer;
+}
+
+.card-footer-menu-toggle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    /*/background: #9c9c9c;/*/
+    border-radius: 6px;
+
+    padding: 4px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /*/width: 30px;
+    height: 10px;/*/
+}
+
+/* seta discreta */
+.card-footer-menu-arrow {
+
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    pointer-events: none;
+
+    height: 20px;
+    
+    /*/opacity: 0.6;/*/
+    color: #9a9a9a;
+    transition: transform 0.2s ease;
+}
+
+.card-footer-menu-arrow.open {
+    transform: rotate(180deg);
+}
+
+/* conteúdo */
+.card-footer-menu-body {
+    display: flex;
+    gap: 6px;
+
+    /*/background: #f4f3f3;/*/
+    
+    border-top: none;
+    
+    padding: 0px 12px;
+
+    overflow: hidden;
+    max-height: 0;
+
+    transition: all 0.2s ease;
+}
+
+/* aberto */
+.card-footer-menu-body.open {
+    border-top: 1px solid #e5e5e5;
+    max-height: 80px;
+    padding: 6px 12px;  /* 👈 agora sim aparece */
+}
+
+/* botões estilo secundário */
+.card-footer-menu-body button {
+    flex: 1;
+
+    padding: 6px;
+    border-radius: 10px;
+
+    border: 1px solid #e2c3a6;
+
+    background: #f7e3d3;
+    color: #a14d12;
+
+    font-size: 12px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: all 0.15s ease;
+}
+
+.card-footer-menu-body button:hover {
+    filter: brightness(1.05);
+}
+
+/* Grafico ---------------------------------- */
+.card-footer-chart {
+    padding: 2px 10px 5px 10px;
 }
 
 /* Card novo! ---------------------------------- */

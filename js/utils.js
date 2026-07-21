@@ -176,7 +176,6 @@ export function bytesToTypedValue(bytes, type = 'u8', littleEndian = true) {
     return values.length === 1 ? values[0] : values;
 }
 
-
 export function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }

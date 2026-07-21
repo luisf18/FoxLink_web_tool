@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Motor DC Analyzer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:#f6f6f7;
+    font-family:Inter,Arial,sans-serif;
+    color:#222;
+}
+
+.container{
+    max-width:1450px;
+    margin:auto;
+    padding:24px;
+}
+
+.title{
+    font-size:38px;
+    font-weight:800;
+    color:#ff7a00;
+    margin-bottom:6px;
+}
+
+.subtitle{
+    color:#666;
+    margin-bottom:28px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+    gap:24px;
+    margin-bottom:28px;
+}
+
+.card{
+    background:white;
+    border-radius:20px;
+    padding:22px;
+    border:1px solid #ececec;
+    box-shadow:
+        0 2px 8px rgba(0,0,0,0.05);
+}
+
+.card h2{
+    margin-top:0;
+    color:#ff7a00;
+}
+
+.input-group{
+    margin-bottom:16px;
+}
+
+label{
+    display:block;
+    margin-bottom:6px;
+    font-size:14px;
+    font-weight:600;
+    color:#555;
+}
+
+input{
+    width:100%;
+    padding:13px;
+    border:none;
+    border-radius:12px;
+    background:#f5f5f5;
+    font-size:15px;
+}
+
+input:focus{
+    outline:none;
+    background:white;
+    box-shadow:0 0 0 2px #ffb36a;
+}
+
+.small{
+    font-size:13px;
+    color:#777;
+    margin-top:4px;
+}
+
+.checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+}
+
+.checkbox-row input{
+    width:auto;
+}
+
+button{
+    border:none;
+    border-radius:14px;
+    padding:14px 18px;
+    background:#ff7a00;
+    color:white;
+    font-weight:700;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+button:hover{
+    background:#ea6f00;
+}
+
+.results{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:18px;
+    margin-bottom:28px;
+}
+
+.result-box{
+    background:white;
+    border-radius:18px;
+    padding:18px;
+    border:1px solid #ececec;
+}
+
+.result-label{
+    color:#777;
+    font-size:13px;
+}
+
+.result-value{
+    margin-top:8px;
+    font-size:28px;
+    color:#ff7a00;
+    font-weight:800;
+}
+
+.chart-card{
+    background:white;
+    border-radius:22px;
+    padding:24px;
+    border:1px solid #ececec;
+}
+
+.chart-top{
+    display:flex;
+    flex-wrap:wrap;
+    gap:18px;
+    align-items:end;
+    margin-bottom:20px;
+}
+
+.chart-top .input-group{
+    min-width:220px;
+    margin-bottom:0;
+}
+
+.action-row{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+canvas{
+    max-height:650px;
+}
+
+hr{
+    border:none;
+    border-top:1px solid #eee;
+    margin:20px 0;
+}
+
+
+
+.input-inline{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.input-inline input{
+    flex:1;
+}
+
+.si-badge{
+    min-width:110px;
+    padding:10px 12px;
+    border-radius:12px;
+    background:#f1f1f1;
+    color:#666;
+    font-size:13px;
+    text-align:center;
+    white-space:nowrap;
+    border:1px solid #e6e6e6;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="title">Motor DC Analyzer</div>
+
+    <div class="subtitle">
+        Curvas características, parâmetros equivalentes e análise completa
+    </div>
+
+    <div class="grid">
+
+        <div class="card">
+
+            <h2>Entrada</h2>
+
+            <div class="checkbox-row">
+                <input
+                    type="checkbox"
+                    id="useMeasured"
+                    checked
+                    onchange="toggleMode()">
+
+                <label for="useMeasured">
+                    Deduzir parâmetros através das medições
+                </label>
+            </div>
+
+            <hr>
+
+            <div id="measuredInputs">
+
+                <h3>Sem carga</h3>
+
+                <div class="input-group">
+                    <label>Velocidade sem carga (RPM)</label>
+                    <input type="number" id="rpm_no_load" value="12000">
+                </div>
+
+                <div class="input-group">
+                    <label>Tensão (V)</label>
+                    <input type="number" id="voltage" value="12">
+                </div>
+
+                <div class="input-group">
+                    <label>Corrente sem carga (A)</label>
+                    <input type="number" id="current_no_load" value="0.5">
+                </div>
+
+                <h3>Stall</h3>
+
+                <div class="input-group">
+                    <label>Corrente de stall (A)</label>
+                    <input type="number" id="current_stall" value="20">
+                </div>
+
+                <div class="checkbox-row">
+                    <input
+                        type="checkbox"
+                        id="deduceTorque"
+                        checked
+                        onchange="toggleTorqueInput()">
+
+                    <label for="deduceTorque">
+                        Deduzir torque de stall automaticamente
+                    </label>
+                </div>
+
+                <div
+                    class="input-group"
+                    id="torqueInputGroup"
+                    style="display:none">
+
+                    <label>Torque de stall (kg.cm)</label>
+                    <input type="number" id="torque_stall" value="8">
+                </div>
+
+            </div>
+
+            <div id="parameterInputs" style="display:none">
+
+                <h3>Parâmetros do motor</h3>
+
+                <div class="param-grid">
+
+                    <div class="param-name">
+                        Resistência de armadura
+                    </div>
+
+                    <div class="param-input">
+
+                        <input
+                            type="number"
+                            id="armature_resistance"
+                            value="0.6">
+
+                        <span class="unit">
+                            Ω
+                        </span>
+
+                    </div>
+
+                    <div class="param-si" id="r_si">
+                        0.600 Ω
+                    </div>
+
+                </div>
+
+                <div class="input-group">
+                    <label>Kv (RPM/V)</label>
+                    <input type="number" id="kv_input" value="1000">
+                    <div class="small" id="kv_si"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Kt (kg.cm/A)</label>
+                    <input type="number" id="kt_input" value="0.097">
+                    <div class="small" id="kt_si"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>Corrente sem carga (A)</label>
+                    <input type="number" id="i0_input" value="0.5">
+                    <div class="small" id="i0_si"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="results">
+
+        <div class="result-box">
+            <div class="result-label">Resistência de armadura</div>
+            <div class="result-value" id="resistanceResult">0 Ω</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Kv</div>
+            <div class="result-value" id="kvResult">0 RPM/V</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Kt</div>
+            <div class="result-value" id="ktResult">0 kg.cm/A</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Kt via 1/Kv</div>
+            <div class="result-value" id="ktCheck">0</div>
+        </div>
+
+    </div>
+
+    <div class="chart-card">
+
+        <div class="chart-top">
+
+            <div class="checkbox-row">
+                <input type="checkbox" id="customVoltageEnable">
+                <label>Usar tensão personalizada</label>
+            </div>
+
+            <div class="input-group">
+                <label>Tensão do gráfico (V)</label>
+                <input type="number" id="customVoltage" value="24">
+            </div>
+
+            <div class="input-group">
+                <label>Potência máxima (W)</label>
+                <input type="number" id="maxPower" value="150">
+            </div>
+
+            <div class="action-row">
+
+                <button onclick="calculateMotor()">
+                    Calcular
+                </button>
+
+                <button onclick="copyImage()">
+                    Copiar gráfico
+                </button>
+
+                <button onclick="saveImage()">
+                    Salvar imagem
+                </button>
+
+            </div>
+
+        </div>
+
+        <canvas id="motorChart"></canvas>
+
+    </div>
+
+</div>
+
+<script>
+
+let chart;
+
+// ---------------------------------------------
+// Convert
+function kgcmToNm(v){
+    return v * 0.0980665;
+}
+
+function nmToKgcm(v){
+    return v / 0.0980665;
+}
+// ---------------------------------------------
+
+// ---------------------------------------------
+// toggleMode ?
+function toggleMode(){
+    const measured =
+        document.getElementById("useMeasured").checked;
+    document.getElementById("measuredInputs").style.display =
+        measured ? "block" : "none";
+    document.getElementById("parameterInputs").style.display =
+        measured ? "none" : "block";
+}
+function toggleTorqueInput(){
+    const deduce =
+        document.getElementById("deduceTorque").checked;
+    document.getElementById("torqueInputGroup").style.display =
+        deduce ? "none" : "block";
+}
+
+
+// ---------------------------------------------
+// toggleMode ?
+function calculateMotor(){
+
+    const useMeasured =
+        document.getElementById("useMeasured").checked;
+
+    let R;
+    let Kv;
+    let Kt;
+    let I0;
+    let voltage;
+
+    if(useMeasured){
+
+        const rpmNoLoad =
+            parseFloat(document.getElementById("rpm_no_load").value);
+
+        voltage =
+            parseFloat(document.getElementById("voltage").value);
+
+        I0 =
+            parseFloat(document.getElementById("current_no_load").value);
+
+        const Istall =
+            parseFloat(document.getElementById("current_stall").value);
+
+        R = voltage / Istall;
+
+        Kv = rpmNoLoad / voltage;
+
+        const deduceTorque =
+            document.getElementById("deduceTorque").checked;
+
+        if(deduceTorque){
+
+            const ktNm =
+                9.549 / Kv;
+
+            Kt =
+                nmToKgcm(ktNm);
+
+        }else{
+
+            const Tstall =
+                parseFloat(document.getElementById("torque_stall").value);
+
+            Kt = Tstall / Istall;
+        }
+
+    }else{
+
+        R =
+            parseFloat(document.getElementById("armature_resistance").value);
+
+        Kv =
+            parseFloat(document.getElementById("kv_input").value);
+
+        Kt =
+            parseFloat(document.getElementById("kt_input").value);
+
+        I0 =
+            parseFloat(document.getElementById("i0_input").value);
+
+        voltage = 12;
+    }
+
+    if(document.getElementById("customVoltageEnable").checked){
+
+        voltage =
+            parseFloat(document.getElementById("customVoltage").value);
+    }
+
+    document.getElementById("r_si").innerText =
+        "SI: " + R.toFixed(4) + " Ω";
+
+    document.getElementById("kv_si").innerText =
+        "SI: " + (Kv * 2 * Math.PI / 60).toFixed(2) +
+        " rad/s/V";
+
+    document.getElementById("kt_si").innerText =
+        "SI: " + kgcmToNm(Kt).toFixed(4) +
+        " N.m/A";
+
+    document.getElementById("i0_si").innerText =
+        "SI: " + I0.toFixed(3) + " A";
+
+    const maxPower =
+        parseFloat(document.getElementById("maxPower").value);
+
+    const ktByKvNm =
+        9.549 / Kv;
+
+    const ktByKvKgcm =
+        nmToKgcm(ktByKvNm);
+
+    const stallCurrent =
+        voltage / R;
+
+    const stallTorque =
+        stallCurrent * Kt;
+
+    const points = 180;
+
+    let torque = [];
+
+    let speed = [];
+    let current = [];
+    let power = [];
+    let efficiency = [];
+
+    let dashedMask = [];
+
+    for(let i = 0; i <= points; i++){
+
+        const t =
+            stallTorque * (i / points);
+
+        const currentMotor =
+            I0 + (t / Kt);
+
+        const rpm =
+            Kv * (voltage - currentMotor * R);
+
+        const omega =
+            rpm * 2 * Math.PI / 60;
+
+        const mechPower =
+            kgcmToNm(t) * omega;
+
+        const elecPower =
+            voltage * currentMotor;
+
+        const eff =
+            elecPower > 0
+            ? (mechPower / elecPower) * 100
+            : 0;
+
+        torque.push(t.toFixed(2));
+
+        speed.push(rpm);
+        current.push(currentMotor);
+        power.push(mechPower);
+        efficiency.push(eff);
+
+        dashedMask.push(mechPower > maxPower);
+    }
+
+    document.getElementById("resistanceResult").innerText =
+        R.toFixed(3) + " Ω";
+
+    document.getElementById("kvResult").innerText =
+        Kv.toFixed(1) + " RPM/V";
+
+    document.getElementById("ktResult").innerText =
+        Kt.toFixed(3) + " kg.cm/A";
+
+    document.getElementById("ktCheck").innerText =
+        ktByKvKgcm.toFixed(3);
+
+    const ctx =
+        document.getElementById("motorChart");
+
+    if(chart){
+        chart.destroy();
+    }
+
+    chart = new Chart(ctx,{
+
+        type:"line",
+
+        data:{
+
+            labels:torque,
+
+            datasets:[
+
+                {
+                    label:"Velocidade",
+                    data:speed,
+                    borderColor:"#ff7a00",
+                    borderWidth:3,
+                    pointRadius:0,
+                    tension:0.25,
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[ctx.p0DataIndex]
+                            ? [8,8]
+                            : undefined
+                    }
+                },
+
+                {
+                    label:"Potência",
+                    data:power,
+                    borderColor:"#555",
+                    borderWidth:2,
+                    pointRadius:0,
+                    tension:0.25,
+                    yAxisID:"y1",
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[ctx.p0DataIndex]
+                            ? [8,8]
+                            : undefined
+                    }
+                },
+
+                {
+                    label:"Corrente",
+                    data:current,
+                    borderColor:"#ffb000",
+                    borderWidth:2,
+                    pointRadius:0,
+                    tension:0.25,
+                    yAxisID:"y1",
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[ctx.p0DataIndex]
+                            ? [8,8]
+                            : undefined
+                    }
+                },
+
+                {
+                    label:"Eficiência",
+                    data:efficiency,
+                    borderColor:"#00a884",
+                    borderWidth:2,
+                    pointRadius:0,
+                    tension:0.25,
+                    yAxisID:"y1",
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[ctx.p0DataIndex]
+                            ? [8,8]
+                            : undefined
+                    }
+                }
+
+            ]
+        },
+
+        options:{
+
+            responsive:true,
+
+            interaction:{
+                mode:"index",
+                intersect:false
+            },
+
+            plugins:{
+                legend:{
+                    labels:{
+                        usePointStyle:true
+                    }
+                }
+            },
+
+            scales:{
+
+                x:{
+                    title:{
+                        display:true,
+                        text:"Torque (kg.cm)"
+                    }
+                },
+
+                y:{
+                    title:{
+                        display:true,
+                        text:"Velocidade (RPM)"
+                    }
+                },
+
+                y1:{
+                    position:"right",
+                    grid:{
+                        drawOnChartArea:false
+                    },
+                    title:{
+                        display:true,
+                        text:"Corrente / Potência / Eficiência"
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function copyImage(){
+
+    const canvas =
+        document.getElementById("motorChart");
+
+    canvas.toBlob(async(blob)=>{
+
+        try{
+
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    "image/png":blob
+                })
+            ]);
+
+            alert("Imagem copiada!");
+
+        }catch(e){
+
+            alert("Falha ao copiar.");
+        }
+
+    });
+}
+
+function saveImage(){
+
+    const canvas =
+        document.getElementById("motorChart");
+
+    const link =
+        document.createElement("a");
+
+    link.download =
+        "motor_dc_chart.png";
+
+    link.href =
+        canvas.toDataURL("image/png");
+
+    link.click();
+}
+
+toggleMode();
+toggleTorqueInput();
+calculateMotor();
+
+</script>
+
+</body>
+</html>

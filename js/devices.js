@@ -6,7 +6,8 @@
 export const deviceRegistry = {
     0x001: { name: "FX_S50", type: "sensor" },
     0x020: { name: "IR_KEY", type: "sensor" },
-    0x200: { name: "BESC8p_double", type: "ESC brushed" }
+    0x200: { name: "BESC8p_double", type: "ESC brushed" },
+    0x800: { name: "Mini53", type: "robot" }
 };
 
 export const deviceDefs = {

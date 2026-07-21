@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>FoxWire Widget</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#eee;
+}
+
+/* ===== WIDGET ROOT ===== */
+.widget-container{
+    width: 520px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    background: #fff;
+    margin: 30px auto;
+}
+
+/* ===== HEADER ===== */
+.widget-header{
+    background:#ff7a00;
+    color:white;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 12px;
+}
+
+.widget-title{
+    font-weight:bold;
+}
+
+/* ===== CONTROLS ===== */
+.controls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:4px;
+    border-radius:8px;
+    background: #4b4b4b70;
+}
+
+/* BUTTONS */
+.btn{
+    border:none;
+    height: 26px;
+    border-radius:6px;
+    font-size:12px;
+    cursor:pointer;
+    transition:0.2s;
+    font-weight:bold;
+}
+
+/* CONNECT */
+.btn-connect{
+    width: 40px;
+    background:#ff3b3b;
+    color:white;
+}
+.btn-connect.on{
+    background:#22c55e;
+}
+
+/* SCAN */
+.btn-scan{
+    background:#ff7a00;
+    color:white;
+}
+.btn-scan:hover{
+    filter:brightness(1.05);
+}
+
+/* PROGRESS */
+.progress-box{
+    width:90px;
+    height:8px;
+    background:#fff3e6;
+    border-radius:6px;
+    overflow:hidden;
+    display:none;
+}
+.progress-bar{
+    width:0%;
+    height:100%;
+    background:#ff7a00;
+}
+
+/* ===== RADAR ===== */
+.device-radar{
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display:none;
+}
+
+.radar-circle{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:2px solid #fff;
+    position: relative;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+}
+
+/* DEVICES */
+.device{
+    position:absolute;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:#f7f7f7;
+    border:2px solid #333;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:11px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.device:hover{
+    transform: scale(1.15);
+}
+
+.device.active{
+    background:#22c55e;
+    color:white;
+    border-color:#22c55e;
+}
+
+/* BADGE */
+.device-count{
+    position:absolute;
+    top:-6px;
+    right:-6px;
+
+    background:#22c55e;
+    color:white;
+    font-size:11px;
+    font-weight:bold;
+
+    width:20px;
+    height:20px;
+    border-radius:50%;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    box-shadow:0 0 6px rgba(0,0,0,0.3);
+}
+
+/* ===== BODY ===== */
+.widget-body{
+    padding:12px;
+}
+
+.status{
+    font-size:12px;
+    color:#444;
+}
+
+/* ===== RADAR ANIMATION ===== */
+.radar-icon svg{
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+.scanning .radar-icon svg{
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="widget-container">
+
+    <div class="widget-header">
+
+        <div class="widget-title">FoxWire Device Manager</div>
+
+        <div class="controls">
+
+            <button class="btn btn-connect" onclick="toggleConnection()" id="connBtn">
+                OFF
+            </button>
+
+            <button class="btn btn-scan" onclick="scan()" id="scanBtn">
+                <div class="radar-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5" opacity="0.6" fill="none"/>
+                        <path d="M12 12 L19 9" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>
+            </button>
+
+            <div class="progress-box" id="progressBox">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <div class="device-radar" id="deviceRadar">
+                <div class="radar-circle" id="radarCircle"></div>
+                <div class="device-count" id="deviceCount">0</div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="widget-body">
+        <div class="status" id="status">
+            Status: desconectado
+        </div>
+    </div>
+</div>
+
+<script>
+
+let connected = false;
+let mode = "foxwire";
+
+function toggleConnection(){
+    connected = !connected;
+
+    const btn = document.getElementById("connBtn");
+
+    btn.innerText = connected ? "ON" : "OFF";
+    btn.classList.toggle("on", connected);
+
+    document.getElementById("status").innerText =
+        "Status: " + (connected ? "conectado ("+mode+")" : "desconectado");
+
+    resetDevices();
+}
+
+function resetDevices(){
+    document.getElementById("deviceRadar").style.display = "none";
+}
+
+function scan(){
+
+    if(!connected){
+        alert("Conecte primeiro");
+        return;
+    }
+
+    document.getElementById("scanBtn").classList.add("scanning");
+
+    let barBox = document.getElementById("progressBox");
+    let bar = document.getElementById("progressBar");
+    let radar = document.getElementById("deviceRadar");
+
+    radar.style.display = "none";
+    barBox.style.display = "block";
+    bar.style.width = "0%";
+
+    let p = 0;
+
+    let t = setInterval(() => {
+        p += 5;
+        bar.style.width = p + "%";
+
+        if(p >= 100){
+            clearInterval(t);
+
+            barBox.style.display = "none";
+            showDevices();
+
+            document.getElementById("scanBtn").classList.remove("scanning");
+        }
+    }, 40);
+}
+
+function showDevices(){
+
+    let radar = document.getElementById("deviceRadar");
+    let circle = document.getElementById("radarCircle");
+    let count = document.getElementById("deviceCount");
+
+    circle.innerHTML = "";
+
+    let devices = 6; // simulação
+    count.innerText = devices;
+
+    let radius = 45;
+    let center = 60;
+
+    for(let i=0;i<devices;i++){
+
+        let angle = (i / devices) * (2 * Math.PI);
+
+        let x = center + radius * Math.cos(angle);
+        let y = center + radius * Math.sin(angle);
+
+        let d = document.createElement("div");
+        d.className = "device";
+        d.innerText = i+1;
+
+        d.style.left = (x - 11) + "px";
+        d.style.top  = (y - 11) + "px";
+
+        d.onclick = () => {
+            document.querySelectorAll(".device").forEach(el => el.classList.remove("active"));
+            d.classList.add("active");
+        };
+
+        circle.appendChild(d);
+    }
+
+    radar.style.display = "block";
+}
+
+</script>
+
+</body>
+</html>

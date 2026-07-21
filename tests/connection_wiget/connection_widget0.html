@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Widget Serial / FoxWire</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f3f3f3;
+    }
+
+    /* CARD */
+    .card {
+        width: 700px;
+        margin: 40px auto;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+
+    /* HEADER */
+    .header {
+        background: #ff7a00;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+    }
+
+    .title {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    /* WIDGET AREA */
+    .widget {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    button {
+        border: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .connect {
+        background: #ffffff;
+        color: #ff7a00;
+        font-weight: bold;
+    }
+
+    .scan {
+        background: #ffffff;
+        color: #333;
+    }
+
+    .mode {
+        background: rgba(255,255,255,0.2);
+        color: white;
+    }
+
+    /* BODY */
+    .content {
+        padding: 15px;
+    }
+
+    .status {
+        font-size: 13px;
+        margin-bottom: 10px;
+        color: #444;
+    }
+
+    /* PROGRESS BAR */
+    .progress-container {
+        width: 100%;
+        background: #eee;
+        border-radius: 8px;
+        overflow: hidden;
+        height: 10px;
+        display: none;
+        margin-bottom: 10px;
+    }
+
+    .progress {
+        width: 0%;
+        height: 100%;
+        background: #ff7a00;
+    }
+
+    /* DEVICE LIST */
+    .device-list {
+        max-height: 150px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 8px;
+        display: none;
+    }
+
+    .device {
+        padding: 6px;
+        margin: 4px 0;
+        background: #f7f7f7;
+        border-radius: 5px;
+        font-size: 13px;
+    }
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="title">Widget Serial / FoxWire</div>
+
+        <div class="widget">
+            <button class="mode" onclick="toggleMode()" id="modeBtn">Mode: FoxWire</button>
+            <button class="connect" onclick="toggleConnect()" id="connectBtn">Connect</button>
+            <button class="scan" onclick="startScan()">Scan</button>
+        </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="content">
+
+        <div class="status" id="status">Status: desconectado</div>
+
+        <div class="progress-container" id="progressBox">
+            <div class="progress" id="progressBar"></div>
+        </div>
+
+        <div class="device-list" id="deviceList"></div>
+
+    </div>
+</div>
+
+<script>
+let mode = "foxwire";
+let connected = false;
+
+function toggleMode() {
+    mode = (mode === "foxwire") ? "serial" : "foxwire";
+    document.getElementById("modeBtn").innerText = "Mode: " + (mode === "foxwire" ? "FoxWire" : "USB Serial");
+
+    document.getElementById("deviceList").style.display = "none";
+}
+
+function toggleConnect() {
+    connected = !connected;
+    document.getElementById("connectBtn").innerText = connected ? "Disconnect" : "Connect";
+    document.getElementById("status").innerText = "Status: " + (connected ? "conectado (" + mode + ")" : "desconectado");
+
+    if (!connected) {
+        document.getElementById("deviceList").style.display = "none";
+    }
+}
+
+function startScan() {
+    if (!connected || mode !== "foxwire") {
+        alert("Scan disponível apenas no modo FoxWire conectado");
+        return;
+    }
+
+    let progress = document.getElementById("progressBox");
+    let bar = document.getElementById("progressBar");
+    let list = document.getElementById("deviceList");
+
+    list.style.display = "none";
+    progress.style.display = "block";
+    bar.style.width = "0%";
+
+    let width = 0;
+
+    let interval = setInterval(() => {
+        width += 5;
+        bar.style.width = width + "%";
+
+        if (width >= 100) {
+            clearInterval(interval);
+
+            progress.style.display = "none";
+
+            showDevices();
+        }
+    }, 50);
+}
+
+function showDevices() {
+    let list = document.getElementById("deviceList");
+
+    let devices = [
+        "Device #001 - OK",
+        "Device #002 - OK",
+        "Device #003 - OK",
+        "Device #004 - OK",
+        "Device #005 - OK"
+    ];
+
+    list.innerHTML = "";
+
+    devices.forEach(d => {
+        let div = document.createElement("div");
+        div.className = "device";
+        div.innerText = d;
+        list.appendChild(div);
+    });
+
+    list.style.display = "block";
+}
+</script>
+
+</body>
+</html>

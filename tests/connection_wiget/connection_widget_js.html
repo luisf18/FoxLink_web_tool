@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>FoxWire Widget</title>
+
+<link rel="stylesheet" href="../../css/foxwire_widget.css">
+
+<style>
+
+/* ===== BASE ===== */
+body{
+    font-family: Arial;
+    background:#eee;
+}
+
+/* ===== CARD ===== */
+.card{
+    width:420px;
+    height:140px;
+    margin:30px auto;
+    display:flex;
+    flex-direction:column;
+    background:#fff;
+    border-radius:10px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.2);
+    overflow:visible;
+}
+.card-title{
+    padding:10px 12px;
+    font-size:10px;
+    font-weight:bold;
+    color:#333;
+    border-bottom:1px solid #eee;
+}
+.card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    color:white;
+    background:#ff7a00;
+    border-radius:10px 10px 0 0;
+}
+
+/*/
+.card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    color:white;
+
+    background: linear-gradient(135deg, #ff7a00, #ffb347);
+
+    border-radius:10px 10px 0 0;
+}
+/*/
+
+/*/
+.card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    color:white;
+    border-radius:10px 10px 0 0;
+
+    background:
+        linear-gradient(135deg, #ff7a00, #ffb347),
+        repeating-linear-gradient(
+            0deg,
+            rgba(255,255,255,0.03) 0px,
+            rgba(255,255,255,0.03) 1px,
+            transparent 1px,
+            transparent 3px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            rgba(0,0,0,0.03) 0px,
+            rgba(0,0,0,0.03) 1px,
+            transparent 1px,
+            transparent 3px
+        );
+}
+
+.card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    color:white;
+    border-radius:10px 10px 0 0;
+
+    background: linear-gradient(270deg, #ff47a3, #ff7a00, #ff2929);
+    background-size: 400% 400%;
+
+    animation: gradientMove 6s ease infinite;
+}
+
+@keyframes gradientMove{
+    0%{
+        background-position: 0% 50%;
+    }
+    50%{
+        background-position: 100% 50%;
+    }
+    100%{
+        background-position: 0% 50%;
+    }
+}
+
+/*/
+
+.card-header{
+    position:relative;
+    /*/overflow:hidden;/*/
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    color:white;
+    border-radius:10px 10px 0 0;
+
+    background: linear-gradient(270deg, #ff8d21, #d20000, #2300c0, #ff4d00);
+    background-size: 400% 400%;
+    animation: gradientMove 8s ease infinite;
+}
+
+@keyframes gradientMove{
+    0%{ background-position: 0% 50%; }
+    50%{ background-position: 100% 50%; }
+    100%{ background-position: 0% 50%; }
+}
+
+.card-body{
+    flex:1;
+    padding:10px;
+    font-size:12px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+    <!-- CONTROLES -->
+    <div class="card-header">
+
+        <div>FoxWire</div>
+
+        <div id="fx-connection"></div>
+
+    </div>
+
+    <!-- BODY -->
+    <div class="card-body">
+        <div id="status">Status: desconectado</div>
+    </div>
+
+</div>
+
+<script type="module">
+
+import { FoxWireWidget } from "../../js/foxwire_widget.js";
+
+new FoxWireWidget(document.getElementById("fx-connection"), {
+    width: "200px",
+    height: "40px",
+    use_title: true,
+    //primary: "#0ea5e9",
+    bg: "#f1f5f9"
+});
+
+</script>
+
+</body>
+</html>

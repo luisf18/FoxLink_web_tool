@@ -1,6 +1,10 @@
 {
     "0": {
+        
         "model": "IrKey",
+        
+        "mem_size": 64,
+
         "graphOptions": {
             "points": 60,
             "autoScale": true,

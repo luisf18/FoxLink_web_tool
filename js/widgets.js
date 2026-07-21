@@ -707,7 +707,7 @@ export class Widget {
         //this._checkMap = options;
 
         Object.entries(options).forEach(([opt, bit]) => {
-            const label = document.createElement('label');
+            const label = document.createElement('div');
             const chk   = document.createElement('input');
             chk.type = 'checkbox';
             chk.title = `bit ${bit}`;

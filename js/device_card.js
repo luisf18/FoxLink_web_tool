@@ -1,3 +1,4 @@
+import * as utils from "./utils.js";
 import { MultiLineGraph } from "./graph.js"
 import { DebugLog } from "./debug.js";
 import { Widget } from "./widgets.js";
@@ -27,6 +28,8 @@ export class FxdeviceCard {
 
         this.log = new DebugLog( `CARD-DEV-${addr}${this.devMode?"-DEV_MODE":""}`, "#ff7300" );
 
+        this.log.level = "warn";
+
         // Informations
         this.info = info;
 
@@ -53,6 +56,15 @@ export class FxdeviceCard {
 
         // Actions
         this.actions = [];
+
+        // Informa se tem suporte a comandos extended
+        this.extended_suport = opts.flag_extended ?? (info.fxv > 1);
+
+        this.mem_size = (this.extended_suport ? ( opts.mem_size ?? 64 ) : 32 );
+
+        this.mem = null;
+
+        this.deviceAction = true;
     }
 
     /* =================================================
@@ -126,28 +138,6 @@ export class FxdeviceCard {
         return await this._fx_retry_until_ok( this.fx?.registerRead, opt, addr, byte );
     }
 
-    async _writeBytes( addr, bytes, opt={} ){
-        
-        if( !this.fx ) return false;
-        
-        if( this.info.fxv >= 2 ){
-            console.log( "try extenderWrite: ", bytes );
-            return (
-                await this._fx_retry_until_ok( this.fx?.extendedWrite, opt, addr, bytes ) != null
-            );
-        }
-
-        // registerWrite não acessa addr maior que 31
-        if( bytes.length + addr >= 32 ) return false;
-
-        for (let i = 0; i < bytes.length; i++) {
-            if( ! await this._writeReg( addr+i,bytes[i] ) )
-                return false;
-        }
-
-        return true;
-    }
-
     /* =================================================
       Buttons Actions
     ================================================= */
@@ -156,29 +146,28 @@ export class FxdeviceCard {
     async read( saved = false ){
         
         if( !this.param || !this.fx ) return;
+
+        this.mem = await this.fx.readMemory( this.addr, 0, this.mem_size, this.extended_suport );
+
+        //console.log( "MEM:", this.mem_size, this.extended_suport, this.mem );
+
+        if( this.mem == null ) return;
         
         for( const p in this.param ){
             
             const addr = this.param[p].addr;
             const wg = this.param[p].wg;
-
-            const value = ( 
-                addr ? 
-                await this.fx?.readType(
-                    this.addr,
-                    addr,
-                    wg.outputType,
-                    wg.outputLen,
-                    ( this.info.fxv >= 2 )
-                ) :
-                this.addr
-            );
             
-            if (value !== null) {
-                ( saved ? 
-                    wg.setSavedValue(value) :
-                    wg.setAppliedValue(value) 
-                );
+            const bytes = this.mem.slice(addr, addr + wg.outputLen);
+            
+            const value = utils.bytesToTypedValue(bytes, wg.outputType);
+
+            if (value !== undefined && value !== null) {
+                if (saved) {
+                    wg.setSavedValue(value);
+                } else {
+                    wg.setAppliedValue(value);
+                }
             }
 
             this.log.packI(
@@ -196,6 +185,9 @@ export class FxdeviceCard {
     // Apply
     async apply( readAtEnd = true ){
         if( !this.param || !this.fx ) return;
+
+        this.log.i( `apply button -> extended: ${this.extended_suport}` );
+        
         for( const p in this.param ){
             let addr = this.param[p].addr;
             const wg = this.param[p].wg;
@@ -213,9 +205,10 @@ export class FxdeviceCard {
                 }
             }else{
                 // Outros endereços
-                ok = await this._writeBytes( addr, bytes );
+                ok = await this.fx.writeMemory(this.addr,addr,bytes,this.extended_suport);
+                //ok = await this._writeBytes( addr, bytes );
             }
-            this.log.i( "bytes:", bytes );
+            //this.log.i( "bytes:", bytes );
             this.log.packI(
                 "APPLY",
                 ok,
@@ -234,16 +227,32 @@ export class FxdeviceCard {
         await this.apply(false);
         this.log.packI( "SAVE", await this._save() );
         await this.delay(20);
-        await this.read( true );
-        this.updateButtons();
+        await this.reset();
+        //await this.read( true );
+        //this.updateButtons();
     }
 
     // Reset
     async reset() {
+
         if( !this.fx ) return;
+
+        // Reset
         this.log.packI( "RESET", await this._reset() );
-        await this.delay(20);
+
+        // Faz reset e aguarda reiniciar
+        this.log.packI( "RESET", true );
+        let try_count = 10;
+        while( try_count ){
+            await this.delay( 50 );
+            const ans = await this.fx.check(this.addr);
+            if( ans.ok ) break;
+            try_count--;
+        }
+        this.log.i( `Power up time = ${ (10-try_count)*50 } ms` );
+
         await this.read( true );
+
         if( this.graph ){
             this.graph.clear();
         }
@@ -268,24 +277,17 @@ export class FxdeviceCard {
             this.render();
             return true;
         }
-        
-        // Reset
-        if( !(await this._reset()) ){
-            this.log.packE( "RESET", false );
-            return false;
-        }
 
-        this.log.packI( "RESET", true );
-        await this.delay( 20 );
+        // renderiza no DOM
+        this.render();
+        
+        await this.reset();
 
         // Get fox wire version
         if(!("fxv" in this.info)) {
             this.info.fxv = await this._getFxv();
         }
         this.log.i( `fxv=${this.info.fxv}` );
-
-        // renderiza no DOM
-        this.render();
 
         // Le os valores de cada parametro
         await this.read( true );
@@ -310,7 +312,7 @@ export class FxdeviceCard {
                         ${this.model} [${this.id}]
                     </div>
                     <div class="card-device-meta">
-                        Firmware v${Math.floor(this.firmwareVersion / 1000)}.${this.firmwareVersion % 1000} |
+                        Firmware v${Math.floor(this.info.fwv / 1000)}.${this.info.fwv % 1000} |
                         FoxWire v${this.info.fxv} |
                         Lote ${this.lot}
                     </div>
@@ -323,10 +325,37 @@ export class FxdeviceCard {
                 
                 ${this.graphOptions ? `
                     <!-- Gráfico -->
-                    <div class="chart-container">
-                        <canvas class="graph-canvas"></canvas>
-                        <div class="chart-labels">Leitura em tempo real</div>
-                    </div>` : ""
+                    <div class="card-footer-chart">
+                        <div class="chart-container">
+                            <canvas class="graph-canvas"></canvas>
+                            <div class="chart-labels">Leitura em tempo real</div>
+                        </div>
+                    </div>`
+                    : ""
+                }
+
+                ${this.deviceAction ? `
+                <!-- MENU COLAPSÁVEL -->
+                <div class="card-footer-menu">
+                    <div class="card-footer-menu-header">
+                        <span class="card-footer-menu-title">Actions</span>
+                        <div class="card-footer-menu-toggle">
+                            <svg class="card-footer-menu-arrow" viewBox="0 0 24 24">
+                                <path d="M6 14 L12 10 M12 10 L18 14"
+                                    stroke="currentColor"
+                                    stroke-width="2.5"
+                                    stroke-linecap="round"
+                                    fill="none"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-footer-menu-body">
+                        <button>Stop</button>
+                        <button>Move1</button>
+                        <button>Move2</button>
+                    </div>
+                </div>
+                ` : ""
                 }
                 
                 <div class="card-footer-buttons">
@@ -346,10 +375,25 @@ export class FxdeviceCard {
         // Botões de baixo
         this.bindButtons();
 
+        this.bindFooterMenu();
+
         // Parametros
         this.cardBody = this.el.querySelector(".card-body");
         this.renderParams();
 
+    }
+
+    bindFooterMenu() {
+        const header = this.el.querySelector(".card-footer-menu-header");
+        const body   = this.el.querySelector(".card-footer-menu-body");
+        const arrow  = this.el.querySelector(".card-footer-menu-arrow");
+
+        if (!header || !body) return;
+
+        header.onclick = () => {
+            const open = body.classList.toggle("open");
+            arrow.classList.toggle("open", open);
+        };
     }
 
     renderGraph() {

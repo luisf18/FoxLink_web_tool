@@ -120,6 +120,7 @@ span.wg-input-hide.wg-left{
 /*INPUT CHECKBOX*/
 .wg-input[type="checkbox"]{
     all: revert;
+    cursor: pointer;
 }
 .wg-input[type="range"]:focus{
     border-color: none;

@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Motor DC Analyzer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+:root{
+    /* ========= INPUT SIZE ========= */
+    --input-height:32px;
+    --input-radius:8px;
+    --input-margin:8px;
+    --input-padding-x:14px;
+    --input-font-size:15px;
+    --unit-width:95px;
+    /* ========= TOGGLE ========= */
+    --toggle-height:22px;
+    --toggle-width:40px;
+    --toggle-padding:3px;
+    /* ========= COLORS ========= */
+    --accent:#ff7a00;
+    --accent-soft:#ffb36a;
+    --border:#e5e5e5;
+    --bg-soft:white;/*#fff9f6;*/
+}
+
+body{
+
+    margin:0;
+
+    background:#f5f6f8;
+
+    font-family:
+        Inter,
+        Arial,
+        sans-serif;
+
+    color:#222;
+}
+
+.container{
+    max-width:1450px;
+    margin:auto;
+    padding:28px;
+}
+
+.title{
+    font-size:38px;
+    font-weight:800;
+    color:#ff7a00;
+    margin-bottom:8px;
+}
+
+.subtitle{
+    color:#666;
+    margin-bottom:28px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:
+        repeat(auto-fit,minmax(360px,1fr));
+    gap:24px;
+    margin-bottom:28px;
+}
+
+.card{
+    background:white;
+    border-radius:22px;
+    padding:24px;
+    border:1px solid #ececec;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.card h2{
+    margin-top:0;
+    color:#ff7a00;
+}
+
+.card h3{
+    margin-top:16px;
+    margin-bottom:18px;
+    padding-bottom:8px;
+    border-bottom:1px solid #ececec;
+    /*color:#444;*/
+    color:#ff7a00;
+    font-size:15px;
+    font-weight:700;
+}
+
+.checkbox-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+}
+
+.checkbox-row input{
+    width:auto;
+}
+
+label{
+    font-size:14px;
+    font-weight:600;
+    color:#555;
+}
+
+button{
+    border:none;
+    border-radius:14px;
+    padding:14px 18px;
+    background:#ff7a00;
+    color:white;
+    font-weight:700;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+button:hover{
+    background:#ea6f00;
+}
+
+.results{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(auto-fit,minmax(240px,1fr));
+
+    gap:18px;
+
+    margin-bottom:28px;
+}
+
+.result-box{
+
+    background:white;
+
+    border-radius:18px;
+
+    padding:18px;
+
+    border:1px solid #ececec;
+}
+
+.result-label{
+
+    color:#777;
+
+    font-size:13px;
+}
+
+.result-value{
+
+    margin-top:8px;
+
+    font-size:28px;
+
+    color:#ff7a00;
+
+    font-weight:800;
+}
+
+.chart-card{
+    background:white;
+    border-radius:22px;
+    padding:24px;
+    border:1px solid #ececec;
+}
+
+.chart-top{
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:18px;
+
+    align-items:end;
+
+    margin-bottom:20px;
+}
+
+.action-row{
+
+    display:flex;
+
+    gap:12px;
+
+    flex-wrap:wrap;
+}
+
+.chart-wrapper{
+    display:flex;
+    justify-content:center;
+    height:520px;
+}
+
+#motorChart{
+    max-width:900px;
+}
+
+hr{
+    border:none;
+    border-top:1px solid #eee;
+    margin:22px 0;
+}
+
+/* ========= PARAM GRID ========= */
+
+.param-grid{
+    display:grid;
+    grid-template-columns:
+        150px   /*clamp(150px, 18vw, 220px)*/
+        1fr
+        1fr;
+    gap:16px;
+    align-items:center;
+    margin-bottom:var(--input-margin);
+    min-height:var(--input-height);
+}
+
+/*
+.param-name{
+    font-size:14px;
+    font-weight:600;
+    color:#444;
+    display:flex;
+    align-items:center;
+    line-height:1.2;
+}*/
+
+.param-name{
+    font-size:14px;
+    font-weight:600;
+    color:#444;
+    line-height:1.2;
+    padding:6px 0;
+    /*padding-bottom: 6px;*/
+}
+
+.param-input{
+    display:flex;
+    align-items:stretch;
+    background:var(--bg-soft);
+    border:1px solid var(--border);
+    border-radius:var(--input-radius);
+    overflow:hidden;
+    transition:0.2s;
+    min-height:var(--input-height);
+}
+
+.param-input:focus-within{
+
+    border-color:#ffb36a;
+
+    box-shadow:
+        0 0 0 3px rgba(255,122,0,0.12);
+
+    background:white;
+}
+
+.param-input input{
+    flex:1;
+    border:none !important;
+    background:transparent !important;
+    /*padding:10px 14px;*/
+    padding: 0 var(--input-padding-x);
+    font-size: var(--input-font-size);
+    color:#222;
+    min-width:0;
+}
+
+.param-input input:focus{
+    outline:none;
+}
+
+.unit{
+    padding:0 var(--input-padding-x);
+    background: #fff5ed; color: #ff9447;
+    background: #fdfdfd;
+    color: #ff8e3c;
+    /*background:#ffcfad; color:#666;*/
+    font-size:13px;
+    border-left:1px solid #ddd;
+    min-width:var(--unit-width);
+    font-weight:600;
+    white-space:nowrap;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    align-self:stretch; /* <- faz ocupar altura total */
+}
+
+.param-si {
+    font-size: 13px;
+    color: #626262; background: #fff9f6;
+    color: #ff9447; background: #fdfdfd;
+    border: 2px dashed #ffd3ba;
+    border-radius: var(--input-radius);
+    padding: 0 var(--input-padding-x);
+    text-align: center;
+    white-space: nowrap;
+    min-height: var(--input-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-group{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:8px;
+
+    min-width:180px;
+}
+
+.input-group input{
+
+    width:100%;
+
+    padding:13px;
+
+    border:none;
+
+    border-radius:12px;
+
+    background:#f5f5f5;
+
+    font-size:15px;
+}
+
+.input-group input:focus{
+
+    outline:none;
+
+    background:white;
+
+    box-shadow:
+        0 0 0 2px #ffb36a;
+}
+
+@media(max-width:900px){
+
+    .param-grid{
+        grid-template-columns:1fr;
+        gap:8px;
+    }
+
+    .param-si{
+
+        justify-content:flex-start;
+    }
+
+    .chart-top{
+
+        flex-direction:column;
+
+        align-items:stretch;
+    }
+}
+
+
+
+
+
+
+
+.mode-selector{
+    position:relative;
+    display:flex;
+    width:100%;
+    max-width:420px;
+    background:#f3f4f6;
+    border-radius:8px;
+    padding:4px;
+    border:1px solid #e2e2e2;
+    margin-bottom:10px;
+    overflow:hidden;
+}
+
+.mode-selector input{
+
+    display:none;
+}
+
+.mode-selector label{
+
+    flex:1;
+
+    position:relative;
+
+    z-index:2;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    height:26px;
+
+    font-size:14px;
+
+    font-weight:700;
+
+    color:#666;
+
+    cursor:pointer;
+
+    transition:
+        color 0.25s ease;
+}
+
+.mode-slider{
+
+    position:absolute;
+
+    top:4px;
+
+    left:4px;
+
+    width:calc(50% - 4px);
+
+    height:26px;
+
+    border-radius:5px;
+
+    background:white;
+
+    box-shadow:
+        0 2px 6px rgba(0,0,0,0.08);
+
+    transition:
+        transform 0.28s cubic-bezier(.2,.8,.2,1);
+}
+
+/* ACTIVE LEFT */
+
+#modeMeasured:checked ~ .mode-slider{
+
+    transform:translateX(0%);
+}
+
+#modeMeasured:checked + label{
+
+    color:#ff7a00;
+}
+
+/* ACTIVE RIGHT */
+
+#modeParameters:checked ~ .mode-slider{
+
+    transform:translateX(100%);
+}
+
+#modeParameters:checked + label{
+
+    color:#ff7a00;
+}
+
+
+
+
+
+
+
+.switch-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.switch{
+    position:relative;
+    width:var(--toggle-width);
+    height:var(--toggle-height);
+}
+
+.switch input{
+
+    display:none;
+}
+
+.switch-slider{
+    position:absolute;
+    inset:0;
+    background:#d8d8d8;
+    border-radius:999px;
+    transition:0.25s;
+}
+
+.switch-slider::before{
+    content:"";
+    position:absolute;
+    width: calc(
+        var(--toggle-height)
+        - var(--toggle-padding) * 2
+    );
+    height:
+        calc(
+            var(--toggle-height)
+            - var(--toggle-padding) * 2
+        );
+    left: var(--toggle-padding);
+    top: var(--toggle-padding);
+    background:white;
+    border-radius:50%;
+    transition:0.25s;
+    box-shadow:
+        0 2px 6px rgba(0,0,0,0.18);
+}
+
+.switch input:checked + .switch-slider{
+
+    background:#ff7a00;
+}
+
+.switch input:checked + .switch-slider::before{
+    transform: translateX(
+        calc(
+            var(--toggle-width)
+            - var(--toggle-height)
+        )
+    );
+}
+
+
+input:disabled{
+    cursor:not-allowed;
+    background:#ededed !important;
+    opacity:0.6;
+}
+
+
+
+
+
+
+
+
+/* ====================================================== */
+/* CHART HEADER                                           */
+/* ====================================================== */
+
+.chart-header{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    margin-bottom:20px;
+}
+
+.chart-header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+}
+
+.chart-title-group{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.chart-title{
+    font-size:22px;
+    font-weight:800;
+    color:#222;
+}
+
+.chart-subtitle{
+    font-size:13px;
+    color:#777;
+}
+
+.chart-controls{
+    display:flex;
+    align-items:end;
+    gap:16px;
+    flex-wrap:wrap;
+
+    padding-top:14px;
+    border-top:1px solid #efefef;
+}
+
+/* ====================================================== */
+/* ACTION BUTTONS                                         */
+/* ====================================================== */
+
+.action-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.action-btn{
+    height:42px;
+
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    padding:0 16px;
+
+    border:none;
+    border-radius:12px;
+
+    background:#f6f6f7;
+    color:#444;
+
+    font-size:14px;
+    font-weight:700;
+
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.action-btn svg{
+    width:18px;
+    height:18px;
+}
+
+.action-btn:hover{
+    background:#ececec;
+}
+
+.action-btn.primary{
+    background:#ff7a00;
+    color:white;
+}
+
+.action-btn.primary:hover{
+    background:#ea6f00;
+}
+
+/* ====================================================== */
+/* COMPACT INPUTS                                         */
+/* ====================================================== */
+
+.input-group.compact{
+    gap:6px;
+    min-width:140px;
+}
+
+.input-group.compact label{
+    font-size:12px;
+    color:#777;
+}
+
+.input-group.compact input{
+    min-height:var(--input-height);
+    padding:0 14px;
+
+    border:1px solid #e5e5e5;
+    border-radius:var(--input-radius);
+
+    background:#fafafa;
+}
+
+/* ====================================================== */
+/* COMPACT SWITCH                                         */
+/* ====================================================== */
+
+.switch-row.compact{
+    margin:0;
+    min-height:var(--input-height);
+    padding-bottom:2px;
+}
+
+/* ====================================================== */
+/* MOBILE                                                 */
+/* ====================================================== */
+
+@media(max-width:900px){
+
+    .chart-header-top{
+        align-items:flex-start;
+    }
+
+    .chart-controls{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .action-row{
+        width:100%;
+    }
+
+    .action-btn{
+        flex:1;
+        justify-content:center;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="title">Motor DC Analyzer</div>
+
+    <div class="subtitle">
+        Curvas características, parâmetros equivalentes e análise completa
+    </div>
+
+    <div class="grid">
+
+        <div class="card">
+
+            <div class="mode-selector">
+                <input
+                    type="radio"
+                    id="modeMeasured"
+                    name="calcMode"
+                    checked
+                    onchange="toggleMode()">
+
+                <label for="modeMeasured">
+                    Medições
+                </label>
+
+                <input
+                    type="radio"
+                    id="modeParameters"
+                    name="calcMode"
+                    onchange="toggleMode()">
+
+                <label for="modeParameters">
+                    Parâmetros
+                </label>
+
+                <div class="mode-slider"></div>
+
+            </div>
+            <div id="measuredInputs"></div>
+            <div id="parameterInputs" style="display:none"></div>
+        </div>
+
+    </div>
+
+    <div class="results">
+
+        <div class="result-box">
+            <div class="result-label">Kv</div>
+            <div class="result-value" id="kvResult">0 RPM/V</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Kt</div>
+            <div class="result-value" id="ktResult">0 kg.cm/A</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Resistência de armadura</div>
+            <div class="result-value" id="resistanceResult">0 Ω</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Corrente sem Carga</div>
+            <div class="result-value" id="i_noloadResult">0.1 A</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Kt x Kv</div>
+            <div class="result-value" id="KtKvResult">0</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Máxima Eficiência</div>
+            <div class="result-value" id="maxEfResult">0 %</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Corrente de Máxima Eficiência</div>
+            <div class="result-value" id="maxEfCurrentResult">0 %</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-label">Velocidade de Máxima Eficiência</div>
+            <div class="result-value" id="maxEfSpeedResult">0 %</div>
+        </div>
+
+    </div>
+
+    <div class="chart-card">
+
+        <div class="chart-header">
+
+            <div class="chart-header-top">
+
+                <div class="chart-title-group">
+                    <div class="chart-title">
+                        Curvas do motor
+                    </div>
+
+                    <div class="chart-subtitle">
+                        Torque, corrente, potência e eficiência
+                    </div>
+                </div>
+
+                <div class="action-row">
+
+                    <button
+                        class="action-btn primary"
+                        onclick="calculateMotor()">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M4 12h16M12 4v16"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"/>
+                        </svg>
+
+                        Calcular
+                    </button>
+
+                    <button
+                        class="action-btn"
+                        onclick="copyImage()">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <rect x="9" y="9" width="11" height="11" rx="2"
+                                stroke="currentColor"
+                                stroke-width="2"/>
+                            <rect x="4" y="4" width="11" height="11" rx="2"
+                                stroke="currentColor"
+                                stroke-width="2"/>
+                        </svg>
+
+                        Copiar
+                    </button>
+
+                    <button
+                        class="action-btn"
+                        onclick="saveImage()">
+
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M12 3v12"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"/>
+
+                            <path d="M7 10l5 5 5-5"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"/>
+
+                            <path d="M5 20h14"
+                                stroke="currentColor"
+                                stroke-width="2.2"
+                                stroke-linecap="round"/>
+                        </svg>
+
+                        Salvar
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="chart-controls">
+
+                <div class="switch-row compact">
+                    <label class="switch">
+                        <input type="checkbox" id="custom_graph" onchange="updateCustomVoltageState()">
+                        <span class="switch-slider"></span>
+                    </label>
+                    <label for="custom_graph">
+                        Inserir
+                    </label>
+                </div>
+
+                <div class="input-group compact">
+                    <label>Tensão (V)</label>
+                    <input type="number" id="customVoltage" value="24">
+                </div>
+
+                <div class="input-group compact">
+                    <label>Potência máxima elétrica (W)</label>
+                    <input type="number" id="maxPower" value="150">
+                </div>
+
+                <div class="input-group compact">
+                    <label>Redução</label>
+                    <input type="number" id="reduction" value="1">
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="chart-wrapper">
+
+            <canvas id="motorChart"></canvas>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+
+/* ===================================================== */
+/* AUTO RECALC                                           */
+/* ===================================================== */
+
+function bindAutoCalculate(){
+    document.querySelectorAll("input").forEach(input => {
+        input.addEventListener("change", () => {
+            calculateMotor();
+        });
+    });
+}
+
+function updateCustomVoltageState(){
+    const enabled = document.getElementById("custom_graph").checked;
+    document.getElementById("customVoltage").disabled = !enabled;
+    document.getElementById("maxPower").disabled = !enabled;
+    document.getElementById("reduction").disabled = !enabled;
+}
+
+/* ===================================================== */
+/* CREATE PARAM INPUT                                    */
+/* ===================================================== */
+
+function createParamInput(config){
+
+    const {
+
+        parentId,
+        label,
+        id,
+        value,
+        unit,
+        siId = null,
+        siValue = "",
+        type = "number",
+        step = "any"
+
+    } = config;
+
+    const parent =
+        document.getElementById(parentId);
+
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "param-grid";
+
+    row.innerHTML = `
+
+        <div class="param-name">
+            ${label}
+        </div>
+
+        <div class="param-input">
+
+            <input
+                type="${type}"
+                id="${id}"
+                value="${value}"
+                step="${step}">
+
+            <span class="unit">
+                ${unit}
+            </span>
+
+        </div>
+
+        <div
+            class="param-si"
+            ${siId ? `id="${siId}"` : ""}>
+
+            ${siValue}
+
+        </div>
+    `;
+
+    parent.appendChild(row);
+}
+
+/* ===================================================== */
+/* BUILD MEASURED INPUTS                                 */
+/* ===================================================== */
+
+function buildMeasuredInputs(){
+
+    const container =
+        document.getElementById(
+            "measuredInputs");
+    
+    container.innerHTML = `
+        <h3>Sem carga</h3>
+    `;
+
+    createParamInput({
+        parentId:"measuredInputs",
+        label:"Velocidade sem carga",
+        id:"rpm_no_load",
+        value:"12000",
+        unit:"RPM",
+        siId:"rpm_si",
+        siValue:"1256.6 rad/s"
+    });
+
+    createParamInput({
+        parentId:"measuredInputs",
+        label:"Tensão",
+        id:"voltage",
+        value:"12",
+        unit:"V",
+        siValue:"12.0 V"
+    });
+
+    createParamInput({
+        parentId:"measuredInputs",
+        label:"Corrente sem carga",
+        id:"current_no_load",
+        value:"0.5",
+        unit:"A",
+        siId:"i0_measured_si",
+        siValue:"0.50 A"
+    });
+
+    container.innerHTML += `
+        <h3>Stall</h3>
+    `;
+
+    createParamInput({
+        parentId:"measuredInputs",
+        label:"Corrente de stall",
+        id:"current_stall",
+        value:"20",
+        unit:"A",
+        siValue:"20.0 A"
+    });
+
+    /* CHECKBOX */
+    const checkbox = document.createElement("div");
+    checkbox.className = "switch-row";
+    checkbox.innerHTML = `
+        <label class="switch">
+            <input
+                type="checkbox"
+                id="deduceTorque"
+                checked
+                onchange="toggleTorqueInput()">
+            <span class="switch-slider"></span>
+        </label>
+        <label for="deduceTorque">
+            Calcule o torque a partir dos outros valores
+        </label>
+    `;
+
+    container.appendChild(checkbox);
+
+    /* TORQUE INPUT */
+
+    const torqueContainer = document.createElement("div");
+    torqueContainer.id = "torqueInputGroup";
+    container.appendChild(torqueContainer);
+
+    createParamInput({
+        parentId:"torqueInputGroup",
+        label:"Torque de stall",
+        id:"torque_stall",
+        value:"8",
+        unit:"kg.cm",
+        siId:"stall_torque_si",
+        siValue:"0.785 N.m"
+    });
+}
+
+/* ===================================================== */
+/* BUILD PARAMETER INPUTS                                */
+/* ===================================================== */
+
+function buildParameterInputs(){
+
+    const container =
+        document.getElementById("parameterInputs");
+
+    container.innerHTML = `
+        <h3>Parâmetros do motor</h3>
+    `;
+
+    createParamInput({
+        parentId:"parameterInputs",
+        label:"Resistência de armadura",
+        id:"armature_resistance",
+        value:"0.6",
+        unit:"Ω",
+        siId:"r_si",
+        siValue:"0.600 Ω"
+    });
+
+    createParamInput({
+        parentId:"parameterInputs",
+        label:"Constante de velocidade",
+        id:"kv_input",
+        value:"1000",
+        unit:"RPM/V",
+        siId:"kv_si",
+        siValue:"104.72 rad/s/V"
+    });
+
+    createParamInput({
+        parentId:"parameterInputs",
+        label:"Constante de torque",
+        id:"kt_input",
+        value:"0.097",
+        unit:"kg.cm/A",
+        siId:"kt_si",
+        siValue:"0.0095 N.m/A"
+    });
+
+    createParamInput({
+        parentId:"parameterInputs",
+        label:"Corrente sem carga",
+        id:"i0_input",
+        value:"0.5",
+        unit:"A",
+        siId:"i0_si",
+        siValue:"0.50 A"
+    });
+}
+
+
+let chart;
+
+// ---------------------------------------------
+// Convert
+function kgcmToNm(v){
+    return v * 0.0980665;
+}
+
+function nmToKgcm(v){
+    return v / 0.0980665;
+}
+// ---------------------------------------------
+
+// ---------------------------------------------
+// toggleMode ?
+function toggleMode(){
+
+    const measured = document.getElementById("modeMeasured").checked;
+
+    document.getElementById(
+        "measuredInputs").style.display =
+        measured ? "block" : "none";
+
+    document.getElementById(
+        "parameterInputs").style.display =
+        measured ? "none" : "block";
+}
+
+function toggleTorqueInput(){
+
+    const deduce =
+        document.getElementById(
+            "deduceTorque").checked;
+
+    const input =
+        document.getElementById(
+            "torque_stall");
+
+    input.disabled = deduce;
+
+    input.style.opacity =
+        deduce ? 0.45 : 1;
+}
+
+
+// ---------------------------------------------
+// toggleMode ?
+function calculateMotor(){
+
+    const useMeasured = document.getElementById( "modeMeasured").checked;
+
+    let R;
+    let I0;
+    let voltage;
+
+    let Kv;
+    let Kt;
+
+    let maxPower = 0;
+    let reduction = 1;
+
+    const input_RPM_no_Load = document.getElementById("rpm_no_load");
+    const input = Object.fromEntries(
+        [
+            "rpm_no_load",
+            "voltage",
+            "current_no_load",
+            "current_stall",
+            "torque_stall",
+            "deduceTorque",
+            "armature_resistance",
+            "kv_input",
+            "kt_input",
+            "i0_input",
+            "custom_graph",
+            "customVoltage",
+            "maxPower",
+            "reduction"
+        ]
+        .map(id => [
+            id,
+            document.getElementById(id)
+        ])
+    );
+
+    /* ================================================= */
+    /* MEASURED MODE                                     */
+    /* ================================================= */
+    if(useMeasured){
+        const rpmNoLoad = parseFloat( input.rpm_no_load.value );
+        voltage = parseFloat(input.voltage.value);
+        I0 = parseFloat(input.current_no_load.value);
+        const Istall = parseFloat( input.current_stall.value );
+        
+        R = voltage / Istall;
+
+        Kv = rpmNoLoad / (voltage - R*I0);
+
+        const deduceTorque = input.deduceTorque.checked;
+
+        if(deduceTorque){
+            const _Kt_si = 9.549 / Kv;
+            Kt = nmToKgcm(_Kt_si);
+        }else{
+            const Tstall = parseFloat(input.torque_stall.value);
+            Kt = Tstall / (Istall-I0);
+        }
+
+    }
+
+    /* ================================================= */
+    /* PARAMETER MODE                                    */
+    /* ================================================= */
+
+    else{
+        R = parseFloat( input.armature_resistance.value );
+        Kv = parseFloat( input.kv_input.value );
+        Kt = parseFloat( input.kt_input.value );
+        I0 = parseFloat(input.i0_input.value);
+        voltage = 6;
+    }
+
+    /* ================================================= */
+    /* CUSTOM VOLTAGE                                    */
+    /* ================================================= */
+    if(input.custom_graph.checked){
+        voltage = parseFloat(input.customVoltage.value);
+        maxPower = parseFloat(input.maxPower.value);
+        reduction = parseFloat(input.reduction.value);
+        if( reduction <= 0.0000000001 ) reduction = 1;
+    }
+
+    /* ================================================= */
+    /* SI VALUES                                         */
+    /* ================================================= */
+
+    const KvSI = Kv * 2 * Math.PI / 60;
+    const KtSI = kgcmToNm(Kt);
+
+    document.getElementById("r_si").innerText =
+        `${R.toFixed(4)} Ω`;
+
+    document.getElementById("kv_si").innerText =
+        `${KvSI.toFixed(2)} rad/s/V`;
+
+    document.getElementById("kt_si").innerText =
+        `${KtSI.toFixed(4)} N.m/A`;
+
+    document.getElementById("i0_si").innerText =
+        `${I0.toFixed(3)} A`;
+
+    /* ================================================= */
+    /* DERIVED PARAMETERS                                */
+    /* ================================================= */
+
+    const ktByKvNm = 9.549 / Kv;
+    const ktKv_check = KtSI*KvSI*100;
+    const stallCurrent = voltage / R;
+    const stallTorque = stallCurrent * Kt;
+    const maxRPM = ( Kv * (voltage-R*I0) )/reduction;
+    const maxEfcurrent = Math.sqrt( stallCurrent / I0 );
+    const maxEfspeed = (voltage-maxEfcurrent*R)*Kv;
+    const maxEf = 100;
+    /* ================================================= */
+    /* UPDATE RESULT BOXES                               */
+    /* ================================================= */
+
+    document.getElementById( "resistanceResult").innerText =
+        R.toFixed(3) + " Ω";
+
+    document.getElementById( "kvResult").innerText =
+        Kv.toFixed(1) + " RPM/V";
+
+    document.getElementById( "ktResult").innerText =
+        Kt.toFixed(3) + " kg.cm/A";
+
+    document.getElementById( "KtKvResult").innerText =
+        ktKv_check.toFixed(1) + " %";
+    
+    document.getElementById( "maxEfResult").innerText =
+        maxEf.toFixed(1) + " %";
+    
+    document.getElementById( "maxEfCurrentResult").innerText =
+        maxEfcurrent.toFixed(3) + " A";
+    
+    document.getElementById( "maxEfSpeedResult").innerText =
+        maxEfspeed.toFixed(0) + " RPM";
+
+    /* ================================================= */
+    /* GRAPH DATA                                        */
+    /* ================================================= */
+
+    const points = 220;
+
+    let rpmArr = [];
+    let torqueArr = [];
+    let currentArr = [];
+    let powerArr = [];
+    let effArr = [];
+    let dashedMask = [];
+
+    for(let i = 0; i <= points; i++){
+        const rpm =
+            maxRPM * ( i / points);
+        const Vind = rpm*reduction/Kv;
+        const currentMotor = (voltage-Vind)/R;
+        // torque util
+        const torque = (currentMotor-I0) * Kt * reduction;
+        const omega = rpm * 2 * Math.PI / 60;
+        
+        const mechPower =
+            kgcmToNm(torque) * omega;
+        
+        const elecPower = voltage * currentMotor;
+        
+        const efficiency =
+            elecPower > 0
+            ? (mechPower / elecPower) * 100
+            : 0;
+        
+        rpmArr.push(rpm);
+        torqueArr.push(torque);
+        currentArr.push(currentMotor);
+        powerArr.push(mechPower);
+        effArr.push(efficiency);
+        dashedMask.push( (maxPower > 0.0001) && (elecPower > maxPower) );
+    }
+
+    /* ================================================= */
+    /* CHART TITLE                                       */
+    /* ================================================= */
+
+    const motorName =
+        document.getElementById(
+            "motorName")?.value
+            || "Motor DC";
+
+    const title =
+        `${motorName}  |  ${voltage.toFixed(1)} V`
+        + (
+            maxPower > 0
+            ? `  |  Pmax ${maxPower.toFixed(0)} W`
+            : ""
+        )+ (
+            Math.abs(reduction-1) > 0.000001
+            ? `  |  Reduction ${reduction}:1`
+            : ""
+        );
+
+    /* ================================================= */
+    /* CHART                                             */
+    /* ================================================= */
+
+    const ctx =
+        document.getElementById(
+            "motorChart");
+
+    if(chart){
+        chart.destroy();
+    }
+
+    chart = new Chart(ctx,{
+
+        type:"line",
+
+        data:{
+
+            labels:rpmArr.map(v => Math.round(v)),
+
+            datasets:[
+
+                {
+                    label:"Torque [kg.cm]",
+
+                    data:torqueArr,
+
+                    borderColor:"#0066cc",
+
+                    borderWidth:3,
+
+                    pointRadius:0,
+
+                    tension:0.25,
+
+                    yAxisID:"torque",
+
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[
+                                ctx.p0DataIndex
+                            ]
+                            ? [8,8]
+                            : undefined
+                    }
+                },
+
+                {
+                    label:"Current [A]",
+
+                    data:currentArr,
+
+                    borderColor:"#ff0000",
+
+                    borderWidth:2,
+
+                    pointRadius:0,
+
+                    tension:0.25,
+
+                    yAxisID:"current",
+
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[
+                                ctx.p0DataIndex
+                            ]
+                            ? [8,8]
+                            : undefined
+                    }
+                },
+
+                {
+                    label:"Power [W]",
+
+                    data:powerArr,
+
+                    borderColor:"#5a2d0c",
+
+                    borderWidth:2,
+
+                    pointRadius:0,
+
+                    tension:0.35,
+
+                    yAxisID:"power",
+
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[
+                                ctx.p0DataIndex
+                            ]
+                            ? [8,8]
+                            : undefined
+                    }
+                },
+
+                {
+                    label:"Efficiency [%]",
+
+                    data:effArr,
+
+                    borderColor:"#00aa44",
+
+                    borderWidth:2,
+
+                    pointRadius:0,
+
+                    tension:0.35,
+
+                    yAxisID:"efficiency",
+
+                    segment:{
+                        borderDash:ctx =>
+                            dashedMask[
+                                ctx.p0DataIndex
+                            ]
+                            ? [8,8]
+                            : undefined
+                    }
+                }
+
+            ]
+        },
+
+        options:{
+
+            responsive:true,
+            maintainAspectRatio:false,
+            aspectRatio:1.8,
+
+            interaction:{
+                mode:"index",
+                intersect:false
+            },
+
+            plugins:{
+
+                title:{
+                    display:true,
+                    text:title,
+                    align:"start",
+                    font:{
+                        size:22,
+                        weight:"bold"
+                    }
+                },
+
+                legend:{
+
+                    position:"top",
+
+                    labels:{
+                        usePointStyle:true,
+                    }
+                }
+            },
+
+            scales:{
+
+                x:{
+
+                    title:{
+                        display:true,
+                        text:"RPM [min⁻¹]"
+                    },
+
+                    grid:{
+                        color:"#dfe5ec"
+                    }
+                },
+
+                torque:{
+
+                    type:"linear",
+
+                    position:"left",
+
+                    title:{
+                        display:true,
+                        text:"Torque [kg.cm]",
+                        color:"#0066cc"
+                    },
+
+                    ticks:{
+                        color:"#0066cc"
+                    }
+                },
+
+                current:{
+
+                    type:"linear",
+
+                    position:"left",
+
+                    offset:true,
+
+                    title:{
+                        display:true,
+                        text:"I [A]",
+                        color:"#ff0000"
+                    },
+
+                    ticks:{
+                        color:"#ff0000"
+                    },
+
+                    grid:{
+                        drawOnChartArea:false
+                    }
+                },
+
+                power:{
+
+                    type:"linear",
+
+                    position:"right",
+
+                    title:{
+                        display:true,
+                        text:"P [W]",
+                        color:"#5a2d0c"
+                    },
+
+                    ticks:{
+                        color:"#5a2d0c"
+                    },
+
+                    grid:{
+                        drawOnChartArea:false
+                    }
+                },
+
+                efficiency:{
+
+                    type:"linear",
+
+                    position:"right",
+
+                    offset:true,
+
+                    min:0,
+
+                    max:100,
+
+                    title:{
+                        display:true,
+                        text:"η [%]",
+                        color:"#00aa44"
+                    },
+
+                    ticks:{
+                        color:"#00aa44"
+                    },
+
+                    grid:{
+                        drawOnChartArea:false
+                    }
+                }
+            }
+        },
+
+       plugins:[
+            {
+                id:"watermark",
+
+                beforeDraw(chart){
+
+                    const {
+                        ctx,
+                        chartArea
+                    } = chart;
+
+                    if(!watermarkLogo.complete)
+                        return;
+
+                    ctx.save();
+
+                    ctx.globalAlpha = 0.8;
+                    ctx.imageSmoothingQuality = "high";
+
+                    //let width = chart.width/900 + 150;
+                    let width = 160;
+
+                    const ratio =
+                        watermarkLogo.naturalHeight
+                        / watermarkLogo.naturalWidth;
+
+                    const height =
+                        width * ratio;
+
+                    const x = chartArea.right + 70 - width;
+
+                    const y = 0;
+
+                    ctx.drawImage(
+                        watermarkLogo,
+                        x,
+                        y,
+                        width,
+                        height
+                    );
+
+                    ctx.restore();
+                }
+            },{
+                id:"powerLimitRegion",
+
+                beforeDatasetsDraw(chart){
+
+                    const {
+                        ctx,
+                        chartArea,
+                        scales
+                    } = chart;
+
+                    //const maxPower =
+                    //    parseFloat( document.getElementById( "maxPower").value );
+
+                    if(maxPower <= 0)
+                        return;
+
+                    /* ============================================== */
+                    /* POWER DATASET                                  */
+                    /* ============================================== */
+
+                    const powerDataset =
+                        chart.data.datasets.find(
+                            d => d.label.includes("Power")
+                        );
+
+                    if(!powerDataset)
+                        return;
+
+                    const data =
+                        powerDataset.data;
+
+                    /* ============================================== */
+                    /* FIND FIRST POINT ABOVE LIMIT                   */
+                    /* ============================================== */
+                    let limitIndex = -1;
+                    for(let i = 0; i < data.length; i++){
+                        if(data[i] > maxPower){
+                            limitIndex = i;
+                            break;
+                        }
+                    }
+
+                    /* ============================================== */
+                    /* NOTHING ABOVE LIMIT                            */
+                    /* ============================================== */
+                    if(limitIndex === -1)
+                        return;
+
+                    /* ============================================== */
+                    /* X POSITION                                     */
+                    /* ============================================== */
+
+                    const xScale =
+                        scales.x;
+
+                    const x =
+                        xScale.getPixelForValue(limitIndex);
+
+                    ctx.save();
+
+                    /* ============================================== */
+                    /* RED REGION                                     */
+                    /* ============================================== */
+
+                    ctx.fillStyle =
+                        "rgba(255,0,0,0.07)";
+
+                    ctx.fillRect(
+                        x,
+                        chartArea.top,
+                        chartArea.right - x,
+                        chartArea.bottom - chartArea.top
+                    );
+
+                    /* ============================================== */
+                    /* TRANSITION LINE                                */
+                    /* ============================================== */
+
+                    const gradient =
+                        ctx.createLinearGradient(
+                            x - 10,
+                            0,
+                            x + 10,
+                            0
+                        );
+
+                    gradient.addColorStop(
+                        0,
+                        "rgba(255,80,80,0)"
+                    );
+
+                    gradient.addColorStop(
+                        0.5,
+                        "rgba(255,80,80,0.95)"
+                    );
+
+                    gradient.addColorStop(
+                        1,
+                        "rgba(255,80,80,0)"
+                    );
+
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = 4;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x, chartArea.top);
+                    ctx.lineTo(x, chartArea.bottom);
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+            }
+
+        ]
+    });
+}
+
+async function copyImage(){
+
+    const canvas =
+        document.getElementById("motorChart");
+
+    canvas.toBlob(async(blob)=>{
+
+        try{
+
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    "image/png":blob
+                })
+            ]);
+
+            //alert("Imagem copiada!");
+
+        }catch(e){
+
+            //alert("Falha ao copiar.");
+        }
+
+    });
+}
+
+function saveImage(){
+
+    const canvas =
+        document.getElementById("motorChart");
+
+    const link =
+        document.createElement("a");
+
+    link.download =
+        "motor_dc_chart.png";
+
+    link.href =
+        canvas.toDataURL("image/png");
+
+    link.click();
+}
+
+/* ===================================================== */
+/* INIT                                                   */
+/* ===================================================== */
+
+const watermarkLogo =
+    new Image();
+watermarkLogo.src =
+    "images/motor_logo.svg";
+
+updateCustomVoltageState();
+buildMeasuredInputs();
+buildParameterInputs();
+toggleMode();
+toggleTorqueInput();
+calculateMotor();
+bindAutoCalculate();
+
+</script>
+
+</body>
+</html>

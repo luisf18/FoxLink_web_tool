@@ -1,7 +1,10 @@
 {
     "0": {
+        
         "model": "FX-S50",
         "image": "https://raw.githubusercontent.com/luisf18/FXDevices/refs/heads/main/Sensor_FXS50/imagens/vista_isometrica.png",
+        "mem_size": 64,
+
         "graphOptions": {
             "points": 60,
             "autoScale": true,
@@ -11,6 +14,7 @@
             "hideYAxis": true,
             "variables": [ { "name": "read", "color": "orange" } ]
         },
+        
         "param": {
             "name": {
                 "addr": "0x08",

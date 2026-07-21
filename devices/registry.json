@@ -10,5 +10,9 @@
     "0x200": {
         "path": "besc8p",
         "type": "ESC brushed"
+    },
+    "0x800": {
+        "path": "Mini53",
+        "type": "Robot"
     }
 }

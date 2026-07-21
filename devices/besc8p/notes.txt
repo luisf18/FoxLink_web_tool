@@ -1,0 +1,18 @@
+            "colors": {
+                "addr": 33,
+                "wg": {
+                    "type": "color8",
+                    "name": "Color Off",
+                    "defaultValue": 0
+                }
+            },
+
+            "Start Melody": {
+                "addr": 34,
+                "wg": {
+                    "type": "rtttl",
+                    "name": "Start Sound",
+                    "defaultValue": "",
+                    "outputLen": 5
+                }
+            },

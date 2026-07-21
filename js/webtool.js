@@ -32,7 +32,7 @@ export async function webtoolInit() {
     if (!app.devMode) {
         const { FoxWire } = await import("./foxwire.js");
         app.fx = new FoxWire();
-        app.fx.log.level = "info";
+        app.fx.log.level = "warn"; //"info";
         //console.log("FoxWire carregado em modo dev");
     }
 }
@@ -140,7 +140,7 @@ export async function scanDevices() {
     progressWrap.style.display = "block";
     progressBar.style.width = "0%";
 
-    await app.fx.scan("id fxv version", async ({ addr, found, info }) => {
+    await app.fx.scan("id fxv firmware", async ({ addr, found, info }) => {
         let progress = Math.ceil( 100*(addr/32) );
         progressBar.style.width = progress + "%";
         if (found) {

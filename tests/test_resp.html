@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Layout Test</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #eee;
+    padding: 20px;
+}
+
+/* container principal */
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* desktop */
+@media (min-width: 800px) {
+    .container {
+        flex-direction: row;
+    }
+    .right {
+        width: 300px; /* largura fixa */
+    }
+}
+
+/* lados */
+.left {
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    flex: 1; /* cresce */
+}
+
+.right {
+    background: #fafafa;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+/* conteúdo fake */
+.box {
+    height: 150px;
+    background: orange;
+    border-radius: 8px;
+}
+
+.code {
+    background: #222;
+    color: #0f0;
+    font-family: monospace;
+    padding: 10px;
+    overflow: auto;
+    max-height: 200px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="left">
+        <h3>Gráfico / Conteúdo</h3>
+        <div class="box"></div>
+    </div>
+
+    <div class="right">
+        <h3>C Array</h3>
+        <div class="code">
+const uint16_t test[] = {<br>
+&nbsp;&nbsp;784, 450,<br>
+&nbsp;&nbsp;0, 75<br>
+};
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

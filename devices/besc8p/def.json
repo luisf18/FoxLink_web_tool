@@ -1,6 +1,8 @@
 {
     "0": {
         "model": "ESC 2x Brushed",
+        "mem_size": 256,
+        "flag_extended":true,
         
         "struct":{
 
@@ -15,7 +17,7 @@
                             "Bidirectional",
                             "Invert",
                             "Set Min. Power",
-                            "Set Max. Power" 
+                            "Set Max. Power"
                         ],
                         "externalActions": [
                             {
@@ -155,9 +157,13 @@
                     "checkBaseValue": 0,
                     "checkOptions": {
                         "Mix": 0,
-                        "swap channels": 1,
-                        "Invert in1": 2,
-                        "Invert in2": 3
+                        "swap motors": 1,
+                        "Invert M1": 2,
+                        "Invert M2": 3,
+                        "M1 Break on stop": 4,
+                        "M2 Break on stop": 5,
+                        "Enable uart log": 6,
+                        "300ms uart log": 7
                     }
                 }
             },
@@ -167,11 +173,12 @@
                 "wg": {
                     "name": "Protocolos",
                     "type": "check",
-                    "defaultValue": 1,
+                    "defaultValue": 3,
                     "checkBaseValue": 0,
                     "checkOptions": {
                         "Enable IBUS": 0,
-                        "Enable PPM": 1
+                        "Enable PPM": 1,
+                        "Enable Bluetooth commands": 2
                     }
                 }
             },
@@ -184,6 +191,17 @@
                     "type": "slide",
                     "defaultValue": 63,
                     "abstract": [148, 1020]
+                }
+            },
+
+            "uart_failsafe": {
+                "addr": 33,
+                "wg": {
+                    "unit": " ms",
+                    "name": "UART Failsafe",
+                    "type": "slide",
+                    "defaultValue": 63,
+                    "abstract": [0, 2040]
                 }
             },
 
@@ -202,6 +220,22 @@
                     "checkOptions": {
                         "Sound On": 7,
                         "Automatic volume compensation": 6
+                    }
+                }
+            },
+
+            "sounds_config": {
+                "addr": "0x09",
+                "wg": {
+                    "name": "Sounds config.",
+                    "type": "check",
+                    "defaultValue": 7,
+                    "checkBaseValue": 0,
+                    "checkOptions": {
+                        "Enable start sound": 0,
+                        "Enable connect sound": 1,
+                        "Enable disconnect sound": 2,
+                        "Use default sounds": 3
                     }
                 }
             },
@@ -225,33 +259,14 @@
                         }
                     },
                     "options":{
-                        "In1/speed": 0,
-                        "In2/rotation": 4,
+                        "In1/rotation": 0,
+                        "In2/speed": 4,
                         "Flip": 8,
                         "Max speed": 12,
                         "Sound": 16,
                         "Move1": 20,
                         "Move2": 24
                     }
-                }
-            },
-
-            "colors": {
-                "addr": 33,
-                "wg": {
-                    "type": "color8",
-                    "name": "Color Off",
-                    "defaultValue": 0
-                }
-            },
-
-            "Start Melody": {
-                "addr": 33,
-                "wg": {
-                    "type": "rtttl",
-                    "name": "Start Sound",
-                    "defaultValue": "",
-                    "outputLen": 5
                 }
             },
 

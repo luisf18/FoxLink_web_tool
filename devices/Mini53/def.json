@@ -1,0 +1,346 @@
+{
+    "0": {
+        "model": "Mini53",
+        "mem_size": 256,
+        "flag_extended":true,
+
+        "param": {
+
+            "name": {
+                "addr": 47,
+                "wg": {
+                    "name": "Name",
+                    "type": "string",
+                    "defaultValue": "BESC 2x",
+                    "outputLen": 16
+                }
+            },
+            
+            "basic": {
+                "addr": "0x03",
+                "wg": {
+                    "name": "Basic config.",
+                    "type": "check",
+                    "defaultValue": 1,
+                    "checkBaseValue": 0,
+                    "checkOptions": {
+                        "Invert ch1 (speed)": 2,
+                        "Invert ch2 (rotation)": 3,
+                        "Invert M1": 4,
+                        "Invert M2": 5
+                    }
+                }
+            },
+
+            "protocols": {
+                "addr": "0x04",
+                "wg": {
+                    "name": "Protocolos",
+                    "type": "check",
+                    "defaultValue": 1,
+                    "checkBaseValue": 0,
+                    "checkOptions": {
+                        "Enable IBUS": 0,
+                        "Enable PPM": 1
+                    }
+                }
+            },
+            
+            "failsafe": {
+                "addr": 6,
+                "wg": {
+                    "unit": " ms",
+                    "name": "Failsafe delay",
+                    "type": "slide",
+                    "defaultValue": 63,
+                    "abstract": [148, 1020]
+                }
+            },
+
+            "sound": {
+                "addr": "0x07",
+                "wg": {
+                    "unit": "%",
+                    "name": "Sound Volume",
+                    "type": "slideCheck",
+                    "defaultValue": 63,
+                    "slide": {
+                        "offset": 0,
+                        "bit_size": 6,
+                        "abstract": [0,100]
+                    },
+                    "checkOptions": {
+                        "Sound On": 7,
+                        "Automatic volume compensation": 6
+                    }
+                }
+            },
+
+            "ch_deadband": {
+                "addr": 9,
+                "wg": {
+                    "name": "Channels deadzone",
+                    "type": "slide",
+                    "defaultValue": 50
+                }
+            },
+
+            "motor_min1": {
+                "addr": 10,
+                "wg": {
+                    "name": "Motor1 min. power",
+                    "unit": " %",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0, 100]
+                }
+            },
+
+            "motor_min2": {
+                "addr": 11,
+                "wg": {
+                    "name": "Motor2 min. power",
+                    "unit": " %",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0, 100]
+                }
+            },
+
+            "channels": {
+                "addr": 14,
+                "wg": {
+                    "type": "multiChannels",
+                    "name": "Multi Channels",
+                    "size": 4,
+                    "defaultValue": "0x21",
+                    "optionsDefault": {
+                        "prefix": "CH",
+                        "bit_size": 4,
+                        "range": [0,10],
+                        "color": "normal",
+                        "special_values":{
+                            "0": {
+                                "name": "-"
+                            }
+                        }
+                    },
+                    "options":{
+                        "In1/speed": 0,
+                        "In2/rotation": 4,
+                        "Flip": 8,
+                        "Max speed": 12,
+                        "Sound": 16,
+                        "Move1": 20,
+                        "Move2": 24
+                    }
+                }
+            },
+
+            "sensor_delay": {
+                "addr": 18,
+                "wg": {
+                    "unit": " ms",
+                    "name": "Sensor delay",
+                    "type": "slide",
+                    "defaultValue": 100,
+                    "abstract": [0,1020]
+                }
+            },
+
+            "sensor_freq": {
+                "addr": 19,
+                "wg": {
+                    "name": "Sensor 1 freq.",
+                    "type": "slide",
+                    "defaultValue": 120
+                }
+            },
+
+            "sensor1_power": {
+                "addr": 21,
+                "wg": {
+                    "name": "Sensor 1 power",
+                    "type": "slide",
+                    "defaultValue": 30
+                }
+            },
+
+            "sensor2_power": {
+                "addr": 22,
+                "wg": {
+                    "name": "Sensor 2 power",
+                    "type": "slide",
+                    "defaultValue": 30
+                }
+            },
+
+            "sensor1_filter": {
+                "addr": 23,
+                "wg": {
+                    "name": "Sensor 1 filter",
+                    "type": "slide",
+                    "defaultValue": 15
+                }
+            },
+
+            "sensor2_filter": {
+                "addr": 24,
+                "wg": {
+                    "name": "Sensor 2 filter",
+                    "type": "slide",
+                    "defaultValue": 15
+                }
+            },
+
+            "sensor1_filter_trig": {
+                "addr": 25,
+                "wg": {
+                    "name": "Sensor 1 filter trig",
+                    "type": "slide",
+                    "defaultValue": 6
+                }
+            },
+
+            "sensor2_filter_trig": {
+                "addr": 26,
+                "wg": {
+                    "name": "Sensor 2 filter trig",
+                    "type": "slide",
+                    "defaultValue": 6
+                }
+            },
+
+            "sensor_line_top": {
+                "addr": 27,
+                "wg": {
+                    "name": "Sensor line trigger value",
+                    "type": "slide",
+                    "defaultValue": 203,
+                    "abstract": [0,1020]
+                }
+            },
+
+            "sensor_line_min": {
+                "addr": 28,
+                "wg": {
+                    "name": "Sensor line min value",
+                    "type": "slide",
+                    "defaultValue": 250,
+                    "abstract": [0,1020]
+                }
+            },
+
+            "colors": {
+                "addr": 30,
+                "wg": {
+                    "type": "color8",
+                    "name": "Color Off",
+                    "defaultValue": 0
+                }
+            },
+
+
+            "Auto__attack_init_speed": {
+                "addr": 35,
+                "wg": {
+                    "name": "Attack Init Speed",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "Auto__attack_init_delay": {
+                "addr": 36,
+                "wg": {
+                    "name": "Attack Init Delay",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "Auto__attack_side_speed": {
+                "addr": 37,
+                "wg": {
+                    "name": "Attack Side Speed",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "Auto__search_rot_speed": {
+                "addr": 38,
+                "wg": {
+                    "name": "Search rot speed",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "Auto__search_rot_delay": {
+                "addr": 39,
+                "wg": {
+                    "name": "Search rot Delay",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "Auto__search_move_speed": {
+                "addr": 40,
+                "wg": {
+                    "name": "Search move speed",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "Auto__search_move_delay": {
+                "addr": 41,
+                "wg": {
+                    "name": "Search move Delay",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "auto_line_return_delay": {
+                "addr": 42,
+                "wg": {
+                    "name": "Line Return Delay",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "auto_line_rot_delay": {
+                "addr": 43,
+                "wg": {
+                    "name": "Line Rot Delay",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            },
+
+            "auto_line_move_delay": {
+                "addr": 44,
+                "wg": {
+                    "name": "Line Move Delay",
+                    "type": "slide",
+                    "defaultValue": 0,
+                    "abstract": [0,2040]
+                }
+            }
+
+        }
+    }
+}

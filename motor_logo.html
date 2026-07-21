@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Teste Header Logo</title>
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #f5f6f8;
+        font-family: Inter, Arial, sans-serif;
+        color: #222;
+    }
+
+    .container {
+        max-width: 1450px;
+        margin: auto;
+        padding: 28px;
+    }
+
+    /* ====================================================== */
+    /* HEADER - DESKTOP                                       */
+    /* ====================================================== */
+
+    .top-header {
+        display: flex;
+        justify-content: flex-start; 
+        align-items: center; /* Mudado de stretch para center para evitar que ela estique infinito */
+        gap: 30px; 
+        margin-bottom: 28px;
+    }
+
+    .header-text {
+        flex: 0 1 auto;
+    }
+
+    .title {
+        font-size: 38px;
+        font-weight: 800;
+        color: #ff7a00;
+        margin-bottom: 8px;
+        line-height: 1.05;
+    }
+
+    .subtitle {
+        color: #666;
+        font-size: 18px;
+    }
+
+    .logo-container {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .header-logo {
+        /* Define um tamanho máximo para não ficar gigante no PC */
+        height: 70px; 
+        width: auto;
+        display: block;
+        object-fit: contain;
+    }
+    
+    /* ====================================================== */
+    /* MOBILE - MANTIDO EXATAMENTE COMO VOCÊ ESTAVA USANDO     */
+    /* ====================================================== */
+
+    @media (max-width: 800px) {
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            position: relative;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .header-text {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 150px; 
+        }
+        .subtitle {
+            margin: 0;
+        }
+        .logo-container {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .header-logo {
+            max-height: 100%;
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            display: block;
+            object-fit: contain;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="top-header">
+
+        <div class="header-text">
+
+            <div class="title">
+                DC Motor Analyzer
+            </div>
+
+            <div class="subtitle">
+                Curvas características, parâmetros equivalentes e análise completa
+            </div>
+
+        </div>
+
+        <div class="logo-container">
+
+            <img
+                class="header-logo"
+                src="images/fox_dynamics.svg"
+                alt="Logo">
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

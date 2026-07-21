@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>FoxWire Widget</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#eee;
+}
+
+/* ===== WIDGET ===== */
+.widget-container{
+    width: 520px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    background: #fff;
+    margin: 30px auto;
+}
+
+/* ===== HEADER ===== */
+.widget-header{
+    background:#ff7a00;
+    color:white;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 12px;
+}
+
+.widget-title{
+    font-weight:bold;
+}
+
+/* ===== CONTROLS ===== */
+.controls{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:4px;
+    border-radius:8px;
+    background: #4b4b4b70;
+}
+
+/* BUTTONS */
+.btn{
+    border:none;
+    height:26px;
+    border-radius:6px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+/* CONNECT */
+.btn-connect{
+    width:40px;
+    background:#ff3b3b;
+    color:white;
+}
+.btn-connect.on{
+    background:#22c55e;
+}
+
+/* SCAN */
+.btn-scan{
+    background:#ff7a00;
+    color:white;
+}
+
+/* PROGRESS */
+.progress-box{
+    width:90px;
+    height:8px;
+    background:#fff3e6;
+    border-radius:6px;
+    overflow:hidden;
+    display:none;
+}
+.progress-bar{
+    width:0%;
+    height:100%;
+    background:#ff7a00;
+}
+
+/* ===== DEVICE SELECT ===== */
+.device-list{
+    display:none;
+    align-items:center;
+    gap:6px;
+    max-width:200px;
+    overflow-x:auto;
+    padding:2px;
+}
+
+/* estilo scroll fino */
+.device-list::-webkit-scrollbar{
+    height:4px;
+}
+.device-list::-webkit-scrollbar-thumb{
+    background:rgba(0,0,0,0.2);
+    border-radius:10px;
+}
+
+/* ITEM */
+.device{
+    flex:0 0 auto;
+    padding:4px 10px;
+    border-radius:20px;
+    background:#fff;
+    border:1px solid rgba(0,0,0,0.2);
+    font-size:12px;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+/* hover */
+.device:hover{
+    background:#ffe4cc;
+}
+
+/* ativo */
+.device.active{
+    background:#22c55e;
+    color:white;
+    border-color:#22c55e;
+}
+
+/* BADGE */
+.device-count{
+    background:#22c55e;
+    color:white;
+    font-size:11px;
+    font-weight:bold;
+    padding:2px 6px;
+    border-radius:10px;
+}
+
+/* ===== BODY ===== */
+.widget-body{
+    padding:12px;
+}
+
+.status{
+    font-size:12px;
+    color:#444;
+}
+
+/* ===== SCAN ICON ===== */
+.radar-icon svg{
+    transform-origin:center;
+}
+
+.scanning .radar-icon svg{
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin{
+    from{transform:rotate(0);}
+    to{transform:rotate(360deg);}
+}
+</style>
+</head>
+
+<body>
+
+<div class="widget-container">
+
+    <div class="widget-header">
+
+        <div class="widget-title">FoxWire Device Manager</div>
+
+        <div class="controls">
+
+            <button class="btn btn-connect" onclick="toggleConnection()" id="connBtn">
+                OFF
+            </button>
+
+            <button class="btn btn-scan" onclick="scan()" id="scanBtn">
+                <div class="radar-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M12 12 L19 9" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </div>
+            </button>
+
+            <div class="progress-box" id="progressBox">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <!-- LISTA -->
+            <div class="device-list" id="deviceList"></div>
+
+            <!-- BADGE -->
+            <div class="device-count" id="deviceCount" style="display:none;">0</div>
+
+        </div>
+    </div>
+
+    <div class="widget-body">
+        <div class="status" id="status">
+            Status: desconectado
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+let connected = false;
+
+function toggleConnection(){
+    connected = !connected;
+
+    const btn = document.getElementById("connBtn");
+
+    btn.innerText = connected ? "ON" : "OFF";
+    btn.classList.toggle("on", connected);
+
+    document.getElementById("status").innerText =
+        "Status: " + (connected ? "conectado" : "desconectado");
+
+    resetDevices();
+}
+
+function resetDevices(){
+    document.getElementById("deviceList").style.display = "none";
+    document.getElementById("deviceCount").style.display = "none";
+}
+
+function scan(){
+
+    if(!connected){
+        alert("Conecte primeiro");
+        return;
+    }
+
+    document.getElementById("scanBtn").classList.add("scanning");
+
+    let barBox = document.getElementById("progressBox");
+    let bar = document.getElementById("progressBar");
+
+    barBox.style.display = "block";
+    bar.style.width = "0%";
+
+    let p = 0;
+
+    let t = setInterval(() => {
+        p += 5;
+        bar.style.width = p + "%";
+
+        if(p >= 100){
+            clearInterval(t);
+
+            barBox.style.display = "none";
+            showDevices();
+
+            document.getElementById("scanBtn").classList.remove("scanning");
+        }
+    }, 40);
+}
+
+function showDevices(){
+
+    let list = document.getElementById("deviceList");
+    let count = document.getElementById("deviceCount");
+
+    list.innerHTML = "";
+
+    let devices = 6; // simulação
+    count.innerText = devices;
+
+    for(let i=1;i<=devices;i++){
+
+        let d = document.createElement("div");
+        d.className = "device";
+        d.innerText = "Dev " + i;
+
+        d.onclick = () => {
+            document.querySelectorAll(".device").forEach(el => el.classList.remove("active"));
+            d.classList.add("active");
+        };
+
+        list.appendChild(d);
+    }
+
+    list.style.display = "flex";
+    count.style.display = "block";
+}
+
+</script>
+
+</body>
+</html>

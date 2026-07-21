@@ -431,6 +431,59 @@ export class FoxWire {
         return await this.packWrite(addr, this.HEAD_REG | this.byteChecksum(reg_addr), value );
     }
 
+    /*/
+    async registerWrite_andCheck(addr, reg_addr, value) {
+        if (reg_addr > 31) {
+            this.logE(
+                "Invalid register address. Valid range is 0–31. For higher addresses, use the extended write command."
+            );
+            return { ok: false, data: null };
+        }
+        return await this.packWrite(addr, this.HEAD_REG | this.byteChecksum(reg_addr), value );
+    }
+    /*/
+
+    async registerWrite_andCheck(addr, reg_addr, value) {
+
+        if (reg_addr > 31) {
+            this.logE(
+                "Invalid register address. Valid range is 0–31. For higher addresses, use the extended write command."
+            );
+            return { ok: false, data: null };
+        }
+
+        // Escreve
+        const ansWrite = await this.registerWrite(addr, reg_addr, value);
+        if( !ansWrite.ok ){
+            return {
+                ok: false,
+                data: null
+            };
+        }
+
+        // Lê de volta
+        const ansRead = await this.registerRead(addr, reg_addr);
+
+        if (!ansRead.ok) {
+            return {
+                ok: false,
+                data: null
+            };
+        }
+
+        const ok = (ansRead.data === value);
+
+        console.log("[registerWrite_andCheck]");
+        console.log("[write]", ansWrite);
+        console.log("[read ]", ansRead);
+        console.log("[equal]", ok);
+
+        return {
+            ok,
+            data: ansWrite,
+        };
+    }
+
     // Comandos com Fast Packs Read e Write
     async command( addr, cmd, value = null ) {
         return await (
@@ -464,45 +517,67 @@ export class FoxWire {
                 [ (2) addr-u16: 0x0400 ][ (2) crc-u16: 0x0263 ] 
     -> CRC = soma todos os bytes menos os do proprio CRC
     ==========================================================/*/
-    
-    async extendedRead( addr, dataAddr, size, base = "reg", log = true ) {
 
-        //const outSize =
-        //    1 + // head
-        //    1 + // cmd
-        //    1 + // len
-        //    2 + // addr u16
-        //    2;  // crc16
-
+    async extended( addr, cmd, dataAddr, data=[], size=0, log = true ) {
+        
         dataAddr = dataAddr & 0xFFFF;
 
-        if( size > 256 ){
-            this.logW( "extendedRead can't read more than 256 bytes" );
-            size = 256;
+        let size_in = 2;
+        let size_out = 2;
+
+        const checkSize = (size) => {
+            if( size > 256 ){
+                this.logW( "extended can't read/write more than 256 bytes" );
+                size = 256;
+            }
+            return size;
         }
+
+        const read_mode = (cmd < 0x81);
+
+        if( read_mode ){ // Read ...
+            size_in = checkSize(size) + 2;
+            size_out = size_in-2;
+        }else{
+            size_in = 2;
+            size_out = checkSize(data.length);
+        }
+
+        // ----------------------------------------------------------
+        // Monta o pacote
+        // ----------------------------------------------------------
 
         let packet = [
             this.HEAD_EXTENDED|(addr&0x1F),
-            0x80, // cmd-read
-            (size-1)&0xFF,
+            cmd, // cmd-read
+            (size_out-1)&0xFF,
             dataAddr&0xFF,
             (dataAddr>>8)&0xFF
         ];
 
-        // por enquanto só le reg
+        if( read_mode ){
+            //packet.push(data[0] ?? 0);
+        }else{
+            packet.push(...data);
+        }
+
         const crc = (this.checksum(packet) - packet[0]) & 0xFFFF;
 
         // CRC u16 little-endian
         packet.push(crc & 0xFF);        // LSB
         packet.push((crc >> 8) & 0xFF); // MSB
 
-        const ans = await this.request( this.toU8Array(packet), size+2 );
+        // ----------------------------------------------------------
+
+        const ans = await this.request( this.toU8Array(packet), size_in );
         let ansOut = { ok: false, data: [], crc: 0 };
 
-        if ( !ans || !ans.ok || !ans.data || ans.data.length <= 2 ) {
+        const len_in = ans.data.length;
+
+        if ( !ans || !ans.ok || !ans.data || len_in != size_in ) {
             this.logHL(
                 ...this.logPack( 
-                    `[EXTENDED-READ]`,
+                    `[EXTENDED-${cmd}]`,
                     false
                 )
             );
@@ -510,21 +585,24 @@ export class FoxWire {
         }
 
         // -----------------------------
-        // extrai CRC RX (u16 LE)
+        // Verificação de validade
         // -----------------------------
-        const len = ans.data.length;
-        ansOut.data = ans.data.slice(0, len - 2);
-        ansOut.crc  = ans.data[len - 2] | (ans.data[len - 1] << 8);
-
-        // -----------------------------
-        // valida CRC
-        // -----------------------------
-        const crc_calc = this.checksum(ansOut.data) & 0xFFFF;
-        ansOut.ok = (ansOut.crc === crc_calc);
+        if( read_mode ){
+            // extrai CRC RX (u16 LE)
+            ansOut.data = ans.data.slice(0, len_in - 2);
+            ansOut.crc  = ans.data[len_in - 2] | (ans.data[len_in - 1] << 8);
+            // valida CRC
+            const crc_calc = this.checksum(ansOut.data) & 0xFFFF;
+            ansOut.ok = (ansOut.crc === crc_calc);
+        }else{
+            ansOut.crc = ans.data[0] | ans.data[1]<<8;
+            ansOut.data = ans.data;
+            ansOut.ok = true;
+        }
 
         this.logML(
             ...this.logPack( 
-                `[EXTENDED-READ]`,
+                `[EXTENDED-${cmd}]`,
                 ansOut.ok,
                 null,
                 ans.data
@@ -533,63 +611,39 @@ export class FoxWire {
 
         return ansOut;
     }
+    
+    async extendedRead( addr, dataAddr, size, log = true ) {
+        return await this.extended( addr, 0x80, dataAddr, [], size, log );
+    }
 
-    async extendedWrite( addr, dataAddr, data, base = "reg", log = true ) {
+    async extendedWrite( addr, dataAddr, data, log = true ) {
+        return await this.extended( addr, 0x81, dataAddr, data, 0, log );
+    }
 
-        dataAddr = dataAddr & 0xFFFF;
-        //data = this.toU8Array(data);
-        //if(  )
-        const size = data.length;
+    async extendedWrite_andCheck(addr, dataAddr, data, log = true) {
 
-        if( size > 256 ){
-            this.logW( "extendedWrite can't write more than 256 bytes" );
-            size = 256;
+        const ansWrite = await this.extendedWrite(addr, dataAddr, data, log);
+        if (!ansWrite.ok) return { ok: false };
+
+        const ansRead = await this.extendedRead(addr, dataAddr, data.length, log);
+        if (!ansRead.ok) return { ok: false };
+
+        const ok =
+            ansRead.data.length === data.length &&
+            ansRead.data.every((v, i) => v === data[i]);
+
+        if (log) {
+            console.log("[extendedWrite_andCheck]");
+            console.log("[write]", ansWrite);
+            console.log("[read ]", ansRead);
+            console.log("[equal]", ok);
         }
 
-        let packet = [
-            this.HEAD_EXTENDED|(addr&0x1F),
-            0x81, // cmd-read
-            (size-1)&0xFF,
-            dataAddr&0xFF,
-            (dataAddr>>8)&0xFF,
-            ...data
-        ];
-
-        // por enquanto só le reg
-        const crc = (this.checksum(packet)-packet[0]) & 0xFFFF;
-
-        // CRC u16 little-endian
-        packet.push(crc & 0xFF);        // LSB
-        packet.push((crc >> 8) & 0xFF); // MSB
-
-        const ans = await this.request( this.toU8Array(packet), 2 );
-        let ansOut = { ok: false, data: [], crc: 0 };
-
-        if ( !ans || !ans.ok || !ans.data || ans.data.length != 2 ) {
-            this.logHL(
-                ...this.logPack( 
-                    `[EXTENDED-WRITE]`,
-                    false,
-                    data
-                )
-            );
-            return ansOut;
-        }
-
-        ansOut.crc = ans.data[0] | ans.data[1]<<8;
-        ansOut.data = ans.data;
-        ansOut.ok = true;
-
-        this.logML(
-            ...this.logPack( 
-                `[EXTENDED-WRITE]`,
-                ansOut.ok,
-                data,
-                ans.data
-            )
-        );
-
-        return ansOut;
+        return {
+            ok,
+            write: ansWrite,
+            read: ansRead
+        };
     }
 
     /*--------------------------------
@@ -782,7 +836,7 @@ export class FoxWire {
             }
             if( dataAddr+size <= 32 ){
                 for (let i = 0; i<size; i++) {
-                    const ans = await this.registerWrite(
+                    const ans = await this.registerWrite_andCheck(
                         addr, dataAddr + i
                     );
                     if( !ans?.ok ){
@@ -808,6 +862,86 @@ export class FoxWire {
             await new Promise(r => setTimeout(r, delayMs));
         }
         return null;
+    }
+
+    // High level Read Memory
+    async readMemory(
+        device_addr,
+        mem_addr,
+        size,
+        hasExtended = false
+    ) {
+        let ok = false;
+        let mem = [];
+
+        if( hasExtended ){
+            const ans = await this._retryUntilOk(
+                this.extendedRead,
+                {},
+                device_addr,
+                mem_addr,
+                size
+            );
+            if( ans ){
+                ok = true;
+                mem = ans.data;
+            }
+        }else if( (mem_addr + size) <= 32 ){
+            ok = true;
+            for (let i = 0; i < size; i++) {
+                const ans = await this._retryUntilOk(
+                    this.registerRead,
+                    {},
+                    device_addr,
+                    mem_addr+i
+                );
+                if( !ans ){
+                    ok = false;
+                    break;
+                }
+                mem.push(ans.data & 0xFF);
+            }
+        }
+
+        return ( mem?.length == size ? mem : null );
+    }
+
+
+    // High level Write Memory
+    async writeMemory(
+        device_addr,
+        mem_addr,
+        mem,
+        hasExtended = false
+    ) {
+        const size = mem.length;
+        if( hasExtended ){
+            return await this._retryUntilOk(
+                this.extendedWrite_andCheck,
+                {},
+                device_addr,
+                mem_addr,
+                mem
+            );
+        }else if( (mem_addr + size) <= 32 ){
+            let ok = false;
+            for (let i = 0; i < size; i++) {
+                const ans = await this._retryUntilOk(
+                    this.registerWrite_andCheck,
+                    {},
+                    device_addr,
+                    mem_addr+i,
+                    mem[i]
+                );
+                if( !ans ){
+                    ok = false;
+                    break;
+                }
+            }
+            return ok;
+        }
+        
+        return false;
     }
 
     

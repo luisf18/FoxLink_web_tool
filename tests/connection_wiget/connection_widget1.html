@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>FoxWire Widget</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#eee;
+}
+
+/* ===== WIDGET ROOT ===== */
+.widget-container{
+    width: 520px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    background: #fff;
+    margin: 30px auto;
+}
+
+/* ===== HEADER ===== */
+.widget-header{
+    background:#ff7a00;
+    color:white;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 12px;
+}
+
+.widget-title{
+    font-weight:bold;
+}
+
+/* ===== CONTROLS ===== */
+.controls{
+    width: 200px;
+    /*/height: 30px;/*/
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:4px;
+    border-radius:8px;
+    background: #4b4b4b70;
+}
+
+/* BUTTONS */
+.btn{
+    border:none;
+    height: 25px;
+    /*/padding:6px 10px;/*/
+    border-radius:6px;
+    font-size:12px;
+    cursor:pointer;
+    transition:0.2s;
+    font-weight:bold;
+}
+
+/* CONNECT OFF */
+.btn-connect{
+    background:#ff3b3b;
+    color:white;
+}
+
+/* CONNECT ON */
+.btn-connect.on{
+    background:#22c55e;
+    color:white;
+}
+
+/* SCAN */
+.btn-scan{
+    background:#ff7a00;
+    color:white;
+    font-weight:bold;
+}
+
+.btn-scan:hover{
+    filter:brightness(1.05);
+}
+
+/* PROGRESS INLINE */
+.progress-box{
+    width:90px;
+    height:8px;
+    background:#fff3e6;
+    border-radius:6px;
+    overflow:hidden;
+    display:none;
+}
+
+.progress-bar{
+    width:0%;
+    height:100%;
+    background:#ff7a00;
+}
+
+/* ===== BODY ===== */
+.widget-body{
+    padding:12px;
+}
+
+/* STATUS */
+.status{
+    font-size:12px;
+    margin-bottom:10px;
+    color:#444;
+}
+
+/* DEVICE GRID */
+.device-grid{
+    display:none;
+    flex-wrap: nowrap;
+    gap:6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    /*/padding:2px 6px;/*/
+    scrollbar-width: thin;
+
+    /*/border-radius: 6px;/*/
+
+    /*/background:#949494;/*/
+    /*/border:1px solid #2f2f2f;/*/
+}
+
+/* DEVICE TILE */
+.device{
+    flex: 0 0 auto;
+    width:20px;
+    height:20px;
+
+    background:#f7f7f7;
+    border:1px solid #4b4b4b70;
+    border-radius:6px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:11px;
+    font-weight:600;
+    color:#333;
+}
+
+
+.device-grid{
+    display:none;
+    flex-wrap: nowrap;
+    gap:6px;
+
+    overflow-x:auto;
+    overflow-y:hidden;
+
+    /* deixa scroll por cima do conteúdo */
+    position: relative;
+
+    scrollbar-width: none; /* Firefox hide default */
+}
+
+/* remove scrollbar padrão Chrome */
+.device-grid::-webkit-scrollbar{
+    height: 4px;
+    opacity: 0;
+}
+
+/* track invisível */
+.device-grid::-webkit-scrollbar-track{
+    background: transparent;
+}
+
+/* thumb fino e discreto */
+.device-grid::-webkit-scrollbar-thumb{
+    background: rgba(0,0,0,0.15);
+    border-radius: 10px;
+    opacity: 0;
+    transition: 0.3s;
+}
+
+/* só aparece no hover */
+.device-grid:hover::-webkit-scrollbar-thumb{
+    opacity: 1;
+}
+
+/* hover geral melhora contraste */
+.device-grid:hover::-webkit-scrollbar{
+    height: 5px;
+}
+
+
+.radar-icon svg{
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+/* só quando estiver escaneando */
+.scanning .radar-icon  svg{
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ===== WIDGET ===== -->
+<div class="widget-container">
+
+    <!-- HEADER -->
+    <div class="widget-header">
+
+        <div class="widget-title">FoxWire Device Manager</div>
+
+        <div class="controls">
+            <button class="btn btn-connect" onclick="toggleConnection()" id="connBtn">
+                OFF
+            </button>
+
+            <div style="display:flex; align-items:center; gap:6px;">
+                <button class="btn btn-scan" onclick="scan()" id="scanBtn">
+                    <div class="radar-icon" id="scanIcon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- círculo externo -->
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+
+                        <!-- círculos internos -->
+                        <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+                        <circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+
+                        <!-- linha do radar -->
+                        <path d="M12 12 L19 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+
+                        <!-- ponto alvo -->
+                        <circle cx="19" cy="9" r="1.5" fill="currentColor"/>
+                    </svg>
+                </div>
+                </button>
+
+                <!-- progress ao lado do scan -->
+                <div class="progress-box" id="progressBox">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+
+            <div class="device-grid" id="deviceGrid"></div>
+
+        </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="widget-body">
+
+        <div class="status" id="status">
+            Status: desconectado
+        </div>
+
+    </div>
+</div>
+
+<script>
+
+const grid = document.getElementById("deviceGrid");
+
+grid.addEventListener("wheel", function(e) {
+    if (grid.style.display !== "flex") return;
+
+    e.preventDefault();
+
+    grid.scrollLeft += e.deltaY;
+});
+
+let mode = "foxwire";
+let connected = false;
+
+function toggleConnection(){
+    connected = !connected;
+
+    const btn = document.getElementById("connBtn");
+
+    btn.innerText = connected ? "ON" : "OFF";
+    //btn.classList.remove("on", "off");
+    btn.classList.toggle( "on", connected );
+
+    document.getElementById("status").innerText =
+        "Status: " + (connected ? "conectado ("+mode+")" : "desconectado");
+
+    resetDevices();
+}
+
+function resetDevices(){
+    document.getElementById("deviceGrid").style.display = "none";
+}
+
+function scan(){
+
+    if(!connected || mode !== "foxwire"){
+        alert("Scan disponível apenas no FoxWire conectado");
+        return;
+    }
+
+    document.getElementById("scanBtn").classList.add("scanning");
+
+    let barBox = document.getElementById("progressBox");
+    let bar = document.getElementById("progressBar");
+    let grid = document.getElementById("deviceGrid");
+
+    grid.style.display = "none";
+    barBox.style.display = "block";
+    bar.style.width = "0%";
+
+    let p = 0;
+
+    let t = setInterval(() => {
+        p += 5;
+        bar.style.width = p + "%";
+
+        if(p >= 100){
+            clearInterval(t);
+
+            barBox.style.display = "none";
+            showDevices();
+
+            document.getElementById("scanBtn").classList.remove("scanning");
+        }
+    }, 40);
+}
+
+function showDevices(){
+
+    let grid = document.getElementById("deviceGrid");
+    grid.innerHTML = "";
+
+    let devices = 6; // simulando
+
+    for(let i=1;i<=devices;i++){
+        let d = document.createElement("div");
+        d.className = "device";
+        d.innerText = "" + i;
+        grid.appendChild(d);
+    }
+
+    grid.style.display = "flex";
+}
+
+</script>
+
+</body>
+</html>
