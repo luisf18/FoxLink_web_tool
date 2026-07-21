@@ -166,10 +166,11 @@ async function addDeviceCard(addr,info) {
     let card = null;
     const deviceId = info?.id ?? null;
     const card_id = app.devices.size;
+    let options = null;
     if( app.devices.has( addr ) ){
         card = app.devices.get(addr);
     }else{
-        const options = await resolveDevice( info );
+        options = await resolveDevice( info );
         if (options){
             app.log.i(`[addCard][DEV-${addr}] op:`,options);
             card = new FxdeviceCard( card_id, addr, info, options, app );
@@ -196,11 +197,25 @@ async function addDeviceCard(addr,info) {
     const div     = document.createElement("div");
 
     div.className = "scan-item";
-    div.textContent = `Addr ${addr} - ID ${
+    if( options != null ){
+        div.textContent = `${addr} - ${options.model}`;
+        //div.textContent = `${addr} - ${options.model} / ${
+        //    deviceId != null
+        //    ? "0x" + deviceId.toString(16)
+        //    : "N/A"
+        //}`;
+    }else{
+        div.textContent = `Addr ${addr} - ID ${
+            deviceId != null
+            ? "0x" + deviceId.toString(16)
+            : "N/A"
+        }`;
+    }
+    /*div.textContent = `Addr ${addr} - ID ${
         deviceId != null
         ? "0x" + deviceId.toString(16)
         : "N/A"
-    }`;
+    }`;*/
     div.onclick = () => {
         console.log( "card: ", addr );
         if (!card || !card.el) return;

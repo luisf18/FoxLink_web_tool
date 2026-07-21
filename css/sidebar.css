@@ -63,6 +63,11 @@
     color: #d85c00;
 }
 
+.sidebar-footer svg {
+    width: 18px;
+    height: 18px;
+}
+
 .footer-logo {
     max-width: 55%;
     margin: 0 auto 0px auto;

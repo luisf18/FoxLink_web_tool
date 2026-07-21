@@ -17,6 +17,12 @@ body {
     overflow: hidden; /* 🔥 nunca deixa scroll global */
 }
 
+.toolbar-icon{
+    width:22px;
+    height:22px;
+    display:block;
+}
+
 /*----------------------------------------------- 
   Container dos cards dos dispositivos
 ----------------------------------------------- */
